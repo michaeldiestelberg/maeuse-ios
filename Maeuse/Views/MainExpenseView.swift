@@ -50,8 +50,8 @@ struct MainExpenseView: View {
         .sheet(isPresented: $editorVM.isPresented) {
             ExpenseEditorSheet(viewModel: editorVM)
         }
-        .sheet(isPresented: $voiceVM.isPresented) {
-            VoiceSheet(viewModel: voiceVM, editorVM: editorVM, apiKey: settingsVM.voiceSettings.apiKey)
+        .fullScreenCover(isPresented: $voiceVM.isPresented) {
+            VoiceSheet(viewModel: voiceVM)
         }
         .sheet(isPresented: $settingsVM.isPresented) {
             SettingsSheet(viewModel: settingsVM, expenses: expenses)

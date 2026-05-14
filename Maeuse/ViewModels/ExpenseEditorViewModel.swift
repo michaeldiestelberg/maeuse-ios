@@ -77,18 +77,6 @@ final class ExpenseEditorViewModel {
         isPresented = true
     }
 
-    func prepareFromVoiceDraft(_ draft: VoiceDraft) {
-        amountText = draft.amount.map { String(format: "%.2f", $0) } ?? ""
-        description = draft.description
-        date = Expense.dateFromISO(draft.dateISO) ?? Date()
-        splitMode = draft.partnerShareMode ?? .percent
-        splitValueText = draft.partnerShareValue.map {
-            $0 == $0.rounded() ? String(Int($0)) : String(format: "%.2f", $0)
-        } ?? "50"
-        editingExpense = nil
-        isPresented = true
-    }
-
     func selectPreset(_ value: Double) {
         splitMode = .percent
         splitValueText = value == value.rounded() ? String(Int(value)) : String(format: "%.2f", value)

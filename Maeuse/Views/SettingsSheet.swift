@@ -24,9 +24,7 @@ struct SettingsSheet: View {
 
                     // Status
                     if viewModel.showStatus {
-                        Text(viewModel.statusMessage)
-                            .font(.caption)
-                            .foregroundStyle(Color.maeusPrimary)
+                        statusCard
                             .transition(.opacity.combined(with: .move(edge: .top)))
                     }
                 }
@@ -68,6 +66,11 @@ struct SettingsSheet: View {
             }
         } message: {
             Text("This will replace all current expenses with the imported backup. This cannot be undone.")
+        }
+        .alert("Voice Mode Error", isPresented: $viewModel.showVoiceError) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(viewModel.voiceErrorMessage)
         }
     }
 
@@ -111,17 +114,17 @@ struct SettingsSheet: View {
         VStack(alignment: .leading, spacing: 16) {
             sectionHeader(kicker: "Voice", title: "Voice Mode")
 
-            Text("Enable a record-then-process voice sheet that turns one spoken expense into a reviewed draft.")
+            Text("Enable a realtime voice workspace that captures one or more expenses in a fresh session.")
                 .font(.caption)
                 .foregroundStyle(Color.maeusTextSecondary)
 
-            // API Key
+            // API key
             VStack(alignment: .leading, spacing: 8) {
-                Text("OpenAI API Key")
+                Text("OpenAI API key")
                     .font(.caption.weight(.medium))
                     .foregroundStyle(Color.maeusTextSecondary)
 
-                SecureField("sk-...", text: Binding(
+                SecureField(viewModel.hasSavedVoiceAPIKey ? "Leave blank to keep saved key" : "sk-proj-...", text: Binding(
                     get: { viewModel.voiceAPIKeyText },
                     set: { viewModel.voiceAPIKeyText = $0 }
                 ))
@@ -136,17 +139,26 @@ struct SettingsSheet: View {
 
             // Verify button
             Button {
-                viewModel.verifyKey()
+                viewModel.verifyVoiceAPIKey()
             } label: {
                 if viewModel.isVerifying {
                     ProgressView()
                         .tint(.white)
                 } else {
-                    Text("Verify Key")
+                    Label("Verify & Save Key", systemImage: "key")
                 }
             }
             .buttonStyle(GlassSecondaryButtonStyle())
             .disabled(viewModel.isVerifying)
+
+            if viewModel.hasSavedVoiceAPIKey {
+                Button(role: .destructive) {
+                    viewModel.removeVoiceAPIKey()
+                } label: {
+                    Label("Remove Saved Key", systemImage: "trash")
+                }
+                .buttonStyle(GlassSecondaryButtonStyle())
+            }
 
             // Enable toggle
             Toggle(isOn: Binding(
@@ -162,7 +174,7 @@ struct SettingsSheet: View {
                 }
             }
             .tint(Color.maeusPrimary)
-            .disabled(!viewModel.voiceSettings.isVerified)
+            .disabled(!viewModel.voiceSettings.isVerified || !viewModel.hasSavedVoiceAPIKey)
 
             if !viewModel.voiceStatusText.isEmpty {
                 HStack(spacing: 4) {
@@ -175,7 +187,11 @@ struct SettingsSheet: View {
                 }
             }
 
-            Text("Voice mode uses your own OpenAI API key. Audio is sent to OpenAI for transcription; no data is stored on any server.")
+            Text("Your key is stored in iOS Keychain on this device and sent only to OpenAI over HTTPS to create short-lived Realtime client secrets.")
+                .font(.caption2)
+                .foregroundStyle(Color.maeusTextTertiary)
+
+            Text("Voice mode requires an OpenAI API project with access to gpt-realtime-2; free-tier API keys are not supported for this model.")
                 .font(.caption2)
                 .foregroundStyle(Color.maeusTextTertiary)
         }
@@ -184,6 +200,24 @@ struct SettingsSheet: View {
     }
 
     // MARK: - Helpers
+
+    private var statusCard: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: viewModel.statusIsError ? "exclamationmark.triangle.fill" : "checkmark.circle.fill")
+                .font(.caption)
+                .foregroundStyle(viewModel.statusIsError ? Color.orange : Color.maeusSuccess)
+
+            Text(viewModel.statusMessage)
+                .font(.caption)
+                .foregroundStyle(Color.maeusTextSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .textSelection(.enabled)
+        }
+        .padding(12)
+        .background(Color.maeusSurface)
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
 
     private func sectionHeader(kicker: String, title: String) -> some View {
         VStack(alignment: .leading, spacing: 4) {

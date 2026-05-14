@@ -15,8 +15,23 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintName = "Maeuse"
+               BlueprintIdentifier = "D29418A4906E4219A1580FF0"
                BuildableName = "Maeuse.app"
+               BlueprintName = "Maeuse"
+               ReferencedContainer = "container:Maeuse.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "NO"
+            buildForProfiling = "NO"
+            buildForArchiving = "NO"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "95447C7231765DF92BF86227"
+               BuildableName = "MaeuseTests.xctest"
+               BlueprintName = "MaeuseTests"
                ReferencedContainer = "container:Maeuse.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
@@ -28,6 +43,19 @@
       selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
       shouldUseLaunchSchemeArgsEnv = "YES"
       shouldAutocreateTestPlan = "YES">
+      <Testables>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "95447C7231765DF92BF86227"
+               BuildableName = "MaeuseTests.xctest"
+               BlueprintName = "MaeuseTests"
+               ReferencedContainer = "container:Maeuse.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
+      </Testables>
    </TestAction>
    <LaunchAction
       buildConfiguration = "Debug"
@@ -43,8 +71,9 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintName = "Maeuse"
+            BlueprintIdentifier = "D29418A4906E4219A1580FF0"
             BuildableName = "Maeuse.app"
+            BlueprintName = "Maeuse"
             ReferencedContainer = "container:Maeuse.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
@@ -59,8 +88,9 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintName = "Maeuse"
+            BlueprintIdentifier = "D29418A4906E4219A1580FF0"
             BuildableName = "Maeuse.app"
+            BlueprintName = "Maeuse"
             ReferencedContainer = "container:Maeuse.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>

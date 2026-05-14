@@ -1,5 +1,25 @@
-# Xcode
+# macOS
+.DS_Store
+._*
+.Spotlight-V100
+.Trashes
+
+# Xcode build output and local state
 build/
+DerivedData/
+*.hmap
+*.ipa
+*.xcarchive
+*.dSYM
+*.dSYM.zip
+*.app
+*.app.dSYM
+
+# Xcode user-specific files
+xcuserdata/
+*.xcuserstate
+*.xccheckout
+*.moved-aside
 *.pbxuser
 !default.pbxuser
 *.mode1v3
@@ -8,25 +28,53 @@ build/
 !default.mode2v3
 *.perspectivev3
 !default.perspectivev3
-xcuserdata/
-*.xccheckout
-*.moved-aside
-DerivedData/
-*.hmap
-*.ipa
-*.dSYM.zip
-*.dSYM
+*.xcodeproj/project.xcworkspace/
 
 # Swift Package Manager
 .build/
+.swiftpm/
 Packages/
 Package.pins
 Package.resolved
 
-# CocoaPods
+# CocoaPods / Carthage
 Pods/
+Carthage/Build/
 
-# Misc
-.DS_Store
+# Signing, provisioning, and App Store Connect credentials
+*.cer
+*.certSigningRequest
+*.mobileprovision
+*.provisionprofile
+*.p12
+*.p8
+AuthKey_*.p8
+ExportOptions.plist
+AppStoreConnectAPIKey*.json
+
+# Local secrets and machine-specific configuration
+.env
+.env.*
+!.env.example
+*.local.xcconfig
+Local.xcconfig
+Secrets.xcconfig
+Secrets*.xcconfig
+Private.xcconfig
+Private*.xcconfig
+
+# Fastlane generated files
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/
+fastlane/test_output/
+fastlane/.env
+fastlane/.env.*
+
+# Editor and temporary files
+.vscode/
+.idea/
 *.swp
-*~.nib
+*~
+*.tmp
+*.log

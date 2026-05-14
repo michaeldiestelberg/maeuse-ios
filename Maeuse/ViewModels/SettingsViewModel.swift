@@ -4,52 +4,77 @@ import Observation
 import UIKit
 
 /// Manages settings state: backup/restore, voice configuration
+@MainActor
 @Observable
 final class SettingsViewModel {
     var isPresented: Bool = false
     var voiceSettings: VoiceSettings
     var statusMessage: String = ""
     var showStatus: Bool = false
+    var statusIsError: Bool = false
     var isVerifying: Bool = false
     var showImportConfirmation: Bool = false
     var pendingImportData: Data? = nil
+    var voiceAPIKeyText: String = ""
+    var voiceErrorMessage: String = ""
+    var showVoiceError: Bool = false
 
-    private let openAI = OpenAIService()
+    private let apiKeyStore = OpenAIAPIKeyStore.shared
+    private let clientSecretService = OpenAIRealtimeClientSecretService()
 
     init() {
-        if let data = UserDefaults.standard.data(forKey: VoiceSettings.storageKey),
+        let storedData = UserDefaults.standard.data(forKey: VoiceSettings.storageKey)
+
+        if let data = storedData,
            let settings = try? JSONDecoder().decode(VoiceSettings.self, from: data) {
             self.voiceSettings = settings
         } else {
             self.voiceSettings = .default
         }
+
+        reconcileStoredAPIKey()
     }
 
     // MARK: - Voice Settings
 
-    var voiceAPIKeyText: String {
-        get { voiceSettings.apiKey }
-        set { voiceSettings.apiKey = newValue.trimmingCharacters(in: .whitespacesAndNewlines) }
-    }
-
     var voiceEnabled: Bool {
         get { voiceSettings.enabled }
         set {
-            voiceSettings.enabled = newValue && voiceSettings.isVerified
+            voiceSettings.enabled = newValue && voiceSettings.isVerified && apiKeyStore.hasAPIKey()
             saveVoiceSettings()
         }
     }
 
     var voiceStatusText: String {
         if voiceSettings.isVerified {
-            return "Key verified"
+            return "API key verified \(voiceSettings.maskedAPIKey)"
         }
         return ""
     }
 
-    func verifyKey() {
-        guard !voiceSettings.apiKey.isEmpty else {
-            showStatusMessage("Enter an API key first.")
+    var hasSavedVoiceAPIKey: Bool {
+        apiKeyStore.hasAPIKey()
+    }
+
+    func verifyVoiceAPIKey() {
+        let enteredKey = voiceAPIKeyText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let candidateKey: String
+        let shouldSaveNewKey: Bool
+
+        if enteredKey.isEmpty {
+            guard let savedKey = try? apiKeyStore.readAPIKey(), !savedKey.isEmpty else {
+                showErrorMessage("Enter an OpenAI API key first.")
+                return
+            }
+            candidateKey = savedKey
+            shouldSaveNewKey = false
+        } else {
+            candidateKey = enteredKey
+            shouldSaveNewKey = true
+        }
+
+        guard candidateKey.hasPrefix("sk-") else {
+            showErrorMessage("Enter a valid OpenAI API key.")
             return
         }
 
@@ -57,21 +82,36 @@ final class SettingsViewModel {
 
         Task { @MainActor in
             do {
-                let valid = try await openAI.verifyAPIKey(voiceSettings.apiKey)
-                if valid {
-                    voiceSettings.verifiedAt = Date()
-                    saveVoiceSettings()
-                    showStatusMessage("Key verified successfully.")
-                } else {
-                    voiceSettings.verifiedAt = nil
-                    voiceSettings.enabled = false
-                    saveVoiceSettings()
-                    showStatusMessage("Invalid API key.")
+                _ = try await clientSecretService.createClientSecret(apiKey: candidateKey)
+
+                if shouldSaveNewKey {
+                    try apiKeyStore.saveAPIKey(candidateKey)
+                    voiceAPIKeyText = ""
                 }
+
+                voiceSettings.apiKeySuffix = OpenAIAPIKeyStore.suffix(for: candidateKey)
+                voiceSettings.verifiedAt = Date()
+                saveVoiceSettings()
+                showStatusMessage("API key verified and saved in Keychain.")
             } catch {
-                showStatusMessage("Verification failed: \(error.localizedDescription)")
+                voiceSettings.verifiedAt = nil
+                voiceSettings.enabled = false
+                saveVoiceSettings()
+                showErrorMessage("API key verification failed: \(error.localizedDescription)")
             }
             isVerifying = false
+        }
+    }
+
+    func removeVoiceAPIKey() {
+        do {
+            try apiKeyStore.deleteAPIKey()
+            voiceAPIKeyText = ""
+            voiceSettings = .default
+            saveVoiceSettings()
+            showStatusMessage("Removed the saved OpenAI API key.")
+        } catch {
+            showErrorMessage("Could not remove API key: \(error.localizedDescription)")
         }
     }
 
@@ -83,6 +123,7 @@ final class SettingsViewModel {
 
     // MARK: - Export
 
+    @MainActor
     func exportBackup(expenses: [Expense]) {
         do {
             let data = try BackupService.exportBackup(expenses: expenses)
@@ -134,13 +175,40 @@ final class SettingsViewModel {
 
     // MARK: - Helpers
 
+    private func reconcileStoredAPIKey() {
+        guard let storedKey = try? apiKeyStore.readAPIKey(), !storedKey.isEmpty else {
+            voiceSettings.apiKeySuffix = nil
+            voiceSettings.verifiedAt = nil
+            voiceSettings.enabled = false
+            saveVoiceSettings()
+            return
+        }
+
+        let suffix = OpenAIAPIKeyStore.suffix(for: storedKey)
+        if voiceSettings.apiKeySuffix != suffix {
+            voiceSettings.apiKeySuffix = suffix
+            saveVoiceSettings()
+        }
+    }
+
     private func showStatusMessage(_ message: String) {
         statusMessage = message
         showStatus = true
+        statusIsError = false
 
         Task { @MainActor in
             try? await Task.sleep(nanoseconds: 3_000_000_000)
-            showStatus = false
+            if !statusIsError {
+                showStatus = false
+            }
         }
+    }
+
+    private func showErrorMessage(_ message: String) {
+        statusMessage = message
+        showStatus = true
+        statusIsError = true
+        voiceErrorMessage = message
+        showVoiceError = true
     }
 }
