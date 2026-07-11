@@ -4,8 +4,10 @@ import SwiftData
 struct ContentView: View {
     @AppStorage("maeuse.onboarding-hidden") private var onboardingHidden: Bool = false
     @State private var showOnboarding: Bool = false
+    @State private var languageManager = LanguageManager.shared
 
     @State private var listVM = ExpenseListViewModel()
+
     @State private var editorVM = ExpenseEditorViewModel()
     @State private var voiceVM = VoiceModeViewModel()
     @State private var settingsVM = SettingsViewModel()
@@ -20,7 +22,10 @@ struct ContentView: View {
                 editorVM: editorVM,
                 voiceVM: voiceVM,
                 settingsVM: settingsVM,
-                expenses: allExpenses
+                expenses: allExpenses,
+                onShowWelcomeGuide: {
+                    showOnboarding = true
+                }
             )
 
             if showOnboarding {
@@ -38,6 +43,9 @@ struct ContentView: View {
             if !onboardingHidden {
                 showOnboarding = true
             }
+        }
+        .task {
+            settingsVM.reconcileStoredAPIKey()
         }
     }
 }

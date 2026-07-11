@@ -7,6 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		A10000000000000000000002 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000001 /* PrivacyInfo.xcprivacy */; };
+		A10000000000000000000006 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000003 /* InfoPlist.strings */; };
+		D29418A4906E4219A1580F11 /* LanguageManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D29418A4906E4219A1580F12 /* LanguageManager.swift */; };
+		D29418A4906E4219A1580F01 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = D29418A4906E4219A1580F02 /* Localizable.strings */; };
 		08B75E346416458F929A2EDC /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7BDBBB4D7934FF6A3A3ACE7 /* OnboardingView.swift */; };
 		1373B04C37E348EF9C67C733 /* ExpenseEditorSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D337D59031741E2989A4DFB /* ExpenseEditorSheet.swift */; };
 		2A003C5F4E52465A998FE588 /* MaeuseApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42ACC1A834444CE3AAB2C4E7 /* MaeuseApp.swift */; };
@@ -41,6 +45,12 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		A10000000000000000000001 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		A10000000000000000000004 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		A10000000000000000000005 /* de */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = de; path = de.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		D29418A4906E4219A1580F12 /* LanguageManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LanguageManager.swift; sourceTree = "<group>"; };
+		D29418A4906E4219A1580F03 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
+		D29418A4906E4219A1580F04 /* de */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = de; path = de.lproj/Localizable.strings; sourceTree = "<group>"; };
 		03330D2BE4C54B86ADB38573 /* SettingsSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsSheet.swift; sourceTree = "<group>"; };
 		0C1CBDE1F3904F4B9D0E4C37 /* LiquidGlass.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiquidGlass.swift; sourceTree = "<group>"; };
 		1498454BB7FF4A289B3B9B17 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -129,6 +139,8 @@
 		7F0A921778294E1EB35FB232 /* Maeuse */ = {
 			isa = PBXGroup;
 			children = (
+				A10000000000000000000003 /* InfoPlist.strings */,
+				D29418A4906E4219A1580F02 /* Localizable.strings */,
 				42ACC1A834444CE3AAB2C4E7 /* MaeuseApp.swift */,
 				1498454BB7FF4A289B3B9B17 /* ContentView.swift */,
 				EDFFD01A65274DA49B488BA1 /* Models */,
@@ -137,6 +149,7 @@
 				DAE9F504688A49CE890B9449 /* Services */,
 				E2428D5F6C294ED6968F6766 /* Theme */,
 				49E2ADAB1DD447F4A6FCB634 /* Assets.xcassets */,
+				A10000000000000000000001 /* PrivacyInfo.xcprivacy */,
 				9D727D76713E4380B08FED8C /* Info.plist */,
 			);
 			path = Maeuse;
@@ -145,6 +158,7 @@
 		DAE9F504688A49CE890B9449 /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				D29418A4906E4219A1580F12 /* LanguageManager.swift */,
 				4E9C0D0EA19AD326788D8966 /* OpenAIRealtimeClientSecretService.swift */,
 				D07D2A6BDED5EB16BCA6293B /* RealtimeEventParser.swift */,
 				9B9EE9E2C221463465E8CF5D /* RealtimeVoiceService.swift */,
@@ -227,6 +241,26 @@
 		};
 /* End PBXNativeTarget section */
 
+/* Begin PBXVariantGroup section */
+		A10000000000000000000003 /* InfoPlist.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				A10000000000000000000004 /* en */,
+				A10000000000000000000005 /* de */,
+			);
+			name = InfoPlist.strings;
+			sourceTree = "<group>";
+		};
+		D29418A4906E4219A1580F02 /* Localizable.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				D29418A4906E4219A1580F03 /* en */,
+				D29418A4906E4219A1580F04 /* de */,
+			);
+			name = Localizable.strings;
+			sourceTree = "<group>";
+		};
+/* End PBXVariantGroup section */
 /* Begin PBXProject section */
 		5A033581FC8A431FABB39F96 /* Project object */ = {
 			isa = PBXProject;
@@ -241,6 +275,7 @@
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				en,
+				de,
 				Base,
 			);
 			mainGroup = F15CA3B915F649D394222ED2;
@@ -259,6 +294,9 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A10000000000000000000006 /* InfoPlist.strings in Resources */,
+				A10000000000000000000002 /* PrivacyInfo.xcprivacy in Resources */,
+				D29418A4906E4219A1580F01 /* Localizable.strings in Resources */,
 				3EAE2DDD9A3848D1B77C1260 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -277,6 +315,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D29418A4906E4219A1580F11 /* LanguageManager.swift in Sources */,
 				2A003C5F4E52465A998FE588 /* MaeuseApp.swift in Sources */,
 				B4209B09301F45DABAAEBA88 /* ContentView.swift in Sources */,
 				BCEC20AC68C14339962A9B5E /* Expense.swift in Sources */,
@@ -324,7 +363,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 8;
 				DEVELOPMENT_TEAM = L8534DYY8S;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Maeuse/Info.plist;
@@ -337,11 +376,12 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.0;
+				MARKETING_VERSION = 1.2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.michaeldiestelberg.maeuse;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_STRICT_CONCURRENCY = complete;
 				TARGETED_DEVICE_FAMILY = 1;
+				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = Release;
 		};
@@ -350,7 +390,7 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 8;
 				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundlePackageType = BNDL;
@@ -360,7 +400,7 @@
 					"@executable_path/Frameworks",
 					"@loader_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.0;
+				MARKETING_VERSION = 1.2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.michaeldiestelberg.maeuse.tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_STRICT_CONCURRENCY = complete;
@@ -376,7 +416,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 8;
 				DEVELOPMENT_TEAM = L8534DYY8S;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Maeuse/Info.plist;
@@ -389,11 +429,12 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.0;
+				MARKETING_VERSION = 1.2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.michaeldiestelberg.maeuse;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_STRICT_CONCURRENCY = complete;
 				TARGETED_DEVICE_FAMILY = 1;
+				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = Debug;
 		};
@@ -522,7 +563,7 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 8;
 				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundlePackageType = BNDL;
@@ -532,7 +573,7 @@
 					"@executable_path/Frameworks",
 					"@loader_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.0;
+				MARKETING_VERSION = 1.2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.michaeldiestelberg.maeuse.tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_STRICT_CONCURRENCY = complete;

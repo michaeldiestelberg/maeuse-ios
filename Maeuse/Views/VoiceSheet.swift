@@ -15,11 +15,11 @@ struct VoiceSheet: View {
 
             VStack(spacing: 0) {
                 topBar
-                    .padding(.horizontal, 20)
-                    .padding(.top, 14)
+                    .padding(.horizontal, 22)
+                    .padding(.top, 12)
                     .padding(.bottom, 12)
 
-                Divider().opacity(0.25)
+                listeningHero
 
                 conversationArea
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -36,60 +36,61 @@ struct VoiceSheet: View {
     }
 
     private var background: some View {
-        LinearGradient(
-            colors: [
-                Color.maeusBackground,
-                Color.maeusSurface,
-                Color.maeusBackground
-            ],
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-        )
+        Color.maeusBackground
     }
 
     private var topBar: some View {
-        HStack(spacing: 12) {
-            Button {
-                viewModel.cancelSession()
-                dismiss()
-            } label: {
-                Image(systemName: "xmark")
-                    .font(.body.weight(.semibold))
-                    .frame(width: 38, height: 38)
-            }
-            .buttonStyle(.plain)
-            .foregroundStyle(Color.maeusTextSecondary)
-            .background(.ultraThinMaterial)
-            .clipShape(Circle())
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Voice Expense")
-                    .font(.headline.weight(.semibold))
-                    .foregroundStyle(Color.maeusText)
-
-                HStack(spacing: 6) {
-                    Circle()
-                        .fill(stateColor)
-                        .frame(width: 8, height: 8)
-                    Text(viewModel.stateLabel)
-                        .font(.caption.weight(.medium))
-                        .foregroundStyle(Color.maeusTextSecondary)
+        ZStack {
+            HStack {
+                Button {
+                    viewModel.cancelSession()
+                    dismiss()
+                } label: {
+                    MaeuseCloseIcon().frame(width: 38, height: 38)
                 }
+                .buttonStyle(.plain)
+                .background(Color.maeusSurface, in: Circle())
+                .overlay(Circle().stroke(Color.maeusCardBorder, lineWidth: 2))
+
+                Spacer()
+
+                Button { endAndSave() } label: {
+                    HStack(spacing: 7) {
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 12, weight: .heavy))
+
+                        Text(loc("Save"))
+                    }
+                    .font(.system(size: 13, weight: .heavy, design: .rounded))
+                    .padding(.horizontal, 16).padding(.vertical, 9)
+                }
+                .buttonStyle(StampedButtonStyle(fill: .maeusCheese, foreground: .maeusInk, cornerRadius: 18, borderColor: .maeusInk, shadow: 2.5))
+                .opacity(viewModel.canSaveDrafts ? 1 : 0.4)
+                .disabled(!viewModel.canSaveDrafts || !viewModel.canEndSession)
             }
 
-            Spacer()
-
-            Button {
-                endAndSave()
-            } label: {
-                Label(viewModel.savedButtonTitle, systemImage: "checkmark")
-                    .labelStyle(.titleAndIcon)
-                    .font(.subheadline.weight(.semibold))
+            HStack(spacing: 8) {
+                Circle().fill(stateColor).frame(width: 10, height: 10)
+                    .overlay(Circle().stroke(Color.maeusCardBorder, lineWidth: 2))
+                Text(viewModel.stateLabel)
+                    .font(.system(size: 14, weight: .heavy, design: .rounded))
+                    .foregroundStyle(Color.maeusForeground)
+                    .lineLimit(1)
             }
-            .buttonStyle(.borderedProminent)
-            .tint(Color.maeusPrimary)
-            .disabled(!viewModel.canEndSession)
         }
+    }
+
+    private var listeningHero: some View {
+        VStack(spacing: 12) {
+            MouseCoin(size: 84, shadow: 5, wigglePeriod: 3.5) {
+                VoiceBars(level: viewModel.microphoneLevel)
+            }
+            Text(loc("SqueakAway"))
+                .font(.system(size: 13, weight: .bold, design: .rounded))
+                .foregroundStyle(Color.maeusTextSecondary)
+                .multilineTextAlignment(.center)
+        }
+        .padding(.horizontal, 22).padding(.top, 18).padding(.bottom, 4)
     }
 
     private var stateColor: Color {
@@ -111,11 +112,6 @@ struct VoiceSheet: View {
         ScrollViewReader { proxy in
             ScrollView {
                 LazyVStack(spacing: 14) {
-                    if viewModel.conversation.isEmpty && viewModel.liveUserTranscript.isEmpty && viewModel.liveAssistantText.isEmpty {
-                        emptyConversation
-                            .padding(.top, 64)
-                    }
-
                     ForEach(viewModel.conversation) { entry in
                         ConversationBubble(entry: entry)
                             .id(entry.id)
@@ -171,25 +167,6 @@ struct VoiceSheet: View {
         }
     }
 
-    private var emptyConversation: some View {
-        VStack(spacing: 12) {
-            ZStack {
-                Circle()
-                    .fill(Color.maeusPrimary.opacity(0.14))
-                    .frame(width: 86, height: 86)
-
-                Image(systemName: "waveform")
-                    .font(.system(size: 34, weight: .semibold))
-                    .foregroundStyle(Color.maeusPrimary)
-            }
-
-            Text(viewModel.phase == .connecting ? "Connecting" : "Listening")
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(Color.maeusText)
-        }
-        .frame(maxWidth: .infinity)
-    }
-
     private var errorBanner: some View {
         HStack(alignment: .top, spacing: 10) {
             Image(systemName: "exclamationmark.triangle.fill")
@@ -208,29 +185,21 @@ struct VoiceSheet: View {
     private var workspaceArea: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("Workspace")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(Color.maeusTextSecondary)
-                    Text(viewModel.takeawayText)
-                        .font(.footnote.weight(.medium))
-                        .foregroundStyle(Color.maeusText)
-                        .monospacedDigit()
-                }
+                Text(loc("InTheTrap", viewModel.drafts.count).uppercased())
+                    .font(.system(size: 11, weight: .heavy, design: .rounded)).tracking(1.5)
+                    .foregroundStyle(Color.maeusTextSecondary)
 
                 Spacer()
 
-                Image(systemName: viewModel.drafts.isEmpty ? "tray" : "sum")
-                    .font(.body.weight(.semibold))
-                    .foregroundStyle(Color.maeusPrimary)
-                    .frame(width: 34, height: 34)
-                    .background(Color.maeusPrimary.opacity(0.1))
-                    .clipShape(Circle())
+                if !viewModel.drafts.isEmpty {
+                    Text(loc("TotalAmount", viewModel.totalAmount.euroFormatted))
+                        .font(.system(size: 12, weight: .heavy, design: .rounded)).foregroundStyle(Color.maeusPrimaryHover)
+                }
             }
 
             if viewModel.drafts.isEmpty {
-                Text("No expenses yet")
-                    .font(.caption)
+                Text(loc("NothingCapturedYet"))
+                    .font(.system(size: 12, weight: .bold, design: .rounded))
                     .foregroundStyle(Color.maeusTextTertiary)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.vertical, 8)
@@ -240,14 +209,13 @@ struct VoiceSheet: View {
                         ForEach(viewModel.drafts) { draft in
                             VoiceExpenseDraftCard(
                                 draft: draft,
-                                isChanged: viewModel.changedExpenseIDs.contains(draft.id),
                                 onRemove: {
                                     withAnimation(.spring(duration: 0.25)) {
                                         viewModel.removeDraft(draft)
                                     }
                                 }
                             )
-                            .frame(width: 260)
+                            .frame(width: 156)
                         }
                     }
                     .padding(.horizontal, 3)
@@ -255,18 +223,26 @@ struct VoiceSheet: View {
                 }
             }
         }
-        .padding(16)
-        .glassSurface(elevated: true)
+        .padding(.horizontal, 11).padding(.top, 14)
         .animation(.spring(duration: 0.3), value: viewModel.drafts)
     }
 
     private func endAndSave() {
+        guard viewModel.canSaveDrafts else { return }
         viewModel.phase = .finalizing
 
         for expense in viewModel.expensesForSaving() {
             modelContext.insert(expense)
         }
-        try? modelContext.save()
+
+        do {
+            try modelContext.save()
+        } catch {
+            modelContext.rollback()
+            viewModel.phase = .error
+            viewModel.errorMessage = loc("SaveExpensesFailed", error.localizedDescription)
+            return
+        }
 
         viewModel.finishAfterSave()
         dismiss()
@@ -282,12 +258,8 @@ private struct ConversationBubble: View {
             if entry.role == .user { Spacer(minLength: 44) }
 
             VStack(alignment: .leading, spacing: 5) {
-                Text(label)
-                    .font(.caption2.weight(.semibold))
-                    .foregroundStyle(labelColor)
-
                 Text(entry.text)
-                    .font(.subheadline)
+                    .font(.system(size: 14, weight: entry.role == .user ? .semibold : .bold, design: .rounded))
                     .foregroundStyle(textColor)
                     .fixedSize(horizontal: false, vertical: true)
                     .opacity(isLive ? 0.75 : 1)
@@ -295,7 +267,8 @@ private struct ConversationBubble: View {
             .padding(.horizontal, 14)
             .padding(.vertical, 10)
             .background(backgroundStyle)
-            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .overlay(bubbleShape.stroke(entry.role == .assistant ? Color.maeusCardBorder : .clear, lineWidth: 2))
+            .clipShape(bubbleShape)
 
             if entry.role != .user { Spacer(minLength: 44) }
         }
@@ -303,121 +276,121 @@ private struct ConversationBubble: View {
 
     private var label: String {
         switch entry.role {
-        case .user: return "You"
-        case .assistant: return "Mäuse"
-        case .system: return "Session"
+        case .user: return loc("You")
+        case .assistant: return loc("Maeuse")
+        case .system: return loc("Session")
         }
     }
 
     private var labelColor: Color {
         switch entry.role {
-        case .user: return .white.opacity(0.8)
+        case .user: return Color.maeusInk.opacity(0.7)
         case .assistant: return Color.maeusPrimary
         case .system: return Color.maeusTextTertiary
         }
     }
 
     private var textColor: Color {
-        entry.role == .user ? .white : Color.maeusText
+        entry.role == .user ? .white : Color.maeusForeground
     }
 
     private var backgroundStyle: some ShapeStyle {
         switch entry.role {
         case .user:
-            return AnyShapeStyle(Color.maeusPrimary)
+            return AnyShapeStyle(Color.maeusInk)
         case .assistant:
-            return AnyShapeStyle(.ultraThinMaterial)
+            return AnyShapeStyle(Color.maeusSurface)
         case .system:
             return AnyShapeStyle(Color.maeusInputBackground.opacity(0.7))
+        }
+    }
+
+    private var bubbleShape: UnevenRoundedRectangle {
+        UnevenRoundedRectangle(
+            cornerRadii: RectangleCornerRadii(
+                topLeading: 18,
+                bottomLeading: entry.role == .user ? 18 : 4,
+                bottomTrailing: entry.role == .user ? 4 : 18,
+                topTrailing: 18
+            ),
+            style: .continuous
+        )
+    }
+}
+
+private struct VoiceBars: View {
+    let level: Double
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    private let heights: [CGFloat] = [26, 32, 22, 34, 20]
+
+    var body: some View {
+        TimelineView(.animation(minimumInterval: 1 / 20, paused: reduceMotion)) { timeline in
+            let time = timeline.date.timeIntervalSinceReferenceDate
+            HStack(spacing: 4) {
+                ForEach(heights.indices, id: \.self) { index in
+                    let pulse = reduceMotion ? 1 : 0.35 + 0.65 * abs(sin(time * (4.5 + Double(index) * 0.35) + Double(index)))
+                    Capsule().fill(Color.maeusInk).frame(width: 5, height: heights[index] * max(CGFloat(level), CGFloat(pulse)))
+                }
+            }.frame(height: 38)
         }
     }
 }
 
 private struct VoiceExpenseDraftCard: View {
     let draft: VoiceExpenseDraft
-    let isChanged: Bool
     let onRemove: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .top, spacing: 10) {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(draft.normalizedTitle)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(Color.maeusText)
-                        .lineLimit(2)
-
-                    Text(formatDate(draft.dateISO))
-                        .font(.caption)
-                        .foregroundStyle(Color.maeusTextTertiary)
-                }
+                Text(draft.normalizedTitle)
+                    .font(.system(size: 14, weight: .heavy, design: .rounded))
+                    .foregroundStyle(Color.maeusForeground)
+                    .lineLimit(1)
 
                 Spacer()
 
                 Button(action: onRemove) {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(.title3)
-                        .foregroundStyle(Color.maeusTextTertiary)
+                    Image(systemName: "xmark")
+                        .font(.system(size: 13, weight: .heavy))
+                        .foregroundStyle(Color.maeusTextSecondary)
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("Remove expense")
+                .accessibilityLabel(loc("RemoveExpense"))
             }
 
-            HStack(alignment: .firstTextBaseline, spacing: 5) {
-                Text(draft.normalizedAmount.euroFormatted)
-                    .font(.title3.weight(.semibold).monospacedDigit())
-                    .foregroundStyle(Color.maeusText)
+            Text(draft.normalizedAmount.euroFormatted)
+                .font(.system(size: 20, weight: .heavy, design: .rounded).monospacedDigit())
+                .foregroundStyle(Color.maeusForeground)
 
-                Spacer()
-
+            HStack(spacing: 6) {
                 Text(splitText)
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(Color.maeusPrimary)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 5)
-                    .background(Color.maeusPrimary.opacity(0.1))
+                    .font(.system(size: 11, weight: .heavy, design: .rounded))
+                    .foregroundStyle(Color.maeusInk)
+                    .padding(.horizontal, 9)
+                    .padding(.vertical, 4)
+                    .background(Color.maeusCheese)
+                    .clipShape(Capsule())
+                    .overlay(Capsule().stroke(Color.maeusInk, lineWidth: 1.5))
+
+                Text(formatDate(draft.dateISO))
+                    .font(.system(size: 11, weight: .heavy, design: .rounded))
+                    .foregroundStyle(Color.maeusTextSecondary)
+                    .padding(.horizontal, 9)
+                    .padding(.vertical, 4)
+                    .background(Color.maeusInputBackground)
                     .clipShape(Capsule())
             }
-
-            HStack(spacing: 8) {
-                confidenceBadge
-
-                if !draft.missingFields.isEmpty {
-                    missingBadge
-                }
+        }
+        .padding(12)
+        .background {
+            let shape = RoundedRectangle(cornerRadius: 16, style: .continuous)
+            ZStack {
+                shape.fill(Color.maeusInk).offset(x: 4, y: 4)
+                shape.fill(Color.maeusSurface)
+                shape.stroke(Color.maeusInk, lineWidth: 2.5)
             }
         }
-        .padding(14)
-        .background(.ultraThinMaterial)
-        .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .strokeBorder(isChanged ? Color.maeusPrimary.opacity(0.8) : Color(UIColor.separator).opacity(0.25), lineWidth: isChanged ? 1.5 : 0.5)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .scaleEffect(isChanged ? 1.015 : 1)
-        .animation(.spring(duration: 0.25), value: isChanged)
-    }
-
-    private var confidenceBadge: some View {
-        Text("\(Int(draft.confidence * 100))%")
-            .font(.caption2.weight(.semibold))
-            .foregroundStyle(Color.maeusTextSecondary)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(Color.maeusInputBackground)
-            .clipShape(Capsule())
-    }
-
-    private var missingBadge: some View {
-        Text("Missing \(draft.missingFields.map(\.rawValue).joined(separator: ", "))")
-            .font(.caption2.weight(.medium))
-            .foregroundStyle(Color.maeusDestructive)
-            .lineLimit(1)
-            .minimumScaleFactor(0.8)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(Color.maeusDestructive.opacity(0.08))
-            .clipShape(Capsule())
     }
 
     private var splitText: String {
@@ -430,11 +403,16 @@ private struct VoiceExpenseDraftCard: View {
     }
 
     private func formatDate(_ iso: String?) -> String {
-        guard let iso, let date = Expense.dateFromISO(iso) else { return "Today" }
+        guard let iso, let date = Expense.dateFromISO(iso) else { return loc("Today") }
+
+        let calendar = Calendar.current
+        if calendar.isDateInToday(date) { return loc("Today") }
+        if calendar.isDateInYesterday(date) { return loc("Yesterday") }
+        if calendar.isDateInTomorrow(date) { return loc("Tomorrow") }
 
         let formatter = DateFormatter()
-        formatter.dateFormat = "d MMM"
-        formatter.locale = Locale(identifier: "en_US")
+        formatter.dateFormat = LanguageManager.shared.activeLanguageCode == "de" ? "d. MMM" : "d MMM"
+        formatter.locale = LanguageManager.shared.activeLocale
         return formatter.string(from: date)
     }
 }

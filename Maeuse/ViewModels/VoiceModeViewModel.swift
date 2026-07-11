@@ -28,16 +28,12 @@ final class VoiceModeViewModel {
 
     var stateLabel: String {
         switch phase {
-        case .idle: return "Ready"
-        case .connecting: return "Connecting"
-        case .listening:
-            if microphoneIsActive {
-                return "Listening · Mic \(Int(microphoneLevel * 100))%"
-            }
-            return "Listening"
-        case .thinking: return "Updating"
-        case .finalizing: return "Saving"
-        case .error: return "Issue"
+        case .idle: return loc("StateReady")
+        case .connecting: return loc("StateConnecting")
+        case .listening: return loc("StateListening")
+        case .thinking: return loc("StateThinking")
+        case .finalizing: return loc("StateSaving")
+        case .error: return loc("StateIssue")
         }
     }
 
@@ -45,8 +41,8 @@ final class VoiceModeViewModel {
         phase != .connecting && phase != .finalizing
     }
 
-    var savedButtonTitle: String {
-        drafts.isEmpty ? "End" : "End & Save"
+    var canSaveDrafts: Bool {
+        !drafts.isEmpty && drafts.allSatisfy(\.isReadyForSaving)
     }
 
     var totalAmount: Double {
@@ -58,9 +54,9 @@ final class VoiceModeViewModel {
     }
 
     var takeawayText: String {
-        guard !drafts.isEmpty else { return "No expenses captured yet" }
-        let count = drafts.count == 1 ? "1 expense" : "\(drafts.count) expenses"
-        return "\(count) · \(totalAmount.euroFormatted) total · \(partnerTotal.euroFormatted) partner"
+        guard !drafts.isEmpty else { return loc("NoExpensesCaptured") }
+        let countText = drafts.count == 1 ? loc("OneExpense") : loc("MultiExpenses", drafts.count)
+        return loc("WorkspaceSummary", countText, totalAmount.euroFormatted, partnerTotal.euroFormatted)
     }
 
     // MARK: - Actions
@@ -107,6 +103,8 @@ final class VoiceModeViewModel {
     }
 
     func expensesForSaving() -> [Expense] {
+        guard canSaveDrafts else { return [] }
+
         let todayISO = Self.todayISOString()
         return drafts.map { draft in
             Expense(
@@ -247,7 +245,7 @@ extension VoiceModeViewModel: RealtimeVoiceServiceDelegate {
             microphoneLevel = 0
             if phase != .finalizing && phase != .idle {
                 phase = .error
-                errorMessage = "The Realtime session disconnected."
+                errorMessage = loc("SessionDisconnectedMsg")
             }
         case .microphoneReady:
             break

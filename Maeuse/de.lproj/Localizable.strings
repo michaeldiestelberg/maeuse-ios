@@ -1,0 +1,137 @@
+/* German Localizable.strings */
+
+/* General / Common */
+"Settings" = "Einstellungen";
+"Done" = "Fertig";
+"Cancel" = "Abbrechen";
+"OK" = "OK";
+"Save" = "Speichern";
+"Delete" = "Löschen";
+"Today" = "Heute";
+"Yesterday" = "Gestern";
+"Tomorrow" = "Morgen";
+"Expense" = "Ausgabe";
+
+/* Main View */
+"Total" = "Gesamt";
+"PartnerShare" = "Anteil Partner";
+"MausOwesYou" = "Deine Maus schuldet dir";
+"TrapEmpty" = "Die Falle ist leer";
+"PercentSplit" = "%d / %d geteilt";
+"PercentSplitDecimal" = "%.1f / %.1f geteilt";
+"FixedSplit" = "Fest %@";
+"SqueakAway" = "Quiek los - „füge Blumen für 12 Euro hinzu …“";
+"InTheTrap" = "In der Falle · %d";
+"NothingCapturedYet" = "Noch nichts erfasst - sprich einfach weiter.";
+"TotalAmount" = "%@ gesamt";
+"NoExpensesYet" = "Noch keine Ausgaben";
+"TapPlusToFirst" = "Tippe auf +, um deine erste Ausgabe hinzuzufügen";
+"StartVoiceMode" = "Sprachmodus starten";
+"AddExpense" = "Ausgabe hinzufügen";
+"PreviousMonth" = "Vorheriger Monat";
+"NextMonth" = "Nächster Monat";
+
+/* Settings Sheet */
+"App" = "App";
+"Preferences" = "Einstellungen";
+"Appearance" = "Erscheinungsbild";
+"Language" = "Sprache";
+"System" = "System";
+"English" = "Englisch";
+"Light" = "Hell";
+"Dark" = "Dunkel";
+
+"Support" = "Support";
+"HelpAbout" = "Hilfe & Info";
+"WelcomeGuideDesc" = "Öffne die Mäuse-Einführung";
+
+"Data" = "Daten";
+"BackupRestore" = "Backup & Wiederherstellung";
+"BackupDesc" = "Exportiere deine Ausgaben in ein JSON-Backup oder importiere eines von einem anderen Gerät.";
+"ExportBackup" = "Backup exportieren";
+"ImportBackup" = "Backup importieren";
+"ImportWarning" = "Beim Importieren werden alle Ausgaben auf diesem Gerät nach Bestätigung ersetzt.";
+
+"Voice" = "Sprachsteuerung";
+"VoiceMode" = "Sprachmodus";
+"Verified" = "Verifiziert";
+"VoiceModeDesc" = "Aktiviere einen Echtzeit-Sprachbereich, um eine oder mehrere Ausgaben in einer neuen Sitzung zu erfassen.";
+"OpenAIApiKey" = "OpenAI-API-Schlüssel";
+"VerifySaveKey" = "Schlüssel prüfen & speichern";
+"RemoveSavedKey" = "Gespeicherten Schlüssel löschen";
+"EnableVoiceMode" = "Sprachmodus aktivieren";
+"ShowsMicButton" = "Zeigt das Mikrofonsymbol auf dem Hauptbildschirm";
+"ApiKeyVerifiedMsg" = "API-Schlüssel verifiziert %@";
+"KeychainStorageDesc" = "Dein Schlüssel wird im iOS-Schlüsselbund (Keychain) auf diesem Gerät gespeichert und nur über HTTPS an OpenAI gesendet, um kurzlebige temporäre Realtime-Client-Secrets zu erstellen.";
+"VoiceRequirementsDesc" = "Der Sprachmodus erfordert ein OpenAI-API-Projekt mit Zugriff auf gpt-realtime-2; API-Schlüssel der kostenlosen Stufe (Free Tier) werden für dieses Modell nicht unterstützt.";
+
+/* Settings Messages & Alerts */
+"ReplaceExpensesTitle" = "Alle Ausgaben ersetzen?";
+"ReplaceExpensesMsg" = "Dies ersetzt alle aktuellen Ausgaben durch das importierte Backup. Dies kann nicht rückgängig gemacht werden.";
+"Replace" = "Ersetzen";
+"VoiceModeErrorTitle" = "Sprachmodus-Fehler";
+"EnterApiKeyPrompt" = "Gib zuerst einen OpenAI-API-Schlüssel ein.";
+"EnterValidApiKeyPrompt" = "Gib einen gültigen OpenAI-API-Schlüssel ein.";
+"ApiKeyVerifiedKeychain" = "API-Schlüssel verifiziert und im Schlüsselbund gespeichert.";
+"ApiKeyVerificationFailed" = "API-Schlüssel-Verifizierung fehlgeschlagen: %@";
+"RemovedApiKeyMsg" = "Gespeicherter OpenAI-API-Schlüssel wurde entfernt.";
+"CouldNotRemoveApiKey" = "API-Schlüssel konnte nicht entfernt werden: %@";
+"BackupReadyMsg" = "Backup bereit zum Teilen.";
+"BackupExportedMsg" = "Backup erfolgreich gespeichert.";
+"ExportFailedMsg" = "Export fehlgeschlagen: %@";
+"ImportedExpensesMsg" = "%d Ausgaben importiert.";
+"ImportFailedMsg" = "Import fehlgeschlagen: %@";
+"PersistenceErrorTitle" = "Änderung fehlgeschlagen";
+"SaveExpenseFailed" = "Die Ausgabe konnte nicht gespeichert werden: %@";
+"DeleteExpenseFailed" = "Die Ausgabe konnte nicht gelöscht werden: %@";
+"SaveExpensesFailed" = "Die erfassten Ausgaben konnten nicht gespeichert werden: %@";
+
+/* Onboarding */
+"SplitSubtitle" = "Teile Ausgaben mühelos mit deinem Partner.";
+"LogExpenseTitle" = "Ausgabe erfassen";
+"LogExpenseDesc" = "Gib den Betrag und eine kurze Beschreibung ein";
+"ChooseSplitTitle" = "Aufteilung wählen";
+"ChooseSplitDesc" = "Prozentual oder als fester Betrag";
+"TrackTotalsTitle" = "Monatssummen verfolgen";
+"TrackTotalsDesc" = "Sieh auf einen Blick, was dein Partner dir schuldet";
+"DontShowAgain" = "Nicht mehr anzeigen";
+"GetStarted" = "Loslegen";
+"SlangHint" = "„Mäuse“ ist ein deutscher Slangbegriff für Geld";
+
+/* Expense Editor */
+"NewExpense" = "Neue Ausgabe";
+"EditExpense" = "Ausgabe bearbeiten";
+"DeleteExpense" = "Ausgabe löschen";
+"DeleteConfirmationTitle" = "Diese Ausgabe löschen?";
+"DeleteConfirmationMsg" = "Dies kann nicht rückgängig gemacht werden.";
+"AddNote" = "Notiz hinzufügen";
+"When" = "Wann";
+"You" = "Du";
+"Partner" = "Partner";
+
+/* Voice Workspace */
+"VoiceExpense" = "Sprach-Erfassung";
+"Workspace" = "Arbeitsbereich";
+"NoExpensesCaptured" = "Noch keine Ausgaben erfasst";
+"OneExpense" = "1 Ausgabe";
+"MultiExpenses" = "%d Ausgaben";
+"WorkspaceSummary" = "%@ · %@ gesamt · %@ Partner";
+"StateReady" = "Bereit";
+"StateConnecting" = "Verbinden";
+"StateListening" = "Zuhören...";
+"StateListeningMic" = "Zuhören · Mikro %d%%";
+"StateThinking" = "Aktualisieren";
+"StateSaving" = "Speichern";
+"StateIssue" = "Problem";
+"End" = "Beenden";
+"EndSave" = "Sichern & Beenden";
+"Session" = "Sitzung";
+"Maeuse" = "Mäuse";
+"SessionDisconnectedMsg" = "Die Realtime-Sitzung wurde getrennt.";
+"RemoveExpense" = "Ausgabe entfernen";
+"MissingFields" = "Fehlend: %@";
+"Date" = "Datum";
+"Split" = "Aufteilung";
+"Title" = "Titel";
+"Amount" = "Betrag";
+"UntitledExpense" = "Unbenannte Ausgabe";

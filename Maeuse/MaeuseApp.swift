@@ -5,11 +5,13 @@ import SwiftData
 struct MaeuseApp: App {
     @AppStorage("maeuse.colorScheme") private var colorSchemePreference: String = "system"
     @AppStorage("maeuse.onboarding-hidden") private var onboardingHidden: Bool = false
+    @State private var languageManager = LanguageManager.shared
 
     var body: some Scene {
         WindowGroup {
             ContentView()
                 .preferredColorScheme(resolvedColorScheme)
+                .environment(\.locale, languageManager.activeLocale)
                 .modelContainer(for: Expense.self)
         }
     }

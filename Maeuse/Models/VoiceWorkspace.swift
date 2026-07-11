@@ -74,11 +74,12 @@ struct VoiceExpenseDraft: Identifiable, Equatable {
 
     var normalizedTitle: String {
         let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.isEmpty ? "Untitled expense" : trimmed
+        return trimmed.isEmpty ? loc("UntitledExpense") : trimmed
     }
 
     var normalizedAmount: Double {
-        max(0, amount ?? 0).roundedMoney
+        guard let amount, amount.isFinite else { return 0 }
+        return max(0, amount).roundedMoney
     }
 
     var normalizedSplitMode: SplitMode {
@@ -86,7 +87,35 @@ struct VoiceExpenseDraft: Identifiable, Equatable {
     }
 
     var normalizedSplitValue: Double {
-        splitValue ?? 50
+        let proposedValue = splitValue ?? 50
+        guard proposedValue.isFinite else { return 50 }
+
+        switch normalizedSplitMode {
+        case .percent:
+            return min(max(proposedValue, 0), 100)
+        case .fixed:
+            return min(max(proposedValue, 0), normalizedAmount)
+        }
+    }
+
+    var isReadyForSaving: Bool {
+        let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedTitle.isEmpty,
+              let amount,
+              amount.isFinite,
+              amount > 0 else {
+            return false
+        }
+
+        let proposedSplit = splitValue ?? 50
+        guard proposedSplit.isFinite, proposedSplit >= 0 else { return false }
+
+        switch normalizedSplitMode {
+        case .percent:
+            return proposedSplit <= 100
+        case .fixed:
+            return true
+        }
     }
 
     func normalizedDate(defaultISO: String) -> Date {

@@ -37,12 +37,12 @@
 	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>LSSupportsOpeningDocumentsInPlace</key>
 	<true/>
-	<key>ITSAppUsesNonExemptEncryption</key>
-	<false/>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Mäuse uses your microphone to stream voice expenses directly to OpenAI Realtime.</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
