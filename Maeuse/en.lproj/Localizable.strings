@@ -1,0 +1,137 @@
+/* English Localizable.strings */
+
+/* General / Common */
+"Settings" = "Settings";
+"Done" = "Done";
+"Cancel" = "Cancel";
+"OK" = "OK";
+"Save" = "Save";
+"Delete" = "Delete";
+"Today" = "Today";
+"Yesterday" = "Yesterday";
+"Tomorrow" = "Tomorrow";
+"Expense" = "Expense";
+
+/* Main View */
+"Total" = "Total";
+"PartnerShare" = "Partner's share";
+"MausOwesYou" = "Your Maus owes you";
+"TrapEmpty" = "The trap is empty";
+"PercentSplit" = "%d / %d split";
+"PercentSplitDecimal" = "%.1f / %.1f split";
+"FixedSplit" = "Fixed %@";
+"SqueakAway" = "Squeak away - “add flowers for 12 euros…”";
+"InTheTrap" = "In the trap · %d";
+"NothingCapturedYet" = "Nothing captured yet - keep talking.";
+"TotalAmount" = "%@ total";
+"NoExpensesYet" = "No expenses yet";
+"TapPlusToFirst" = "Tap + to add your first expense";
+"StartVoiceMode" = "Start voice mode";
+"AddExpense" = "Add expense";
+"PreviousMonth" = "Previous month";
+"NextMonth" = "Next month";
+
+/* Settings Sheet */
+"App" = "App";
+"Preferences" = "Preferences";
+"Appearance" = "Appearance";
+"Language" = "Language";
+"System" = "System";
+"English" = "English";
+"Light" = "Light";
+"Dark" = "Dark";
+
+"Support" = "Support";
+"HelpAbout" = "Help & About";
+"WelcomeGuideDesc" = "Review the Mäuse welcome guide";
+
+"Data" = "Data";
+"BackupRestore" = "Backup & Restore";
+"BackupDesc" = "Export your expenses to a JSON backup or import one on another device.";
+"ExportBackup" = "Export Backup";
+"ImportBackup" = "Import Backup";
+"ImportWarning" = "Import replaces the expenses stored on this device after confirmation.";
+
+"Voice" = "Voice";
+"VoiceMode" = "Voice Mode";
+"Verified" = "Verified";
+"VoiceModeDesc" = "Enable a realtime voice workspace that captures one or more expenses in a fresh session.";
+"OpenAIApiKey" = "OpenAI API key";
+"VerifySaveKey" = "Verify & Save Key";
+"RemoveSavedKey" = "Remove Saved Key";
+"EnableVoiceMode" = "Enable voice mode";
+"ShowsMicButton" = "Shows the mic button on the main screen";
+"ApiKeyVerifiedMsg" = "API key verified %@";
+"KeychainStorageDesc" = "Your key is stored in iOS Keychain on this device and sent only to OpenAI over HTTPS to create short-lived Realtime client secrets.";
+"VoiceRequirementsDesc" = "Voice mode requires an OpenAI API project with access to gpt-realtime-2; free-tier API keys are not supported for this model.";
+
+/* Settings Messages & Alerts */
+"ReplaceExpensesTitle" = "Replace all expenses?";
+"ReplaceExpensesMsg" = "This will replace all current expenses with the imported backup. This cannot be undone.";
+"Replace" = "Replace";
+"VoiceModeErrorTitle" = "Voice Mode Error";
+"EnterApiKeyPrompt" = "Enter an OpenAI API key first.";
+"EnterValidApiKeyPrompt" = "Enter a valid OpenAI API key.";
+"ApiKeyVerifiedKeychain" = "API key verified and saved in Keychain.";
+"ApiKeyVerificationFailed" = "API key verification failed: %@";
+"RemovedApiKeyMsg" = "Removed the saved OpenAI API key.";
+"CouldNotRemoveApiKey" = "Could not remove API key: %@";
+"BackupReadyMsg" = "Backup ready to share.";
+"BackupExportedMsg" = "Backup saved successfully.";
+"ExportFailedMsg" = "Export failed: %@";
+"ImportedExpensesMsg" = "Imported %d expenses.";
+"ImportFailedMsg" = "Import failed: %@";
+"PersistenceErrorTitle" = "Couldn’t Complete the Change";
+"SaveExpenseFailed" = "Could not save the expense: %@";
+"DeleteExpenseFailed" = "Could not delete the expense: %@";
+"SaveExpensesFailed" = "Could not save the captured expenses: %@";
+
+/* Onboarding */
+"SplitSubtitle" = "Split expenses with your partner, effortlessly.";
+"LogExpenseTitle" = "Log an expense";
+"LogExpenseDesc" = "Enter the amount and a short description";
+"ChooseSplitTitle" = "Choose how to split";
+"ChooseSplitDesc" = "By percentage or a fixed amount";
+"TrackTotalsTitle" = "Track monthly totals";
+"TrackTotalsDesc" = "See what your partner owes at a glance";
+"DontShowAgain" = "Don't show this again";
+"GetStarted" = "Get Started";
+"SlangHint" = "\"Mäuse\" is German slang for money - literally \"mice\"";
+
+/* Expense Editor */
+"NewExpense" = "New Expense";
+"EditExpense" = "Edit Expense";
+"DeleteExpense" = "Delete expense";
+"DeleteConfirmationTitle" = "Delete this expense?";
+"DeleteConfirmationMsg" = "This cannot be undone.";
+"AddNote" = "Add a note";
+"When" = "When";
+"You" = "You";
+"Partner" = "Partner";
+
+/* Voice Workspace */
+"VoiceExpense" = "Voice Expense";
+"Workspace" = "Workspace";
+"NoExpensesCaptured" = "No expenses captured yet";
+"OneExpense" = "1 expense";
+"MultiExpenses" = "%d expenses";
+"WorkspaceSummary" = "%@ · %@ total · %@ partner";
+"StateReady" = "Ready";
+"StateConnecting" = "Connecting";
+"StateListening" = "Listening...";
+"StateListeningMic" = "Listening · Mic %d%%";
+"StateThinking" = "Updating";
+"StateSaving" = "Saving";
+"StateIssue" = "Issue";
+"End" = "End";
+"EndSave" = "End & Save";
+"Session" = "Session";
+"Maeuse" = "Mäuse";
+"SessionDisconnectedMsg" = "The Realtime session disconnected.";
+"RemoveExpense" = "Remove expense";
+"MissingFields" = "Missing %@";
+"Date" = "date";
+"Split" = "split";
+"Title" = "title";
+"Amount" = "amount";
+"UntitledExpense" = "Untitled expense";

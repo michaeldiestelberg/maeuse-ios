@@ -125,7 +125,8 @@ extension Double {
         formatter.numberStyle = .decimal
         formatter.minimumFractionDigits = 2
         formatter.maximumFractionDigits = 2
-        formatter.locale = Locale(identifier: "en_US")
-        return (formatter.string(from: NSNumber(value: self)) ?? "0.00") + " €"
+        formatter.locale = LanguageManager.shared.activeLocale
+        return "€" + (formatter.string(from: NSNumber(value: self)) ?? "0.00")
     }
+
 }

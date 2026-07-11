@@ -3,6 +3,21 @@ import XCTest
 
 @MainActor
 final class RealtimeVoiceWorkspaceTests: XCTestCase {
+    private var originalLanguagePreference: AppLanguage = .system
+
+    @MainActor
+    override func setUp() {
+        super.setUp()
+        originalLanguagePreference = LanguageManager.shared.languagePreference
+        LanguageManager.shared.languagePreference = .english
+    }
+
+    @MainActor
+    override func tearDown() {
+        LanguageManager.shared.languagePreference = originalLanguagePreference
+        super.tearDown()
+    }
+
     func testClientSecretSessionConfigUsesRealtime2AndConstrainedWorkspaceTool() throws {
         let data = try RealtimeSessionConfiguration.requestBodyData()
         let object = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
@@ -194,7 +209,7 @@ final class RealtimeVoiceWorkspaceTests: XCTestCase {
         XCTAssertEqual(draft?.splitMode, .percent)
         XCTAssertEqual(draft?.splitValue, 50)
         XCTAssertEqual(draft?.missingFields, [])
-        XCTAssertEqual(viewModel.takeawayText, "1 expense · 10.00 € total · 5.00 € partner")
+        XCTAssertEqual(viewModel.takeawayText, "1 expense · €10.00 total · €5.00 partner")
     }
 
     func testWorkspaceSyncDoesNotUseModelParaphraseAsUserChat() {
@@ -254,9 +269,10 @@ final class RealtimeVoiceWorkspaceTests: XCTestCase {
         XCTAssertTrue(viewModel.microphoneIsActive)
         XCTAssertEqual(viewModel.microphoneLevel, 0.4)
         XCTAssertEqual(viewModel.phase, .listening)
+        XCTAssertEqual(viewModel.stateLabel, "Listening...")
     }
 
-    func testNormalizesIncompleteDraftsForSaving() {
+    func testRejectsIncompleteDraftsForSaving() {
         let viewModel = VoiceModeViewModel()
         viewModel.drafts = [
             VoiceExpenseDraft(
@@ -283,15 +299,61 @@ final class RealtimeVoiceWorkspaceTests: XCTestCase {
 
         let expenses = viewModel.expensesForSaving()
 
-        XCTAssertEqual(expenses.count, 2)
-        XCTAssertEqual(expenses[0].desc, "Untitled expense")
-        XCTAssertEqual(expenses[0].amount, 12.35)
-        XCTAssertEqual(expenses[0].splitMode, .percent)
-        XCTAssertEqual(expenses[0].splitValue, 50)
-        XCTAssertEqual(expenses[1].desc, "Bakery")
-        XCTAssertEqual(expenses[1].amount, 0)
-        XCTAssertEqual(expenses[1].splitMode, .fixed)
-        XCTAssertEqual(expenses[1].splitValue, 2)
+        XCTAssertFalse(viewModel.canSaveDrafts)
+        XCTAssertTrue(expenses.isEmpty)
+    }
+
+    func testValidatesAndBoundsVoiceDraftsBeforeSaving() {
+        let viewModel = VoiceModeViewModel()
+        let draft = VoiceExpenseDraft(
+            id: "expense-1",
+            title: "Dinner",
+            amount: 20,
+            dateISO: "2026-05-14",
+            splitMode: .fixed,
+            splitValue: 25,
+            confidence: 0.9,
+            missingFields: []
+        )
+        viewModel.drafts = [draft]
+
+        XCTAssertTrue(viewModel.canSaveDrafts)
+        XCTAssertEqual(draft.normalizedSplitValue, 20)
+        XCTAssertEqual(viewModel.expensesForSaving().first?.splitValue, 20)
+
+        viewModel.drafts[0].splitMode = .percent
+        viewModel.drafts[0].splitValue = 125
+
+        XCTAssertFalse(viewModel.canSaveDrafts)
+        XCTAssertEqual(viewModel.drafts[0].normalizedSplitValue, 100)
+        XCTAssertTrue(viewModel.expensesForSaving().isEmpty)
+    }
+
+    func testExpenseAmountFormattingUsesSelectedAppLanguage() {
+        LanguageManager.shared.languagePreference = .german
+        let viewModel = ExpenseEditorViewModel()
+        let expense = Expense(amount: 12.34, desc: "Lunch", date: Date())
+
+        viewModel.prepareForEdit(expense)
+
+        XCTAssertEqual(viewModel.amountText, "12,34")
+    }
+
+    func testBackupExportRoundTripsThroughImporter() throws {
+        let date = try XCTUnwrap(Expense.dateFromISO("2026-07-11"))
+        let expense = Expense(id: "expense-backup", amount: 42.75, desc: "Groceries",
+                              date: date, splitMode: .percent, splitValue: 35)
+
+        let data = try BackupService.exportBackup(expenses: [expense])
+        let imported = try BackupService.parseBackup(data: data)
+
+        XCTAssertEqual(imported.count, 1)
+        XCTAssertEqual(imported[0].id, "expense-backup")
+        XCTAssertEqual(imported[0].amount, 42.75)
+        XCTAssertEqual(imported[0].description, "Groceries")
+        XCTAssertEqual(imported[0].date, "2026-07-11")
+        XCTAssertEqual(imported[0].splitMode, "percent")
+        XCTAssertEqual(imported[0].splitValue, 35)
     }
 }
 

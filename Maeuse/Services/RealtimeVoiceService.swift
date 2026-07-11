@@ -33,6 +33,7 @@ final class RealtimeVoiceService: NSObject, @unchecked Sendable {
 
     private let logger = Logger(subsystem: "com.michaeldiestelberg.maeuse", category: "RealtimeVoice")
     private let apiKeyStore = OpenAIAPIKeyStore.shared
+    private let clientSecretService = OpenAIRealtimeClientSecretService()
     private let eventQueue = DispatchQueue(label: "maeuse.realtime.events")
     private let audioSendQueue = DispatchQueue(label: "maeuse.realtime.audio-send")
     private let targetAudioFormat = AVAudioFormat(
@@ -63,14 +64,16 @@ final class RealtimeVoiceService: NSObject, @unchecked Sendable {
         disconnect()
         isDisconnecting = false
 
-        guard let apiKey = try apiKeyStore.readAPIKey() else {
-            throw RealtimeVoiceError.missingAPIKey
+        do {
+            let credential = try await createSessionCredential()
+            try await connectWebSocket(credential: credential)
+            try await sendSessionUpdate()
+            try await prepareAudioSession()
+            try startAudioCapture()
+        } catch {
+            disconnect()
+            throw error
         }
-
-        try await prepareAudioSession()
-        try await connectWebSocket(apiKey: apiKey)
-        try await sendSessionUpdate()
-        try startAudioCapture()
     }
 
     func disconnect() {
@@ -112,7 +115,19 @@ final class RealtimeVoiceService: NSObject, @unchecked Sendable {
         sendTextResponseCreate()
     }
 
-    private func connectWebSocket(apiKey: String) async throws {
+    private func createSessionCredential() async throws -> String {
+        guard let apiKey = try apiKeyStore.readAPIKey() else {
+            throw RealtimeVoiceError.missingAPIKey
+        }
+
+        let clientSecret = try await clientSecretService.createClientSecret(apiKey: apiKey)
+        guard !clientSecret.value.isEmpty else {
+            throw OpenAIRealtimeClientSecretError.decodeFailed
+        }
+        return clientSecret.value
+    }
+
+    private func connectWebSocket(credential: String) async throws {
         var components = URLComponents(string: "wss://api.openai.com/v1/realtime")!
         components.queryItems = [
             URLQueryItem(name: "model", value: RealtimeSessionConfiguration.model)
@@ -124,7 +139,7 @@ final class RealtimeVoiceService: NSObject, @unchecked Sendable {
 
         var request = URLRequest(url: url)
         request.timeoutInterval = 20
-        request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        request.setValue("Bearer \(credential)", forHTTPHeaderField: "Authorization")
 
         let session = URLSession(configuration: .default, delegate: self, delegateQueue: nil)
         let task = session.webSocketTask(with: request)
@@ -345,11 +360,15 @@ final class RealtimeVoiceService: NSObject, @unchecked Sendable {
             return
         }
 
-        webSocketTask.send(message) { [weak self] error in
-            if let error, self?.isDisconnecting == false {
-                self?.logger.error("Realtime WebSocket send failed: \(error.localizedDescription, privacy: .public)")
-                self?.emit(.error("Realtime send failed: \(error.localizedDescription)"))
-            }
+        webSocketTask.send(message) { [weak self, weak webSocketTask] error in
+            guard let self,
+                  let webSocketTask,
+                  webSocketTask === self.webSocketTask,
+                  !self.isDisconnecting,
+                  let error else { return }
+
+            self.logger.error("Realtime WebSocket send failed: \(error.localizedDescription, privacy: .public)")
+            self.failConnection(with: .error("Realtime send failed: \(error.localizedDescription)"))
         }
     }
 
@@ -374,8 +393,12 @@ final class RealtimeVoiceService: NSObject, @unchecked Sendable {
     }
 
     private func receiveLoop() {
-        webSocketTask?.receive { [weak self] result in
-            guard let self else { return }
+        guard let webSocketTask else { return }
+
+        webSocketTask.receive { [weak self, weak webSocketTask] result in
+            guard let self,
+                  let webSocketTask,
+                  webSocketTask === self.webSocketTask else { return }
 
             switch result {
             case .success(let message):
@@ -384,7 +407,7 @@ final class RealtimeVoiceService: NSObject, @unchecked Sendable {
             case .failure(let error):
                 guard !self.isDisconnecting else { return }
                 self.logger.error("Realtime WebSocket receive failed: \(error.localizedDescription, privacy: .public)")
-                self.emit(.error("Realtime session failed: \(error.localizedDescription)"))
+                self.failConnection(with: .error("Realtime session failed: \(error.localizedDescription)"))
             }
         }
     }
@@ -414,7 +437,7 @@ final class RealtimeVoiceService: NSObject, @unchecked Sendable {
                     self.handleParsedEvent(event)
                 }
             } catch {
-                self.emit(.error("Could not parse Realtime event: \(error.localizedDescription)"))
+                self.failConnection(with: .error("Could not parse Realtime event: \(error.localizedDescription)"))
             }
         }
     }
@@ -451,8 +474,14 @@ final class RealtimeVoiceService: NSObject, @unchecked Sendable {
                 sendFunctionOutput(callID: callID)
             }
         case .error(let message):
-            emit(.error(message))
+            failConnection(with: .error(message))
         }
+    }
+
+    private func failConnection(with event: RealtimeVoiceServiceEvent) {
+        guard !isDisconnecting else { return }
+        disconnect()
+        emit(event)
     }
 
     private func emit(_ event: RealtimeVoiceServiceEvent) {
@@ -469,6 +498,7 @@ extension RealtimeVoiceService: URLSessionWebSocketDelegate {
         webSocketTask: URLSessionWebSocketTask,
         didOpenWithProtocol protocol: String?
     ) {
+        guard webSocketTask === self.webSocketTask else { return }
         logger.info("Realtime WebSocket opened.")
         webSocketOpenContinuation?.resume(returning: ())
         webSocketOpenContinuation = nil
@@ -482,19 +512,25 @@ extension RealtimeVoiceService: URLSessionWebSocketDelegate {
         didCloseWith closeCode: URLSessionWebSocketTask.CloseCode,
         reason: Data?
     ) {
+        guard webSocketTask === self.webSocketTask else { return }
         logger.info("Realtime WebSocket closed: \(String(describing: closeCode), privacy: .public)")
         guard !isDisconnecting else { return }
-        emit(.disconnected)
+        failConnection(with: .disconnected)
     }
 
     func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
+        guard task === webSocketTask else { return }
+
         if let error {
-            webSocketOpenContinuation?.resume(throwing: error)
-            webSocketOpenContinuation = nil
+            if let continuation = webSocketOpenContinuation {
+                webSocketOpenContinuation = nil
+                continuation.resume(throwing: error)
+                return
+            }
 
             guard !isDisconnecting else { return }
             logger.error("Realtime WebSocket task failed: \(error.localizedDescription, privacy: .public)")
-            emit(.error("Realtime session failed: \(error.localizedDescription)"))
+            failConnection(with: .error("Realtime session failed: \(error.localizedDescription)"))
         }
     }
 }

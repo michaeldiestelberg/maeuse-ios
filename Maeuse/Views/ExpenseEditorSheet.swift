@@ -1,186 +1,238 @@
 import SwiftUI
 import SwiftData
 
-/// Bottom sheet for adding or editing an expense
 struct ExpenseEditorSheet: View {
     @Bindable var viewModel: ExpenseEditorViewModel
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
+    @State private var showDeleteConfirmation = false
+    @State private var showDatePicker = false
+    @State private var showPersistenceError = false
+    @State private var persistenceErrorMessage = ""
 
-    private let presetValues: [Double] = [50, 30, 70, 100]
+    private var decimalSeparator: String {
+        LanguageManager.shared.activeLanguageCode == "de" ? "," : "."
+    }
+
+    private var keys: [String] {
+        ["1", "2", "3", "4", "5", "6", "7", "8", "9", decimalSeparator, "0", "⌫"]
+    }
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(spacing: 24) {
-                    // Amount input
-                    amountSection
-
-                    // Description
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Description")
-                            .font(.caption.weight(.medium))
-                            .foregroundStyle(Color.maeusTextSecondary)
-                        TextField("e.g. Groceries, Dinner…", text: $viewModel.description)
-                            .textFieldStyle(.plain)
-                            .font(.body)
-                            .padding(12)
-                            .background(Color.maeusInputBackground)
-                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                    }
-
-                    // Date
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Date")
-                            .font(.caption.weight(.medium))
-                            .foregroundStyle(Color.maeusTextSecondary)
-                        HStack(spacing: 12) {
-                            DatePicker("", selection: $viewModel.date, displayedComponents: .date)
-                                .labelsHidden()
-                                .datePickerStyle(.compact)
-
-                            Button("Today") {
-                                viewModel.setToday()
-                            }
-                            .font(.caption.weight(.medium))
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 6)
-                            .background(Color.maeusPrimaryLight)
-                            .foregroundStyle(Color.maeusPrimary)
-                            .clipShape(Capsule())
-                        }
-                    }
-
-                    // Split section
-                    splitSection
-
-                    // Delete button (edit mode only)
-                    if viewModel.isEditing {
-                        Button(role: .destructive) {
-                            viewModel.delete(context: modelContext)
-                            dismiss()
-                        } label: {
-                            Text("Delete Expense")
-                                .font(.subheadline.weight(.medium))
-                                .foregroundStyle(.red)
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 14)
-                        }
-                    }
-                }
-                .padding(20)
-            }
-            .background(Color.maeusBackground)
-            .navigationTitle(viewModel.sheetTitle)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
-                        viewModel.isPresented = false
-                        dismiss()
-                    }
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") {
-                        viewModel.save(context: modelContext)
-                        dismiss()
-                    }
-                    .fontWeight(.semibold)
-                    .disabled(!viewModel.canSave)
-                }
-            }
+        VStack(spacing: 0) {
+            Capsule().fill(Color.maeusTextTertiary.opacity(0.45)).frame(width: 40, height: 5).padding(.top, 10)
+            topBar.padding(.horizontal, 22).padding(.top, 8)
+            hero.padding(.top, 14)
+            datePicker.padding(.horizontal, 22).padding(.top, 12)
+            details.padding(.horizontal, 22).padding(.top, 12)
+            Spacer(minLength: 10)
+            keypad.padding(.horizontal, 22).padding(.bottom, 24)
         }
-        .presentationDetents([.large])
-        .presentationDragIndicator(.visible)
+        .fontDesign(.rounded).background(Color.maeusBackground.ignoresSafeArea())
+        .presentationDetents([.large]).presentationDragIndicator(.hidden)
+        .presentationCornerRadius(30)
+        .confirmationDialog(loc("DeleteConfirmationTitle"), isPresented: $showDeleteConfirmation) {
+            Button(loc("DeleteExpense"), role: .destructive) { deleteExpense() }
+            Button(loc("Cancel"), role: .cancel) { }
+        }
+        .alert(loc("PersistenceErrorTitle"), isPresented: $showPersistenceError) {
+            Button(loc("OK"), role: .cancel) { }
+        } message: {
+            Text(persistenceErrorMessage)
+        }
+        .sheet(isPresented: $showDatePicker) {
+            themedCalendar
+                .presentationDetents([.height(440)])
+                .presentationDragIndicator(.hidden)
+                .presentationCornerRadius(30)
+        }
     }
 
-    // MARK: - Amount Section
-
-    private var amountSection: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 4) {
-            Text("€")
-                .font(.system(size: 32, weight: .light))
-                .foregroundStyle(Color.maeusTextTertiary)
-
-            TextField("0.00", text: $viewModel.amountText)
-                .font(.system(size: 44, weight: .semibold, design: .rounded))
-                .keyboardType(.decimalPad)
-                .multilineTextAlignment(.leading)
-                .foregroundStyle(Color.maeusText)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.top, 8)
+    private var topBar: some View {
+        HStack {
+            circleButton(isCheck: false, fill: .maeusSurface) { dismiss() }
+            Spacer(); Text(viewModel.sheetTitle).font(.system(.headline, design: .rounded, weight: .heavy)); Spacer()
+            circleButton(isCheck: true, fill: .maeusCheese) { saveExpense() }
+                .opacity(viewModel.canSave ? 1 : 0.4).disabled(!viewModel.canSave)
+        }.foregroundStyle(Color.maeusForeground)
     }
 
-    // MARK: - Split Section
+    private func circleButton(isCheck: Bool, fill: Color, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Group { if isCheck { MaeuseCheckIcon() } else { MaeuseCloseIcon() } }.frame(width: 38, height: 38)
+        }
+            .buttonStyle(StampedButtonStyle(fill: fill, foreground: fill == .maeusCheese ? .maeusInk : .maeusForeground,
+                                            cornerRadius: 19, borderColor: fill == .maeusCheese ? .maeusInk : .maeusCardBorder, shadow: fill == .maeusCheese ? 2.5 : 0))
+    }
 
-    private var splitSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Split")
-                .font(.caption.weight(.medium))
-                .foregroundStyle(Color.maeusTextSecondary)
-
-            // Mode toggle
-            HStack(spacing: 0) {
-                splitModeButton("Percentage", mode: .percent)
-                splitModeButton("Fixed Amount", mode: .fixed)
+    private var hero: some View {
+        VStack(spacing: 8) {
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                Text("€").font(.system(size: 24, weight: .bold, design: .rounded)).foregroundStyle(Color.maeusTextSecondary)
+                Text(viewModel.amountText.isEmpty ? "0.00" : viewModel.amountText)
+                    .font(.system(size: 48, weight: .heavy, design: .rounded)).tracking(-2).monospacedDigit()
+                    .foregroundStyle(viewModel.amountText.isEmpty ? Color.maeusTextTertiary : Color.maeusForeground)
+                    .overlay(alignment: .bottom) { Rectangle().fill(Color.maeusCheese).frame(height: 4).offset(y: 4) }
             }
-            .background(Color.maeusInputBackground)
-            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+            TextField(loc("AddNote"), text: $viewModel.description)
+                .font(.system(size: 15, weight: .bold, design: .rounded)).multilineTextAlignment(.center).textFieldStyle(.plain).frame(width: 240)
+        }
+    }
 
-            // Preset chips (percent mode only)
-            if viewModel.splitMode == .percent {
-                HStack(spacing: 8) {
-                    ForEach(presetValues, id: \.self) { value in
-                        Button("\(Int(value)) %") {
-                            viewModel.selectPreset(value)
-                        }
-                        .buttonStyle(ChipStyle(isSelected: viewModel.parsedSplitValue == value))
+    private var details: some View {
+        CheeseCard(cornerRadius: 22, shadow: 4) {
+            VStack(spacing: 11) {
+                HStack {
+                    share(title: loc("You"), value: viewModel.splitMode == .fixed ? "rest" : "\(viewModel.userPercent)%", amount: viewModel.userShareAmount.euroFormatted, accent: false)
+                    Spacer()
+                    share(title: loc("Partner"), value: viewModel.splitMode == .fixed ? viewModel.parsedSplitValue.euroFormatted : "\(viewModel.partnerPercent)%", amount: viewModel.partnerShareAmount.euroFormatted, accent: true)
+                }
+                GeometryReader { geo in
+                    let x = geo.size.width * (1 - viewModel.partnerFraction)
+                    ZStack(alignment: .leading) {
+                        HStack(spacing: 0) {
+                            Color.maeusInputBackground.frame(width: x); Color.maeusCheese
+                        }.clipShape(Capsule()).overlay(Capsule().stroke(Color.maeusCardBorder, lineWidth: 2.5)).frame(height: 20)
+                        Capsule().fill(Color.maeusForeground).frame(width: 9, height: 30).offset(x: x - 4.5)
                     }
-                }
-            }
+                    .contentShape(Rectangle())
+                    .gesture(
+                        DragGesture(minimumDistance: 0)
+                            .onChanged { updateSplit(at: $0.location.x, width: geo.size.width) }
+                    )
+                    .accessibilityElement()
+                    .accessibilityLabel(loc("Partner"))
+                    .accessibilityValue("\(viewModel.partnerPercent)%")
+                    .accessibilityAdjustableAction { direction in
+                        let change = direction == .increment ? 5 : -5
+                        setPartnerPercent(viewModel.partnerPercent + change)
+                    }
+                }.frame(height: 30)
+                if viewModel.isEditing { Button(loc("DeleteExpense"), role: .destructive) { showDeleteConfirmation = true }.font(.system(.caption, design: .rounded, weight: .heavy)) }
+            }.padding(.horizontal, 18).padding(.vertical, 14)
+        }
+    }
 
-            // Split value input + result
-            HStack(spacing: 12) {
-                HStack(spacing: 4) {
-                    TextField("", text: $viewModel.splitValueText)
-                        .font(.body.monospacedDigit())
-                        .keyboardType(.decimalPad)
-                        .multilineTextAlignment(.trailing)
-                        .frame(width: 60)
-
-                    Text(viewModel.splitSuffix)
-                        .font(.body)
-                        .foregroundStyle(Color.maeusTextTertiary)
-                }
-                .padding(10)
-                .background(Color.maeusInputBackground)
-                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-
-                Text(viewModel.splitResultText)
-                    .font(.subheadline)
+    private var datePicker: some View {
+        Button { showDatePicker = true } label: {
+            HStack(spacing: 10) {
+                Image(systemName: "calendar")
+                    .font(.system(size: 14, weight: .heavy))
+                    .frame(width: 24, height: 24)
+                    .foregroundStyle(Color.maeusInk)
+                    .background(Color.maeusCheese, in: Circle())
+                    .overlay(Circle().stroke(Color.maeusInk, lineWidth: 1.5))
+                Text(loc("Date").uppercased())
+                    .font(.system(size: 10, weight: .heavy, design: .rounded))
+                    .tracking(1.3)
                     .foregroundStyle(Color.maeusTextSecondary)
-
                 Spacer()
+                Text(viewModel.dateDisplay)
+                    .font(.system(size: 14, weight: .heavy, design: .rounded))
+                    .foregroundStyle(Color.maeusForeground)
+                MaeuseChevronIcon(pointsRight: true).frame(width: 18, height: 18)
+            }
+        }
+        .buttonStyle(.plain)
+        .padding(.horizontal, 16)
+        .frame(height: 46)
+        .background {
+            let shape = RoundedRectangle(cornerRadius: 15, style: .continuous)
+            ZStack {
+                shape.fill(Color(light: Color.maeusInk.opacity(0.12), dark: Color.black.opacity(0.5)))
+                    .offset(y: 3)
+                shape.fill(Color.maeusSurface)
+                shape.stroke(Color.maeusCardBorder, lineWidth: 2)
+            }
+        }
+        .accessibilityLabel(loc("Date"))
+        .accessibilityValue(viewModel.dateDisplay)
+    }
+
+    private var themedCalendar: some View {
+        VStack(spacing: 0) {
+            Capsule().fill(Color.maeusTextTertiary.opacity(0.45))
+                .frame(width: 40, height: 5).padding(.top, 10)
+            HStack {
+                Text(loc("Date").localizedCapitalized)
+                    .font(.system(size: 20, weight: .heavy, design: .rounded))
+                    .foregroundStyle(Color.maeusForeground)
+                Spacer()
+                Button { showDatePicker = false } label: {
+                    Text(loc("Done"))
+                        .font(.system(size: 14, weight: .heavy, design: .rounded))
+                        .padding(.horizontal, 16).padding(.vertical, 8)
+                }
+                    .buttonStyle(StampedButtonStyle(fill: .maeusCheese, foreground: .maeusInk,
+                                                    cornerRadius: 18, borderColor: .maeusInk, shadow: 2.5))
+            }
+            .padding(.horizontal, 22).padding(.top, 8)
+            DatePicker("", selection: $viewModel.date, displayedComponents: .date)
+                .labelsHidden()
+                .datePickerStyle(.graphical)
+                .tint(Color.maeusPrimary)
+                .padding(.horizontal, 14).padding(.top, 4)
+        }
+        .fontDesign(.rounded)
+        .background(Color.maeusBackground.ignoresSafeArea())
+    }
+
+    private func share(title: String, value: String, amount: String, accent: Bool) -> some View {
+        VStack(alignment: accent ? .trailing : .leading, spacing: 2) {
+            Text(title.uppercased()).font(.system(size: 10, weight: .heavy, design: .rounded)).tracking(1.5)
+            Text(value).font(.system(size: 19, weight: .heavy, design: .rounded))
+            Text(amount).font(.system(size: 12, weight: .bold, design: .rounded)).foregroundStyle(Color.maeusTextSecondary)
+        }.foregroundStyle(accent ? Color.maeusPrimaryHover : Color.maeusForeground)
+    }
+
+    private func updateSplit(at x: CGFloat, width: CGFloat) {
+        guard width > 0 else { return }
+        viewModel.setPartnerFraction(1 - min(max(x / width, 0), 1))
+    }
+
+    private func setPartnerPercent(_ percent: Int) {
+        viewModel.setPartnerFraction(Double(min(max(percent, 0), 100)) / 100)
+    }
+
+    private var keypad: some View {
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 9), count: 3), spacing: 9) {
+            ForEach(keys, id: \.self) { key in
+                Button { type(key) } label: { Text(key).font(.system(size: 21, weight: .heavy, design: .rounded)).frame(maxWidth: .infinity).frame(height: 50) }
+                    .buttonStyle(StampedButtonStyle(fill: key == "0" || key.first?.isNumber == true ? .maeusSurface : .maeusBackground,
+                                                    foreground: .maeusForeground, cornerRadius: 14, borderColor: key == "0" || key.first?.isNumber == true ? .maeusCardBorder : .maeusSoftBorder, shadow: 0))
             }
         }
     }
 
-    private func splitModeButton(_ title: String, mode: SplitMode) -> some View {
-        Button {
-            viewModel.splitMode = mode
-            if mode == .percent {
-                viewModel.splitValueText = "50"
-            } else {
-                viewModel.splitValueText = ""
-            }
-        } label: {
-            Text(title)
-                .font(.caption.weight(.medium))
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 10)
-                .background(viewModel.splitMode == mode ? Color.maeusPrimary.opacity(0.12) : Color.clear)
-                .foregroundStyle(viewModel.splitMode == mode ? Color.maeusPrimary : Color.maeusTextSecondary)
+    private func type(_ key: String) {
+        if key == "⌫" { if !viewModel.amountText.isEmpty { viewModel.amountText.removeLast() }; return }
+        let isDecimalKey = key == "." || key == ","
+        let existingDecimal = viewModel.amountText.firstIndex { $0 == "." || $0 == "," }
+        if isDecimalKey && existingDecimal != nil { return }
+        if let decimal = existingDecimal,
+           viewModel.amountText.distance(from: decimal, to: viewModel.amountText.endIndex) > 2 {
+            return
+        }
+        let digitCount = viewModel.amountText.filter(\.isNumber).count
+        if digitCount >= 6 { return }
+        viewModel.amountText += key
+    }
+
+    private func saveExpense() {
+        do {
+            try viewModel.save(context: modelContext)
+        } catch {
+            persistenceErrorMessage = loc("SaveExpenseFailed", error.localizedDescription)
+            showPersistenceError = true
+        }
+    }
+
+    private func deleteExpense() {
+        do {
+            try viewModel.delete(context: modelContext)
+        } catch {
+            persistenceErrorMessage = loc("DeleteExpenseFailed", error.localizedDescription)
+            showPersistenceError = true
         }
     }
 }

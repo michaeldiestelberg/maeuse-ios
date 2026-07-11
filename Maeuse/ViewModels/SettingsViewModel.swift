@@ -1,7 +1,6 @@
 import Foundation
 import SwiftData
 import Observation
-import UIKit
 
 /// Manages settings state: backup/restore, voice configuration
 @MainActor
@@ -18,6 +17,7 @@ final class SettingsViewModel {
     var voiceAPIKeyText: String = ""
     var voiceErrorMessage: String = ""
     var showVoiceError: Bool = false
+    var hasSavedVoiceAPIKey: Bool = false
 
     private let apiKeyStore = OpenAIAPIKeyStore.shared
     private let clientSecretService = OpenAIRealtimeClientSecretService()
@@ -32,7 +32,6 @@ final class SettingsViewModel {
             self.voiceSettings = .default
         }
 
-        reconcileStoredAPIKey()
     }
 
     // MARK: - Voice Settings
@@ -40,20 +39,9 @@ final class SettingsViewModel {
     var voiceEnabled: Bool {
         get { voiceSettings.enabled }
         set {
-            voiceSettings.enabled = newValue && voiceSettings.isVerified && apiKeyStore.hasAPIKey()
+            voiceSettings.enabled = newValue && voiceSettings.isVerified && hasSavedVoiceAPIKey
             saveVoiceSettings()
         }
-    }
-
-    var voiceStatusText: String {
-        if voiceSettings.isVerified {
-            return "API key verified \(voiceSettings.maskedAPIKey)"
-        }
-        return ""
-    }
-
-    var hasSavedVoiceAPIKey: Bool {
-        apiKeyStore.hasAPIKey()
     }
 
     func verifyVoiceAPIKey() {
@@ -63,7 +51,7 @@ final class SettingsViewModel {
 
         if enteredKey.isEmpty {
             guard let savedKey = try? apiKeyStore.readAPIKey(), !savedKey.isEmpty else {
-                showErrorMessage("Enter an OpenAI API key first.")
+                showErrorMessage(loc("EnterApiKeyPrompt"))
                 return
             }
             candidateKey = savedKey
@@ -74,7 +62,7 @@ final class SettingsViewModel {
         }
 
         guard candidateKey.hasPrefix("sk-") else {
-            showErrorMessage("Enter a valid OpenAI API key.")
+            showErrorMessage(loc("EnterValidApiKeyPrompt"))
             return
         }
 
@@ -89,15 +77,16 @@ final class SettingsViewModel {
                     voiceAPIKeyText = ""
                 }
 
+                hasSavedVoiceAPIKey = true
                 voiceSettings.apiKeySuffix = OpenAIAPIKeyStore.suffix(for: candidateKey)
                 voiceSettings.verifiedAt = Date()
                 saveVoiceSettings()
-                showStatusMessage("API key verified and saved in Keychain.")
+                showStatusMessage(loc("ApiKeyVerifiedKeychain"))
             } catch {
                 voiceSettings.verifiedAt = nil
                 voiceSettings.enabled = false
                 saveVoiceSettings()
-                showErrorMessage("API key verification failed: \(error.localizedDescription)")
+                showErrorMessage(loc("ApiKeyVerificationFailed", error.localizedDescription))
             }
             isVerifying = false
         }
@@ -107,11 +96,12 @@ final class SettingsViewModel {
         do {
             try apiKeyStore.deleteAPIKey()
             voiceAPIKeyText = ""
+            hasSavedVoiceAPIKey = false
             voiceSettings = .default
             saveVoiceSettings()
-            showStatusMessage("Removed the saved OpenAI API key.")
+            showStatusMessage(loc("RemovedApiKeyMsg"))
         } catch {
-            showErrorMessage("Could not remove API key: \(error.localizedDescription)")
+            showErrorMessage(loc("CouldNotRemoveApiKey", error.localizedDescription))
         }
     }
 
@@ -123,39 +113,41 @@ final class SettingsViewModel {
 
     // MARK: - Export
 
-    @MainActor
-    func exportBackup(expenses: [Expense]) {
+    func prepareBackup(expenses: [Expense]) -> BackupDocument? {
         do {
             let data = try BackupService.exportBackup(expenses: expenses)
-            let filename = BackupService.exportFileName()
-
-            let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(filename)
-            try data.write(to: tempURL)
-
-            let activityVC = UIActivityViewController(activityItems: [tempURL], applicationActivities: nil)
-
-            if let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-               let rootVC = scene.windows.first?.rootViewController {
-                // Handle iPad popover
-                if let popover = activityVC.popoverPresentationController {
-                    popover.sourceView = rootVC.view
-                    popover.sourceRect = CGRect(x: rootVC.view.bounds.midX, y: rootVC.view.bounds.midY, width: 0, height: 0)
-                    popover.permittedArrowDirections = []
-                }
-                rootVC.present(activityVC, animated: true)
-            }
-
-            showStatusMessage("Backup ready to share.")
+            return BackupDocument(data: data)
         } catch {
-            showStatusMessage("Export failed: \(error.localizedDescription)")
+            showErrorStatus(loc("ExportFailedMsg", error.localizedDescription))
+            return nil
+        }
+    }
+
+    func exportCompleted(_ result: Result<URL, Error>) {
+        switch result {
+        case .success:
+            showStatusMessage(loc("BackupExportedMsg"))
+        case .failure(let error):
+            if (error as NSError).code != NSUserCancelledError {
+                showErrorStatus(loc("ExportFailedMsg", error.localizedDescription))
+            }
         }
     }
 
     // MARK: - Import
 
     func handleImportFile(_ data: Data) {
-        pendingImportData = data
-        showImportConfirmation = true
+        do {
+            _ = try BackupService.parseBackup(data: data)
+            pendingImportData = data
+            showImportConfirmation = true
+        } catch {
+            showErrorStatus(loc("ImportFailedMsg", error.localizedDescription))
+        }
+    }
+
+    func handleImportError(_ error: Error) {
+        showErrorStatus(loc("ImportFailedMsg", error.localizedDescription))
     }
 
     func confirmImport(context: ModelContext) {
@@ -164,9 +156,9 @@ final class SettingsViewModel {
         do {
             let backups = try BackupService.parseBackup(data: data)
             try BackupService.replaceAllExpenses(in: context, with: backups)
-            showStatusMessage("Imported \(backups.count) expenses.")
+            showStatusMessage(loc("ImportedExpensesMsg", backups.count))
         } catch {
-            showStatusMessage("Import failed: \(error.localizedDescription)")
+            showStatusMessage(loc("ImportFailedMsg", error.localizedDescription))
         }
 
         pendingImportData = nil
@@ -175,8 +167,9 @@ final class SettingsViewModel {
 
     // MARK: - Helpers
 
-    private func reconcileStoredAPIKey() {
+    func reconcileStoredAPIKey() {
         guard let storedKey = try? apiKeyStore.readAPIKey(), !storedKey.isEmpty else {
+            hasSavedVoiceAPIKey = false
             voiceSettings.apiKeySuffix = nil
             voiceSettings.verifiedAt = nil
             voiceSettings.enabled = false
@@ -184,6 +177,7 @@ final class SettingsViewModel {
             return
         }
 
+        hasSavedVoiceAPIKey = true
         let suffix = OpenAIAPIKeyStore.suffix(for: storedKey)
         if voiceSettings.apiKeySuffix != suffix {
             voiceSettings.apiKeySuffix = suffix
@@ -210,5 +204,11 @@ final class SettingsViewModel {
         statusIsError = true
         voiceErrorMessage = message
         showVoiceError = true
+    }
+
+    private func showErrorStatus(_ message: String) {
+        statusMessage = message
+        showStatus = true
+        statusIsError = true
     }
 }

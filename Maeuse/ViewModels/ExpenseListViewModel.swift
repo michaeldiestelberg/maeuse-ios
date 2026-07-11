@@ -18,13 +18,18 @@ final class ExpenseListViewModel {
     // MARK: - Month Navigation
 
     var monthLabel: String {
-        let monthNames = [
-            "January", "February", "March", "April", "May", "June",
-            "July", "August", "September", "October", "November", "December"
-        ]
-        guard currentMonth >= 1 && currentMonth <= 12 else { return "" }
-        return "\(monthNames[currentMonth - 1]) \(currentYear)"
+        var components = DateComponents()
+        components.year = currentYear
+        components.month = currentMonth
+        components.day = 1
+        guard let date = Calendar.current.date(from: components) else { return "" }
+
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMMM yyyy"
+        formatter.locale = LanguageManager.shared.activeLocale
+        return formatter.string(from: date)
     }
+
 
     func previousMonth() {
         if currentMonth == 1 {
@@ -67,21 +72,26 @@ final class ExpenseListViewModel {
 
     func formatDate(_ date: Date) -> String {
         let formatter = DateFormatter()
-        formatter.dateFormat = "d MMM"
-        formatter.locale = Locale(identifier: "en_US")
+        if LanguageManager.shared.activeLanguageCode == "de" {
+            formatter.dateFormat = "d. MMM"
+        } else {
+            formatter.dateFormat = "d MMM"
+        }
+        formatter.locale = LanguageManager.shared.activeLocale
         return formatter.string(from: date)
     }
+
 
     func formatSplit(_ expense: Expense) -> String {
         switch expense.splitMode {
         case .percent:
             let pct = expense.splitValue
             if pct == pct.rounded() {
-                return "\(Int(pct)) %"
+                return loc("PercentSplit", 100 - Int(pct), Int(pct))
             }
-            return String(format: "%.1f %%", pct)
+            return loc("PercentSplitDecimal", 100 - pct, pct)
         case .fixed:
-            return expense.splitValue.euroFormatted
+            return loc("FixedSplit", expense.splitValue.euroFormatted)
         }
     }
 }

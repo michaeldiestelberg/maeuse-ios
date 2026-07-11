@@ -6,197 +6,338 @@ import UniformTypeIdentifiers
 struct SettingsSheet: View {
     @Bindable var viewModel: SettingsViewModel
     let expenses: [Expense]
+    let onShowWelcomeGuide: () -> Void
 
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
 
+    @AppStorage("maeuse.colorScheme") private var colorSchemePreference: String = "system"
+    @State private var languageManager = LanguageManager.shared
     @State private var showFilePicker = false
+    @State private var showFileExporter = false
+    @State private var exportDocument = BackupDocument()
 
     var body: some View {
-        NavigationStack {
+        VStack(spacing: 0) {
+            Capsule().fill(Color.maeusTextTertiary.opacity(0.45)).frame(width: 40, height: 5).padding(.top, 10)
+            settingsHeader.padding(.horizontal, 22).padding(.top, 8).padding(.bottom, 4)
             ScrollView {
-                VStack(spacing: 24) {
-                    // Backup & Restore
-                    backupSection
+                VStack(spacing: 16) {
+                    // App Settings
+                    appSection
 
                     // Voice Settings
                     voiceSection
+
+                    // Backup & Restore
+                    backupSection
 
                     // Status
                     if viewModel.showStatus {
                         statusCard
                             .transition(.opacity.combined(with: .move(edge: .top)))
                     }
+
+                    // Help & About
+                    helpSection
                 }
-                .padding(20)
+                .padding(.horizontal, 22).padding(.top, 14).padding(.bottom, 40)
             }
             .background(Color.maeusBackground)
-            .navigationTitle("Settings")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") {
-                        viewModel.isPresented = false
-                        dismiss()
-                    }
-                    .fontWeight(.semibold)
-                }
-            }
         }
+        .fontDesign(.rounded)
+        .background(Color.maeusBackground.ignoresSafeArea())
+        .preferredColorScheme(resolvedColorScheme)
         .presentationDetents([.large])
-        .presentationDragIndicator(.visible)
+        .presentationDragIndicator(.hidden)
+        .presentationCornerRadius(30)
         .fileImporter(isPresented: $showFilePicker, allowedContentTypes: [.json]) { result in
             switch result {
             case .success(let url):
-                guard url.startAccessingSecurityScopedResource() else { return }
-                defer { url.stopAccessingSecurityScopedResource() }
-                if let data = try? Data(contentsOf: url) {
+                let accessed = url.startAccessingSecurityScopedResource()
+                defer { if accessed { url.stopAccessingSecurityScopedResource() } }
+                do {
+                    let data = try Data(contentsOf: url)
                     viewModel.handleImportFile(data)
+                } catch {
+                    viewModel.handleImportError(error)
                 }
-            case .failure:
-                break
+            case .failure(let error):
+                if (error as NSError).code != NSUserCancelledError {
+                    viewModel.handleImportError(error)
+                }
             }
         }
-        .alert("Replace all expenses?", isPresented: $viewModel.showImportConfirmation) {
-            Button("Cancel", role: .cancel) {
+        .fileExporter(isPresented: $showFileExporter,
+                      document: exportDocument,
+                      contentType: .json,
+                      defaultFilename: BackupService.exportFileName()) {
+            viewModel.exportCompleted($0)
+        }
+        .alert(loc("ReplaceExpensesTitle"), isPresented: $viewModel.showImportConfirmation) {
+            Button(loc("Cancel"), role: .cancel) {
                 viewModel.pendingImportData = nil
             }
-            Button("Replace", role: .destructive) {
+            Button(loc("Replace"), role: .destructive) {
                 viewModel.confirmImport(context: modelContext)
             }
         } message: {
-            Text("This will replace all current expenses with the imported backup. This cannot be undone.")
+            Text(loc("ReplaceExpensesMsg"))
         }
-        .alert("Voice Mode Error", isPresented: $viewModel.showVoiceError) {
-            Button("OK", role: .cancel) {}
+        .alert(loc("VoiceModeErrorTitle"), isPresented: $viewModel.showVoiceError) {
+            Button(loc("OK"), role: .cancel) {}
         } message: {
             Text(viewModel.voiceErrorMessage)
         }
     }
 
+    private var settingsHeader: some View {
+        HStack {
+            Text(loc("Settings")).font(.system(size: 20, weight: .heavy, design: .rounded)).foregroundStyle(Color.maeusForeground)
+            Spacer()
+            Button { viewModel.isPresented = false; dismiss() } label: {
+                Text(loc("Done")).font(.system(size: 14, weight: .heavy, design: .rounded))
+                    .padding(.horizontal, 16).padding(.vertical, 8)
+            }
+                .buttonStyle(StampedButtonStyle(fill: .maeusCheese, foreground: .maeusInk, cornerRadius: 18, borderColor: .maeusInk, shadow: 2.5))
+        }
+    }
+
+    private var resolvedColorScheme: ColorScheme? {
+        switch colorSchemePreference {
+        case "light": return .light
+        case "dark": return .dark
+        default: return nil
+        }
+    }
+
+    // MARK: - App Section
+
+    private var appSection: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            themeLabel(loc("Appearance"))
+            choiceStrip([
+                (loc("System"), "system"), (loc("Light"), "light"), (loc("Dark"), "dark")
+            ], selection: $colorSchemePreference)
+
+            Divider()
+                .overlay(Color.maeusSoftBorder).frame(height: 2)
+
+            themeLabel(loc("Language"))
+            languageChoiceStrip
+        }
+        .padding(18)
+        .glassSurface()
+    }
+
+    private func themeLabel(_ text: String) -> some View {
+        Text(text.uppercased()).font(.system(size: 11, weight: .heavy, design: .rounded)).tracking(1.5).foregroundStyle(Color.maeusTextSecondary)
+    }
+
+    private func choiceStrip(_ choices: [(String, String)], selection: Binding<String>) -> some View {
+        HStack(spacing: 0) {
+            ForEach(choices, id: \.1) { choice in
+                choiceButton(choice.0, selected: selection.wrappedValue == choice.1) { selection.wrappedValue = choice.1 }
+            }
+        }
+        .padding(3).background(Color.maeusInputBackground, in: Capsule()).overlay(Capsule().stroke(Color.maeusCardBorder, lineWidth: 2))
+    }
+
+    private var languageChoiceStrip: some View {
+        let current = LanguageManager.shared.languagePreference
+        return HStack(spacing: 0) {
+            choiceButton(loc("System"), selected: current == .system) { LanguageManager.shared.languagePreference = .system }
+            choiceButton(loc("English"), selected: current == .english) { LanguageManager.shared.languagePreference = .english }
+            choiceButton("Deutsch", selected: current == .german) { LanguageManager.shared.languagePreference = .german }
+        }
+        .padding(3).background(Color.maeusInputBackground, in: Capsule()).overlay(Capsule().stroke(Color.maeusCardBorder, lineWidth: 2))
+    }
+
+    private func choiceButton(_ title: String, selected: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title).font(.system(size: 13, weight: selected ? .heavy : .bold, design: .rounded))
+                .foregroundStyle(selected ? Color.maeusInk : Color.maeusTextSecondary).frame(maxWidth: .infinity).padding(.vertical, 8)
+                .background(selected ? Color.maeusCheese : Color.clear, in: Capsule())
+                .overlay(Capsule().stroke(selected ? Color.maeusInk : Color.clear, lineWidth: 2))
+        }.buttonStyle(.plain)
+    }
+
     // MARK: - Backup Section
 
     private var backupSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            sectionHeader(kicker: "Data", title: "Backup & Restore")
-
-            Text("Export your expenses to a JSON backup or import one on another device.")
-                .font(.caption)
-                .foregroundStyle(Color.maeusTextSecondary)
+        VStack(alignment: .leading, spacing: 14) {
+            themeLabel(loc("BackupRestore"))
 
             VStack(spacing: 8) {
                 Button {
-                    viewModel.exportBackup(expenses: expenses)
+                    if let document = viewModel.prepareBackup(expenses: expenses) {
+                        exportDocument = document
+                        showFileExporter = true
+                    }
                 } label: {
-                    Label("Export Backup", systemImage: "square.and.arrow.up")
+                    Label(loc("ExportBackup"), systemImage: "square.and.arrow.up")
                 }
                 .buttonStyle(GlassPrimaryButtonStyle())
 
                 Button {
                     showFilePicker = true
                 } label: {
-                    Label("Import Backup", systemImage: "square.and.arrow.down")
+                    Label(loc("ImportBackup"), systemImage: "square.and.arrow.down")
                 }
                 .buttonStyle(GlassSecondaryButtonStyle())
             }
 
-            Text("Import replaces the expenses stored on this device after confirmation.")
-                .font(.caption2)
-                .foregroundStyle(Color.maeusTextTertiary)
         }
-        .padding(20)
+        .padding(18)
         .glassSurface()
     }
 
     // MARK: - Voice Section
 
     private var voiceSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            sectionHeader(kicker: "Voice", title: "Voice Mode")
+        VStack(alignment: .leading, spacing: 14) {
+            themeLabel(loc("VoiceMode"))
 
-            Text("Enable a realtime voice workspace that captures one or more expenses in a fresh session.")
-                .font(.caption)
-                .foregroundStyle(Color.maeusTextSecondary)
-
-            // API key
-            VStack(alignment: .leading, spacing: 8) {
-                Text("OpenAI API key")
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(Color.maeusTextSecondary)
-
-                SecureField(viewModel.hasSavedVoiceAPIKey ? "Leave blank to keep saved key" : "sk-proj-...", text: Binding(
-                    get: { viewModel.voiceAPIKeyText },
-                    set: { viewModel.voiceAPIKeyText = $0 }
-                ))
-                .textFieldStyle(.plain)
-                .font(.body)
-                .padding(12)
-                .background(Color.maeusInputBackground)
-                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                .autocorrectionDisabled()
-                .textInputAutocapitalization(.never)
+            if viewModel.hasSavedVoiceAPIKey {
+                savedVoiceKeyRow
+            } else {
+                voiceKeyEntryField
             }
 
-            // Verify button
-            Button {
-                viewModel.verifyVoiceAPIKey()
-            } label: {
-                if viewModel.isVerifying {
-                    ProgressView()
-                        .tint(.white)
-                } else {
-                    Label("Verify & Save Key", systemImage: "key")
+            if !viewModel.hasSavedVoiceAPIKey || !viewModel.voiceSettings.isVerified {
+                Button {
+                    viewModel.verifyVoiceAPIKey()
+                } label: {
+                    if viewModel.isVerifying {
+                        ProgressView().tint(.white)
+                    } else {
+                        Label(loc("VerifySaveKey"), systemImage: "key")
+                    }
                 }
+                .buttonStyle(GlassSecondaryButtonStyle())
+                .disabled(
+                    viewModel.isVerifying
+                    || (!viewModel.hasSavedVoiceAPIKey && viewModel.voiceAPIKeyText.isEmpty)
+                )
             }
-            .buttonStyle(GlassSecondaryButtonStyle())
-            .disabled(viewModel.isVerifying)
 
             if viewModel.hasSavedVoiceAPIKey {
                 Button(role: .destructive) {
                     viewModel.removeVoiceAPIKey()
                 } label: {
-                    Label("Remove Saved Key", systemImage: "trash")
+                    Label(loc("RemoveSavedKey"), systemImage: "trash")
                 }
                 .buttonStyle(GlassSecondaryButtonStyle())
             }
 
-            // Enable toggle
+            Divider()
+                .overlay(Color.maeusSoftBorder)
+
             Toggle(isOn: Binding(
                 get: { viewModel.voiceEnabled },
                 set: { viewModel.voiceEnabled = $0 }
             )) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Enable voice mode")
+                    Text(loc("EnableVoiceMode"))
                         .font(.subheadline.weight(.medium))
-                    Text("Shows the mic button on the main screen")
+                    Text(loc("ShowsMicButton"))
                         .font(.caption)
                         .foregroundStyle(Color.maeusTextTertiary)
                 }
             }
             .tint(Color.maeusPrimary)
             .disabled(!viewModel.voiceSettings.isVerified || !viewModel.hasSavedVoiceAPIKey)
+        }
+        .padding(18)
+        .glassSurface()
+    }
 
-            if !viewModel.voiceStatusText.isEmpty {
-                HStack(spacing: 4) {
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundStyle(Color.maeusSuccess)
-                        .font(.caption)
-                    Text(viewModel.voiceStatusText)
-                        .font(.caption)
-                        .foregroundStyle(Color.maeusSuccess)
-                }
+    private var savedVoiceKeyRow: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "lock.fill")
+                .font(.system(size: 13, weight: .bold))
+                .foregroundStyle(Color.maeusTextSecondary)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(loc("OpenAIApiKey"))
+                    .font(.system(size: 12, weight: .heavy, design: .rounded))
+                    .foregroundStyle(Color.maeusForeground)
+
+                Text(viewModel.voiceSettings.maskedAPIKey)
+                    .font(.system(size: 11, weight: .bold, design: .monospaced))
+                    .foregroundStyle(Color.maeusTextSecondary)
             }
 
-            Text("Your key is stored in iOS Keychain on this device and sent only to OpenAI over HTTPS to create short-lived Realtime client secrets.")
-                .font(.caption2)
-                .foregroundStyle(Color.maeusTextTertiary)
+            Spacer()
 
-            Text("Voice mode requires an OpenAI API project with access to gpt-realtime-2; free-tier API keys are not supported for this model.")
-                .font(.caption2)
-                .foregroundStyle(Color.maeusTextTertiary)
+            if viewModel.voiceSettings.isVerified {
+                Label(loc("Verified"), systemImage: "checkmark.circle.fill")
+                    .font(.system(size: 10, weight: .heavy, design: .rounded))
+                    .foregroundStyle(Color.maeusSuccess)
+            }
         }
-        .padding(20)
-        .glassSurface()
+        .padding(.horizontal, 12)
+        .frame(minHeight: 48)
+        .background(Color.maeusInputBackground, in: RoundedRectangle(cornerRadius: 10))
+        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.maeusCardBorder, lineWidth: 1.5))
+    }
+
+    private var voiceKeyEntryField: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "lock")
+                .font(.caption.weight(.bold))
+                .foregroundStyle(Color.maeusTextSecondary)
+
+            SecureField("sk-proj-...", text: Binding(
+                get: { viewModel.voiceAPIKeyText },
+                set: { viewModel.voiceAPIKeyText = $0 }
+            ))
+            .textFieldStyle(.plain)
+            .font(.system(size: 13, weight: .bold, design: .rounded))
+            .autocorrectionDisabled()
+            .textInputAutocapitalization(.never)
+        }
+        .padding(.horizontal, 12)
+        .frame(height: 38)
+        .background(Color.maeusInputBackground, in: RoundedRectangle(cornerRadius: 10))
+        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.maeusCardBorder, lineWidth: 1.5))
+    }
+
+    // MARK: - Help Section
+
+    private var helpSection: some View {
+        Button {
+            viewModel.isPresented = false
+            dismiss()
+            onShowWelcomeGuide()
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: "questionmark.circle")
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundStyle(Color.maeusPrimaryHover)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(loc("HelpAbout"))
+                        .font(.system(size: 14, weight: .heavy, design: .rounded))
+                        .foregroundStyle(Color.maeusForeground)
+
+                    Text(loc("WelcomeGuideDesc"))
+                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                        .foregroundStyle(Color.maeusTextSecondary)
+                }
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .heavy))
+                    .foregroundStyle(Color.maeusTextTertiary)
+            }
+            .padding(18)
+            .contentShape(Rectangle())
+            .glassSurface()
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(loc("HelpAbout"))
     }
 
     // MARK: - Helpers
@@ -219,16 +360,4 @@ struct SettingsSheet: View {
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 
-    private func sectionHeader(kicker: String, title: String) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(kicker.uppercased())
-                .font(.caption2.weight(.semibold))
-                .foregroundStyle(Color.maeusPrimary)
-                .tracking(1)
-
-            Text(title)
-                .font(.headline.weight(.semibold))
-                .foregroundStyle(Color.maeusText)
-        }
-    }
 }
