@@ -17,12 +17,12 @@
 
 ## Public URLs
 
-- [ ] `https://xn--muse-loa.app/` is deployed and loads without authentication.
-- [ ] `https://xn--muse-loa.app/privacy.html` is deployed.
-- [ ] `https://xn--muse-loa.app/support.html` is deployed and includes working contact information.
-- [ ] `https://xn--muse-loa.app/terms.html` is deployed.
+- [x] `https://xn--muse-loa.app/` is deployed and loads without authentication.
+- [x] `https://xn--muse-loa.app/privacy.html` is deployed.
+- [x] `https://xn--muse-loa.app/support.html` is deployed and includes working contact information.
+- [x] `https://xn--muse-loa.app/terms.html` is deployed.
 - [ ] Website “coming soon” links are replaced with the final App Store URL after Apple provides the numeric app ID.
-- [ ] If the site/app is operated commercially in Germany, the website legal notice contains the legally required complete postal address and other provider details.
+- [x] Account holder has classified the app as an EU non-trader; reassess public provider-detail requirements if that status or the commercial operation changes.
 
 ## App Store metadata
 
