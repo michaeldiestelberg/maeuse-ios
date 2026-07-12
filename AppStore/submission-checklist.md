@@ -30,8 +30,8 @@
 - [x] German localization is entered from `metadata-de.md`.
 - [x] Support, marketing, and privacy URLs are entered.
 - [x] Copyright is `2026 Michael Diestelberg`.
-- [ ] Four English 6.9-inch screenshots are uploaded in the planned order.
-- [ ] Four German 6.9-inch screenshots are uploaded in the planned order.
+- [x] Four English 6.9-inch screenshots are uploaded in the planned order.
+- [x] Four German 6.9-inch screenshots are uploaded in the planned order.
 - [x] Prepared screenshots contain no real personal data or secret API key.
 
 ## Privacy and compliance
@@ -69,13 +69,13 @@
 - [x] An App Store Connect distribution-signed IPA exports successfully and passes local signature/archive integrity checks.
 - [ ] Xcode Organizer validation passes.
 - [x] Build 8 is uploaded to App Store Connect (confirmed by Apple's duplicate-build response on July 12, 2026).
-- [ ] Build finishes processing without missing-compliance warnings.
+- [x] Build 8 finishes processing and is selectable for App Store version 1.2.0.
 - [ ] TestFlight information is entered from `testflight.md`.
 - [ ] At least one physical-iPhone TestFlight pass covers the listed critical flows.
-- [ ] Correct build is selected for version 1.2.0.
-- [ ] Temporary OpenAI review project/key is created with a low usage limit.
+- [x] Correct build 8 is selected for version 1.2.0.
+- [x] Temporary OpenAI review project/key is created with a low usage limit (confirmed by account holder July 12, 2026).
 - [ ] Temporary key is entered only in App Store Connect review information; the private reviewer phone number is already entered there.
-- [ ] App Review notes are copied from `review-notes.md` and checked for accuracy.
+- [x] App Review notes are copied from `review-notes.md` and checked for accuracy; the temporary key placeholder still needs to be replaced in App Store Connect.
 - [x] Release method is Manual Release.
 - [ ] Version is added to review and submitted.
 
