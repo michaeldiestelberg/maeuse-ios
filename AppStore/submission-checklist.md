@@ -70,7 +70,7 @@
 - [ ] Xcode Organizer validation passes.
 - [x] Build 8 is uploaded to App Store Connect (confirmed by Apple's duplicate-build response on July 12, 2026).
 - [x] Build 8 finishes processing and is selectable for App Store version 1.2.0.
-- [ ] TestFlight information is entered from `testflight.md`.
+- [x] TestFlight information is entered from `testflight.md`; build 8 is validated and assigned to the internal Family group (2 testers).
 - [ ] At least one physical-iPhone TestFlight pass covers the listed critical flows.
 - [x] Correct build 8 is selected for version 1.2.0.
 - [x] Temporary OpenAI review project/key is created with a low usage limit (confirmed by account holder July 12, 2026).
