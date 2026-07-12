@@ -1,10 +1,9 @@
 {
   "images" : [
     {
-      "filename" : "AppIcon-1024.png",
+      "filename" : "MaeuseBrandBackdropLight.png",
       "idiom" : "universal",
-      "platform" : "ios",
-      "size" : "1024x1024"
+      "scale" : "1x"
     },
     {
       "appearances" : [
@@ -13,10 +12,9 @@
           "value" : "dark"
         }
       ],
-      "filename" : "AppIcon-Dark-1024.png",
+      "filename" : "MaeuseBrandBackdropDark.png",
       "idiom" : "universal",
-      "platform" : "ios",
-      "size" : "1024x1024"
+      "scale" : "1x"
     }
   ],
   "info" : {

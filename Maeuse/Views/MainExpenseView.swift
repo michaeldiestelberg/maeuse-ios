@@ -43,9 +43,11 @@ struct MainExpenseView: View {
     private var header: some View {
         HStack {
             HStack(spacing: 10) {
-                MouseCoin(size: 34) {
-                    Text("€").font(.system(size: 16, weight: .bold, design: .rounded)).foregroundStyle(Color.maeusInk)
-                }
+                Image("CoinMouseMark")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 38, height: 38)
+                    .accessibilityHidden(true)
                 Text("Mäuse").font(.system(size: 19, weight: .heavy, design: .rounded)).foregroundStyle(Color.maeusForeground)
             }
             Spacer()
@@ -110,7 +112,7 @@ struct MainExpenseView: View {
                         .position(x: geometry.size.width - 3, y: geometry.size.height - 25)
                 }
             }
-            .clipped()
+            .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
         }
     }
 

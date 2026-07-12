@@ -16,6 +16,7 @@ struct SettingsSheet: View {
     @State private var showFilePicker = false
     @State private var showFileExporter = false
     @State private var exportDocument = BackupDocument()
+    @State private var showVoiceConsent = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -31,6 +32,9 @@ struct SettingsSheet: View {
 
                     // Backup & Restore
                     backupSection
+
+                    // Privacy, terms, and support
+                    legalAndSupportSection
 
                     // Status
                     if viewModel.showStatus {
@@ -88,6 +92,15 @@ struct SettingsSheet: View {
             Button(loc("OK"), role: .cancel) {}
         } message: {
             Text(viewModel.voiceErrorMessage)
+        }
+        .sheet(isPresented: $showVoiceConsent) {
+            VoicePrivacyConsentSheet {
+                viewModel.acceptVoiceConsent()
+                viewModel.voiceEnabled = true
+                showVoiceConsent = false
+            } onCancel: {
+                showVoiceConsent = false
+            }
         }
     }
 
@@ -235,7 +248,13 @@ struct SettingsSheet: View {
 
             Toggle(isOn: Binding(
                 get: { viewModel.voiceEnabled },
-                set: { viewModel.voiceEnabled = $0 }
+                set: { enabled in
+                    if enabled && !viewModel.hasVoiceConsent {
+                        showVoiceConsent = true
+                    } else {
+                        viewModel.voiceEnabled = enabled
+                    }
+                }
             )) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(loc("EnableVoiceMode"))
@@ -247,9 +266,70 @@ struct SettingsSheet: View {
             }
             .tint(Color.maeusPrimary)
             .disabled(!viewModel.voiceSettings.isVerified || !viewModel.hasSavedVoiceAPIKey)
+
+            if viewModel.hasVoiceConsent {
+                Label(loc("VoiceConsentAcceptedLabel"), systemImage: "checkmark.shield.fill")
+                    .font(.system(size: 11, weight: .bold, design: .rounded))
+                    .foregroundStyle(Color.maeusSuccess)
+
+                Button(role: .destructive) {
+                    viewModel.withdrawVoiceConsent()
+                } label: {
+                    Label(loc("WithdrawVoiceConsent"), systemImage: "hand.raised.slash")
+                }
+                .buttonStyle(GlassSecondaryButtonStyle())
+            }
+
+            Text(loc("KeychainStorageDesc"))
+                .font(.caption)
+                .foregroundStyle(Color.maeusTextSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Text(loc("VoiceRequirementsDesc"))
+                .font(.caption)
+                .foregroundStyle(Color.maeusTextSecondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .padding(18)
         .glassSurface()
+    }
+
+    // MARK: - Legal & Support Section
+
+    private var legalAndSupportSection: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            themeLabel(loc("PrivacySupport"))
+
+            Link(destination: URL(string: "https://xn--muse-loa.app/privacy.html")!) {
+                legalLinkLabel(loc("PrivacyPolicy"), systemImage: "hand.raised.fill")
+            }
+
+            Link(destination: URL(string: "https://xn--muse-loa.app/support.html")!) {
+                legalLinkLabel(loc("Support"), systemImage: "envelope.fill")
+            }
+
+            Link(destination: URL(string: "https://xn--muse-loa.app/terms.html")!) {
+                legalLinkLabel(loc("TermsOfUse"), systemImage: "doc.text.fill")
+            }
+        }
+        .padding(18)
+        .glassSurface()
+    }
+
+    private func legalLinkLabel(_ title: String, systemImage: String) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: systemImage)
+                .frame(width: 20)
+                .foregroundStyle(Color.maeusPrimaryHover)
+            Text(title)
+                .font(.system(size: 14, weight: .heavy, design: .rounded))
+                .foregroundStyle(Color.maeusForeground)
+            Spacer()
+            Image(systemName: "arrow.up.right")
+                .font(.caption.weight(.heavy))
+                .foregroundStyle(Color.maeusTextTertiary)
+        }
+        .padding(.vertical, 4)
     }
 
     private var savedVoiceKeyRow: some View {
@@ -360,4 +440,83 @@ struct SettingsSheet: View {
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 
+}
+
+private struct VoicePrivacyConsentSheet: View {
+    let onAccept: () -> Void
+    let onCancel: () -> Void
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    MouseCoin(size: 72, fill: .maeusCheese) {
+                        Image(systemName: "waveform")
+                            .font(.system(size: 26, weight: .heavy))
+                            .foregroundStyle(Color.maeusInk)
+                    }
+                    .frame(maxWidth: .infinity)
+
+                    Text(loc("VoicePrivacyIntro"))
+                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .foregroundStyle(Color.maeusTextSecondary)
+
+                    disclosureRow(
+                        icon: "mic.fill",
+                        title: loc("VoicePrivacyDataTitle"),
+                        body: loc("VoicePrivacyDataDesc")
+                    )
+
+                    disclosureRow(
+                        icon: "clock.fill",
+                        title: loc("VoicePrivacyRetentionTitle"),
+                        body: loc("VoicePrivacyRetentionDesc")
+                    )
+
+                    disclosureRow(
+                        icon: "creditcard.fill",
+                        title: loc("VoicePrivacyBillingTitle"),
+                        body: loc("VoicePrivacyBillingDesc")
+                    )
+
+                    Link(loc("ReadPrivacyPolicy"), destination: URL(string: "https://xn--muse-loa.app/privacy.html#voice-mode")!)
+                        .font(.system(size: 14, weight: .heavy, design: .rounded))
+
+                    Button(action: onAccept) {
+                        Text(loc("AgreeEnableVoice"))
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(GlassPrimaryButtonStyle())
+
+                    Button(loc("NotNow"), action: onCancel)
+                        .buttonStyle(GlassSecondaryButtonStyle())
+                }
+                .padding(22)
+            }
+            .background(Color.maeusBackground)
+            .navigationTitle(loc("VoicePrivacyTitle"))
+            .navigationBarTitleDisplayMode(.inline)
+        }
+        .fontDesign(.rounded)
+        .presentationDetents([.large])
+        .interactiveDismissDisabled()
+    }
+
+    private func disclosureRow(icon: String, title: String, body: String) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 16, weight: .bold))
+                .foregroundStyle(Color.maeusPrimaryHover)
+                .frame(width: 26)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.system(size: 14, weight: .heavy, design: .rounded))
+                    .foregroundStyle(Color.maeusForeground)
+                Text(body)
+                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                    .foregroundStyle(Color.maeusTextSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
 }

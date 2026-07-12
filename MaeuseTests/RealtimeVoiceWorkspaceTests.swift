@@ -355,6 +355,42 @@ final class RealtimeVoiceWorkspaceTests: XCTestCase {
         XCTAssertEqual(imported[0].splitMode, "percent")
         XCTAssertEqual(imported[0].splitValue, 35)
     }
+
+    func testVoiceSettingsRequireCurrentConsentForReadiness() {
+        var settings = VoiceSettings(
+            apiKeySuffix: "7mQ2",
+            verifiedAt: Date(),
+            enabled: true,
+            consentVersion: nil,
+            consentedAt: nil
+        )
+
+        XCTAssertTrue(settings.isVerified)
+        XCTAssertFalse(settings.hasCurrentConsent)
+        XCTAssertFalse(settings.isReady)
+
+        settings.consentVersion = VoiceSettings.currentConsentVersion
+        settings.consentedAt = Date()
+
+        XCTAssertTrue(settings.hasCurrentConsent)
+        XCTAssertTrue(settings.isReady)
+    }
+
+    func testLegacyVoiceSettingsDecodeWithoutConsent() throws {
+        let legacy = """
+        {
+          "apiKeySuffix": "7mQ2",
+          "verifiedAt": 796348800,
+          "enabled": true
+        }
+        """
+
+        let settings = try JSONDecoder().decode(VoiceSettings.self, from: Data(legacy.utf8))
+
+        XCTAssertTrue(settings.enabled)
+        XCTAssertFalse(settings.hasCurrentConsent)
+        XCTAssertFalse(settings.isReady)
+    }
 }
 
 private extension RealtimeParsedEvent {

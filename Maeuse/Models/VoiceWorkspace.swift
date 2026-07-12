@@ -188,23 +188,42 @@ struct VoiceSettings: Codable {
     var apiKeySuffix: String?
     var verifiedAt: Date?
     var enabled: Bool
+    var consentVersion: Int?
+    var consentedAt: Date?
 
     static let storageKey = "maeuse.voice-settings"
+    static let currentConsentVersion = 1
 
     static var `default`: VoiceSettings {
-        VoiceSettings(apiKeySuffix: nil, verifiedAt: nil, enabled: false)
+        VoiceSettings(
+            apiKeySuffix: nil,
+            verifiedAt: nil,
+            enabled: false,
+            consentVersion: nil,
+            consentedAt: nil
+        )
     }
 
-    init(apiKeySuffix: String?, verifiedAt: Date?, enabled: Bool) {
+    init(
+        apiKeySuffix: String?,
+        verifiedAt: Date?,
+        enabled: Bool,
+        consentVersion: Int?,
+        consentedAt: Date?
+    ) {
         self.apiKeySuffix = apiKeySuffix
         self.verifiedAt = verifiedAt
         self.enabled = enabled
+        self.consentVersion = consentVersion
+        self.consentedAt = consentedAt
     }
 
     enum CodingKeys: String, CodingKey {
         case apiKeySuffix
         case verifiedAt
         case enabled
+        case consentVersion
+        case consentedAt
     }
 
     init(from decoder: Decoder) throws {
@@ -212,6 +231,8 @@ struct VoiceSettings: Codable {
         apiKeySuffix = try container.decodeIfPresent(String.self, forKey: .apiKeySuffix)
         verifiedAt = try container.decodeIfPresent(Date.self, forKey: .verifiedAt)
         enabled = try container.decodeIfPresent(Bool.self, forKey: .enabled) ?? false
+        consentVersion = try container.decodeIfPresent(Int.self, forKey: .consentVersion)
+        consentedAt = try container.decodeIfPresent(Date.self, forKey: .consentedAt)
     }
 
     func encode(to encoder: Encoder) throws {
@@ -219,6 +240,8 @@ struct VoiceSettings: Codable {
         try container.encodeIfPresent(apiKeySuffix, forKey: .apiKeySuffix)
         try container.encodeIfPresent(verifiedAt, forKey: .verifiedAt)
         try container.encode(enabled, forKey: .enabled)
+        try container.encodeIfPresent(consentVersion, forKey: .consentVersion)
+        try container.encodeIfPresent(consentedAt, forKey: .consentedAt)
     }
 
     var isVerified: Bool {
@@ -226,7 +249,11 @@ struct VoiceSettings: Codable {
     }
 
     var isReady: Bool {
-        enabled && isVerified
+        enabled && isVerified && hasCurrentConsent
+    }
+
+    var hasCurrentConsent: Bool {
+        consentVersion == Self.currentConsentVersion && consentedAt != nil
     }
 
     var maskedAPIKey: String {

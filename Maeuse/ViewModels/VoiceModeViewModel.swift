@@ -66,6 +66,53 @@ final class VoiceModeViewModel {
         isPresented = true
     }
 
+    #if targetEnvironment(simulator)
+    func openScreenshotPreview() {
+        resetWorkspace()
+        hasStartedSession = true
+        phase = .listening
+        isPresented = true
+
+        let german = LanguageManager.shared.activeLanguageCode == "de"
+        conversation = [
+            VoiceConversationEntry(
+                role: .user,
+                text: german
+                    ? "Blumen für 12 Euro und Kinokarten für 24 Euro, beides halbe-halbe."
+                    : "Flowers for 12 euros and cinema tickets for 24 euros, split both in half."
+            ),
+            VoiceConversationEntry(
+                role: .assistant,
+                text: german
+                    ? "Zwei Ausgaben erfasst und jeweils 50/50 aufgeteilt."
+                    : "Captured two expenses and split each one 50/50."
+            )
+        ]
+        drafts = [
+            VoiceExpenseDraft(
+                id: "screenshot-flowers",
+                title: german ? "Blumen" : "Flowers",
+                amount: 12,
+                dateISO: Self.todayISOString(),
+                splitMode: .percent,
+                splitValue: 50,
+                confidence: 1,
+                missingFields: []
+            ),
+            VoiceExpenseDraft(
+                id: "screenshot-cinema",
+                title: german ? "Kinokarten" : "Cinema tickets",
+                amount: 24,
+                dateISO: Self.todayISOString(),
+                splitMode: .percent,
+                splitValue: 50,
+                confidence: 1,
+                missingFields: []
+            )
+        ]
+    }
+    #endif
+
     func startSession() {
         guard !hasStartedSession else { return }
 

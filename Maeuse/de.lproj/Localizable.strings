@@ -44,6 +44,9 @@
 "Support" = "Support";
 "HelpAbout" = "Hilfe & Info";
 "WelcomeGuideDesc" = "Öffne die Mäuse-Einführung";
+"PrivacySupport" = "Datenschutz & Support";
+"PrivacyPolicy" = "Datenschutzerklärung";
+"TermsOfUse" = "Nutzungsbedingungen";
 
 "Data" = "Daten";
 "BackupRestore" = "Backup & Wiederherstellung";
@@ -64,6 +67,19 @@
 "ApiKeyVerifiedMsg" = "API-Schlüssel verifiziert %@";
 "KeychainStorageDesc" = "Dein Schlüssel wird im iOS-Schlüsselbund (Keychain) auf diesem Gerät gespeichert und nur über HTTPS an OpenAI gesendet, um kurzlebige temporäre Realtime-Client-Secrets zu erstellen.";
 "VoiceRequirementsDesc" = "Der Sprachmodus erfordert ein OpenAI-API-Projekt mit Zugriff auf gpt-realtime-2; API-Schlüssel der kostenlosen Stufe (Free Tier) werden für dieses Modell nicht unterstützt.";
+"VoiceConsentAcceptedLabel" = "Datenweitergabe für Sprachmodus akzeptiert";
+"WithdrawVoiceConsent" = "Einwilligung widerrufen";
+"VoicePrivacyTitle" = "Vor der Nutzung des Sprachmodus";
+"VoicePrivacyIntro" = "Der Sprachmodus ist optional. Die manuelle Ausgabenerfassung funktioniert ohne OpenAI-API-Schlüssel und ohne Mikrofonzugriff.";
+"VoicePrivacyDataTitle" = "An OpenAI übermittelte Daten";
+"VoicePrivacyDataDesc" = "Während einer aktiven Sprachsitzung sendet Mäuse Live-Mikrofonaudio und Ausgabendetails an OpenAI, um Sprache zu transkribieren und Ausgabenentwürfe zu erstellen.";
+"VoicePrivacyRetentionTitle" = "Speicherdauer";
+"VoicePrivacyRetentionDesc" = "OpenAI kann API-Inhalte standardmäßig bis zu 30 Tage in Protokollen zur Missbrauchsprävention speichern. API-Inhalte werden nicht zum Trainieren von OpenAI-Modellen verwendet, sofern der Inhaber des API-Kontos dem nicht ausdrücklich zustimmt.";
+"VoicePrivacyBillingTitle" = "Dein OpenAI-Konto";
+"VoicePrivacyBillingDesc" = "Der Sprachmodus verwendet deinen eigenen OpenAI-API-Schlüssel. OpenAI kann die Nutzung deinem API-Projekt berechnen. Mäuse erhält keinen Anteil an diesen Kosten.";
+"ReadPrivacyPolicy" = "Vollständige Datenschutzerklärung lesen";
+"AgreeEnableVoice" = "Zustimmen & Sprachmodus aktivieren";
+"NotNow" = "Jetzt nicht";
 
 /* Settings Messages & Alerts */
 "ReplaceExpensesTitle" = "Alle Ausgaben ersetzen?";
@@ -75,6 +91,7 @@
 "ApiKeyVerifiedKeychain" = "API-Schlüssel verifiziert und im Schlüsselbund gespeichert.";
 "ApiKeyVerificationFailed" = "API-Schlüssel-Verifizierung fehlgeschlagen: %@";
 "RemovedApiKeyMsg" = "Gespeicherter OpenAI-API-Schlüssel wurde entfernt.";
+"VoiceConsentWithdrawnMsg" = "Einwilligung widerrufen. Der Sprachmodus ist jetzt deaktiviert.";
 "CouldNotRemoveApiKey" = "API-Schlüssel konnte nicht entfernt werden: %@";
 "BackupReadyMsg" = "Backup bereit zum Teilen.";
 "BackupExportedMsg" = "Backup erfolgreich gespeichert.";

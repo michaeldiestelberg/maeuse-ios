@@ -32,6 +32,9 @@ final class SettingsViewModel {
             self.voiceSettings = .default
         }
 
+        if !self.voiceSettings.hasCurrentConsent {
+            self.voiceSettings.enabled = false
+        }
     }
 
     // MARK: - Voice Settings
@@ -39,9 +42,30 @@ final class SettingsViewModel {
     var voiceEnabled: Bool {
         get { voiceSettings.enabled }
         set {
-            voiceSettings.enabled = newValue && voiceSettings.isVerified && hasSavedVoiceAPIKey
+            voiceSettings.enabled = newValue
+                && voiceSettings.isVerified
+                && hasSavedVoiceAPIKey
+                && voiceSettings.hasCurrentConsent
             saveVoiceSettings()
         }
+    }
+
+    var hasVoiceConsent: Bool {
+        voiceSettings.hasCurrentConsent
+    }
+
+    func acceptVoiceConsent() {
+        voiceSettings.consentVersion = VoiceSettings.currentConsentVersion
+        voiceSettings.consentedAt = Date()
+        saveVoiceSettings()
+    }
+
+    func withdrawVoiceConsent() {
+        voiceSettings.enabled = false
+        voiceSettings.consentVersion = nil
+        voiceSettings.consentedAt = nil
+        saveVoiceSettings()
+        showStatusMessage(loc("VoiceConsentWithdrawnMsg"))
     }
 
     func verifyVoiceAPIKey() {

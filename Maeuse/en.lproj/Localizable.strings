@@ -44,6 +44,9 @@
 "Support" = "Support";
 "HelpAbout" = "Help & About";
 "WelcomeGuideDesc" = "Review the Mäuse welcome guide";
+"PrivacySupport" = "Privacy & Support";
+"PrivacyPolicy" = "Privacy Policy";
+"TermsOfUse" = "Terms of Use";
 
 "Data" = "Data";
 "BackupRestore" = "Backup & Restore";
@@ -64,6 +67,19 @@
 "ApiKeyVerifiedMsg" = "API key verified %@";
 "KeychainStorageDesc" = "Your key is stored in iOS Keychain on this device and sent only to OpenAI over HTTPS to create short-lived Realtime client secrets.";
 "VoiceRequirementsDesc" = "Voice mode requires an OpenAI API project with access to gpt-realtime-2; free-tier API keys are not supported for this model.";
+"VoiceConsentAcceptedLabel" = "Voice data sharing accepted";
+"WithdrawVoiceConsent" = "Withdraw Voice Consent";
+"VoicePrivacyTitle" = "Before You Use Voice Mode";
+"VoicePrivacyIntro" = "Voice Mode is optional. Manual expense tracking remains available without an OpenAI API key or microphone access.";
+"VoicePrivacyDataTitle" = "Data sent to OpenAI";
+"VoicePrivacyDataDesc" = "While a voice session is active, Mäuse sends live microphone audio and expense details to OpenAI to transcribe speech and create expense drafts.";
+"VoicePrivacyRetentionTitle" = "Retention";
+"VoicePrivacyRetentionDesc" = "OpenAI may retain API content in abuse-monitoring logs for up to 30 days by default. API content is not used to train OpenAI models unless the API account owner opts in.";
+"VoicePrivacyBillingTitle" = "Your OpenAI account";
+"VoicePrivacyBillingDesc" = "Voice Mode uses your own OpenAI API key. OpenAI may charge your API project for usage. Mäuse does not receive any part of those charges.";
+"ReadPrivacyPolicy" = "Read the full Privacy Policy";
+"AgreeEnableVoice" = "Agree & Enable Voice Mode";
+"NotNow" = "Not Now";
 
 /* Settings Messages & Alerts */
 "ReplaceExpensesTitle" = "Replace all expenses?";
@@ -75,6 +91,7 @@
 "ApiKeyVerifiedKeychain" = "API key verified and saved in Keychain.";
 "ApiKeyVerificationFailed" = "API key verification failed: %@";
 "RemovedApiKeyMsg" = "Removed the saved OpenAI API key.";
+"VoiceConsentWithdrawnMsg" = "Voice consent withdrawn. Voice Mode is now disabled.";
 "CouldNotRemoveApiKey" = "Could not remove API key: %@";
 "BackupReadyMsg" = "Backup ready to share.";
 "BackupExportedMsg" = "Backup saved successfully.";
