@@ -10,36 +10,40 @@ Shared expenses, made simple
 
 ## Promotional text
 
-Track shared spending, choose a fair split, and add several expenses by voice—all from one playful, local-first iPhone app.
+Shared expenses without the spreadsheet: add costs, split them fairly, and optionally enter several expenses at once by voice.
 
 ## Description
 
-Mäuse is a local-first expense tracker for two people. Record everyday shared costs, choose how much each person should contribute, and see what your partner owes at a glance.
+Shared expenses don't have to be complicated. Mäuse helps the two of you record everyday costs, split them in whatever way feels fair, and instantly see who owes what.
 
-SPLIT EXPENSES YOUR WAY
+EVERYTHING AT A GLANCE
 
-• Add and edit shared expenses in seconds
-• Split by percentage or a fixed partner amount
-• Review monthly totals and your partner’s share
-• Browse previous and upcoming months
+• Add and edit expenses in seconds
+• See monthly totals and your partner's share
+• Move easily between previous and upcoming months
+• Great for groceries, rent, trips, meals out, and more
 
-OPTIONAL VOICE ENTRY
+SPLIT THINGS YOUR WAY
 
-Say what you spent—even several expenses at once. Mäuse creates temporary drafts for you to review before anything is saved.
+Choose a percentage split or enter the exact amount your partner should cover. Mäuse takes care of the rest.
 
-Voice Mode is optional and requires your own compatible OpenAI API key. Live microphone audio and spoken expense details are sent directly to OpenAI only during a voice session and only after you consent. OpenAI may charge your API project for usage. Mäuse receives no part of those charges.
+OPTIONALLY, JUST SAY IT
 
-LOCAL-FIRST AND PORTABLE
+“10 euros for groceries and 5 euros for coffee, split both in half.”
 
-• Expenses are stored locally on your iPhone
-• No Mäuse account or developer-operated backend
-• No advertising, app analytics, or cross-app tracking
-• Export and import portable JSON backups
-• API keys are stored in Apple Keychain and excluded from backups
+With optional Voice Mode, you can add several expenses in one go. Mäuse creates drafts first, so you can check every detail before saving anything.
 
-MADE FOR YOUR IPHONE
+YOUR EXPENSES STAY WITH YOU
 
-Use Mäuse in English or German, with light, dark, or system appearance. Manual expense tracking works offline and does not require an OpenAI key.
+• No Mäuse account required
+• Expenses are stored on your iPhone
+• No advertising or cross-app tracking
+• Export and restore a portable JSON backup
+• Manual entry works offline
+
+Optional Voice Mode requires your own compatible OpenAI API key. Only during a voice session, and after you consent, microphone audio and spoken expense details are sent directly to OpenAI. OpenAI may charge your API project for usage; Mäuse receives none of those fees.
+
+Use Mäuse in English or German, with light, dark, or system appearance.
 
 “Mäuse” is German slang for money—literally, “mice.”
 

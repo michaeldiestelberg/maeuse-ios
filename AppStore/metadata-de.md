@@ -10,36 +10,40 @@ Gemeinsame Ausgaben teilen
 
 ## Werbetext
 
-Gemeinsame Ausgaben erfassen, fair aufteilen und mehrere Einträge per Sprache hinzufügen – verspielt, übersichtlich und „Local First“.
+Gemeinsame Ausgaben ohne Rechnerei: schnell erfassen, fair aufteilen und auf Wunsch mehrere Einträge einfach per Sprache hinzufügen.
 
 ## Beschreibung
 
-Mäuse ist ein lokaler Ausgaben-Tracker für zwei Personen. Erfasse gemeinsame Alltagskosten, bestimme den passenden Anteil und sieh auf einen Blick, was dir dein Partner schuldet.
+Gemeinsame Ausgaben müssen nicht kompliziert sein. Mit Mäuse erfasst ihr eure Alltagskosten, teilt sie so auf, wie es für euch passt, und seht sofort, wer wem wie viel schuldet.
 
-AUSGABEN FLEXIBEL TEILEN
+ALLES AUF EINEN BLICK
 
-• Gemeinsame Ausgaben in Sekunden erfassen und bearbeiten
-• Prozentual oder mit einem festen Partnerbetrag aufteilen
-• Monatssummen und Partneranteil direkt überblicken
-• Zwischen vergangenen und kommenden Monaten wechseln
+• Ausgaben in wenigen Sekunden hinzufügen und bearbeiten
+• Monatssummen und Partneranteil direkt sehen
+• Einfach zwischen vergangenen und kommenden Monaten wechseln
+• Perfekt für Einkäufe, Miete, Urlaub, Restaurantbesuche und mehr
 
-OPTIONALE SPRACHERFASSUNG
+SO FAIR, WIE IHR ES BRAUCHT
 
-Sag einfach, was du ausgegeben hast – auch mehrere Ausgaben auf einmal. Mäuse erstellt temporäre Entwürfe, die du vor dem Speichern prüfen kannst.
+Teilt eine Ausgabe prozentual oder tragt direkt den Betrag ein, den dein Partner übernimmt. Mäuse rechnet den Rest für euch aus.
 
-Der Sprachmodus ist optional und benötigt deinen eigenen kompatiblen OpenAI-API-Schlüssel. Live-Mikrofonaudio und gesprochene Ausgabendetails werden nur während einer Sprachsitzung, direkt an OpenAI und erst nach deiner Einwilligung übertragen. OpenAI kann die Nutzung deinem API-Projekt berechnen. Mäuse erhält keinen Anteil an diesen Kosten.
+AUF WUNSCH EINFACH SAGEN
 
-LOKAL UND PORTABEL
+„10 Euro für Lebensmittel und 5 Euro für Kaffee, beides halbieren.“
 
-• Ausgaben werden lokal auf deinem iPhone gespeichert
-• Kein Mäuse-Konto und kein eigenes App-Backend
-• Keine Werbung, App-Analyse oder App-übergreifendes Tracking
-• Portable JSON-Backups exportieren und importieren
-• API-Schlüssel liegen im Apple-Schlüsselbund und nie im Backup
+Mit dem optionalen Sprachmodus kannst du sogar mehrere Ausgaben auf einmal erfassen. Mäuse erstellt zuerst Entwürfe, damit du alles in Ruhe prüfen kannst, bevor es gespeichert wird.
 
-FÜR DEIN IPHONE GEMACHT
+DEINE AUSGABEN BLEIBEN BEI DIR
 
-Nutze Mäuse auf Deutsch oder Englisch sowie im hellen, dunklen oder systemweiten Erscheinungsbild. Die manuelle Ausgabenerfassung funktioniert offline und ohne OpenAI-Schlüssel.
+• Kein Mäuse-Konto erforderlich
+• Ausgaben werden auf deinem iPhone gespeichert
+• Keine Werbung und kein App-übergreifendes Tracking
+• Backup als JSON-Datei exportieren und wiederherstellen
+• Manuelle Erfassung funktioniert auch offline
+
+Für den optionalen Sprachmodus brauchst du einen eigenen kompatiblen OpenAI-API-Schlüssel. Nur während einer Sprachsitzung werden Mikrofonaudio und gesprochene Ausgabendetails nach deiner Einwilligung direkt an OpenAI übertragen. Dabei können Kosten in deinem OpenAI-Projekt entstehen; Mäuse verdient daran nichts.
+
+Nutze Mäuse auf Deutsch oder Englisch und im hellen, dunklen oder systemweiten Erscheinungsbild.
 
 „Mäuse“ ist umgangssprachlich Geld – und wortwörtlich natürlich: Mäuse.
 
