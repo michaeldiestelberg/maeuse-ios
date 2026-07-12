@@ -74,10 +74,10 @@
 - [ ] At least one physical-iPhone TestFlight pass covers the listed critical flows.
 - [x] Correct build 8 is selected for version 1.2.0.
 - [x] Temporary OpenAI review project/key is created with a low usage limit (confirmed by account holder July 12, 2026).
-- [ ] Temporary key is entered only in App Store Connect review information; the private reviewer phone number is already entered there.
-- [x] App Review notes are copied from `review-notes.md` and checked for accuracy; the temporary key placeholder still needs to be replaced in App Store Connect.
+- [x] Temporary key and private reviewer phone number are entered only in App Store Connect review information.
+- [x] App Review notes are copied from `review-notes.md`, completed with the temporary key, and checked for accuracy.
 - [x] Release method is Manual Release.
-- [ ] Version is added to review and submitted.
+- [x] Version 1.2.0 (build 8) is added to review and submitted (July 12, 2026).
 
 ## After approval
 
