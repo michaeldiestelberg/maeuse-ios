@@ -7,7 +7,7 @@ enum SplitMode: String, Codable {
     case fixed
 }
 
-/// Persistent expense model backed by SwiftData (replaces IndexedDB)
+/// Persistent expense model backed by SwiftData.
 @Model
 final class Expense {
     @Attribute(.unique) var id: String

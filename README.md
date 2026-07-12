@@ -1,156 +1,98 @@
-# Mäuse
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="Maeuse/BrandAssets/MaeuseLogoLockupDark.png">
+    <img src="Maeuse/BrandAssets/MaeuseLogoLockupLight.png" alt="Mäuse" width="320">
+  </picture>
+</p>
 
-Mäuse is a native iOS expense tracker for couples. It is built for the small, everyday money moments that are easy to forget: groceries, coffee, train tickets, dinner, shared household bits, and anything else two people want to settle later.
+<p align="center">
+  Shared expenses, made simple. A local-first iPhone app for two people who want to keep everyday spending fair without maintaining a spreadsheet.
+</p>
 
-The name is German slang for money. Literally, it means "mice."
+## Current release
 
-## Project Status
+| | |
+| --- | --- |
+| Version | 1.2.0 (build 9) |
+| Platform | iPhone · iOS 17 or later |
+| Status | Submitted to App Review · Internal TestFlight available |
+| Languages | English and German |
 
-Mäuse is currently in **internal TestFlight testing**.
+Version 1.2.0 was submitted to App Review on July 12, 2026. The release uses manual publishing, so approval will not make it public automatically.
 
-It is not available on the App Store, there is no public TestFlight link, and the app should be treated as beta software. Core expense tracking works, the native iOS flow is usable, and the current work is focused on polishing distribution, reliability, voice capture, and the realtime expense-entry experience.
+## What Mäuse does
 
-This repository is public so the project can be followed and developed in the open, but the app is not a finished public release yet.
+- Records shared expenses in seconds.
+- Splits costs by percentage or by an exact partner amount.
+- Shows monthly spending, partner shares, and the current balance at a glance.
+- Keeps expense data on the iPhone with SwiftData.
+- Exports and restores portable JSON backups.
+- Supports English and German, plus light, dark, and system appearance.
+- Optionally turns several spoken expenses into reviewable drafts with Voice Mode.
 
-## What It Does
+<p align="center">
+  <img src="AppStore/screenshots/framed/en/01-dashboard.png" alt="Monthly shared-expense dashboard" width="23%">
+  <img src="AppStore/screenshots/framed/en/02-editor.png" alt="Expense editor" width="23%">
+  <img src="AppStore/screenshots/framed/en/03-voice.png" alt="Voice Mode draft review" width="23%">
+  <img src="AppStore/screenshots/framed/en/04-settings.png" alt="Settings, privacy controls, and backups" width="23%">
+</p>
 
-- Track expenses locally on an iPhone.
-- Split each expense by percentage or by a fixed partner amount.
-- Browse expenses by month and see totals at a glance.
-- Add and edit expenses manually.
-- Export and import JSON backups.
-- Enable an experimental realtime voice workspace for adding expenses by speaking.
+## Local-first by design
 
-The default split is 50 percent, which fits the main use case: two people sharing everyday costs.
+Mäuse has no account system, app backend, advertising, or tracking SDK. Expenses are stored locally and manual entry works offline. Backup files are created only when the user exports them.
 
-## Realtime Voice Entry
+Voice Mode is optional. When a user enables it and starts a session, microphone audio and expense context are sent directly to OpenAI. The user supplies their own compatible OpenAI API key, which Mäuse stores in iOS Keychain. Drafts can be reviewed, corrected, or removed before anything is saved.
 
-Voice mode is the most experimental part of the app.
+## Technology
 
-When enabled, the microphone button opens a full-screen voice workspace. A fresh conversation starts for each session. The user can speak naturally, for example:
+- SwiftUI for the interface
+- SwiftData for local persistence
+- Observation for application state
+- AVFoundation for microphone capture
+- URLSession WebSocket for OpenAI Realtime sessions
+- XCTest for unit coverage
 
-> Add groceries for 10 euros and coffee for 5.
+The Xcode project is intentionally dependency-light and does not require a package manager or third-party SDK to build.
 
-The app streams microphone audio to OpenAI Realtime, shows the live transcript/understanding, and maintains one or more draft expenses in the workspace. The user can continue speaking to correct, remove, or add more expenses before saving.
+## Development
 
-Current voice-mode behavior:
+Requirements:
 
-- Uses `gpt-realtime-2`.
-- Uses realtime input transcription and text-only model output.
-- Supports multiple expenses in one voice session.
-- Defaults missing date to today.
-- Defaults missing split to 50 percent.
-- Saves all active draft expenses when the session ends.
-- Stores the user's OpenAI API key in iOS Keychain.
-- Connects directly from the app to OpenAI. There is no app-owned token server in the current architecture.
+- macOS with Xcode 26 or later recommended
+- iOS 17 or later simulator or device
+- An Apple development team for installation on a physical device
+- Optional: an OpenAI API project with access to `gpt-realtime-2` for Voice Mode
 
-Voice mode is optional. The rest of the app works without an OpenAI API key.
+Clone the repository, open `Maeuse.xcodeproj`, select the `Maeuse` scheme, and run it on an iPhone simulator or device. Manual expense tracking works without additional configuration.
 
-## Privacy And Data
-
-Mäuse is local-first.
-
-- Expense data is stored on device with SwiftData.
-- There is no user account system.
-- There is no app backend.
-- There is no analytics or tracking SDK.
-- Backup files are user-exported JSON files.
-- Voice mode sends microphone audio and session context to OpenAI only when the user enables voice mode and starts a voice session.
-- The OpenAI API key is provided by the user and stored in iOS Keychain on that device.
-
-Anyone using voice mode is responsible for their own OpenAI API usage, billing, and project access.
-
-## Distribution
-
-Current distribution state:
-
-- Internal TestFlight only.
-- Not listed on the App Store.
-- No public beta link.
-- No production support commitments.
-
-The current internal build is used to test the native app on real devices before deciding whether to move toward external TestFlight or App Store submission.
-
-## Versioning
-
-Mäuse uses App Store-friendly versioning:
-
-- `MARKETING_VERSION` is the user-visible app version and maps to `CFBundleShortVersionString`.
-- `CURRENT_PROJECT_VERSION` is the upload build number and maps to `CFBundleVersion`.
-- `Info.plist` uses build-setting substitution for both values, so the Xcode project is the source of truth.
-
-The marketing version follows `Major.Minor.Patch`:
-
-- Patch: bug fixes and small polish, for example `1.0.0` to `1.0.1`.
-- Minor: meaningful user-facing improvements, for example `1.0.0` to `1.1.0`.
-- Major: large compatibility, product, or architecture changes, for example `1.0.0` to `2.0.0`.
-
-The build number is a monotonically increasing integer. Increment it before every archive uploaded to App Store Connect or TestFlight, even when the marketing version stays the same.
-
-Use the helper script from the repository root:
+To run the test suite from the command line:
 
 ```sh
-scripts/bump-version.sh build
-scripts/bump-version.sh patch
-scripts/bump-version.sh minor
-scripts/bump-version.sh major
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+  xcodebuild test \
+  -project Maeuse.xcodeproj \
+  -scheme Maeuse \
+  -destination 'platform=iOS Simulator,name=iPhone 17 Pro'
 ```
 
-For a TestFlight rebuild of the same app version, use `build`. For release notes that would say "fixed" or "polished", use `patch`. For a new feature release, use `minor`. Reserve `major` for a larger product milestone.
+## Versioning and releases
 
-## Tech Stack
+The Xcode project is the source of truth for both version values:
 
-- SwiftUI for the app UI.
-- SwiftData for local persistence.
-- Observation for view model state.
-- AVFoundation for microphone capture.
-- URLSession WebSocket for the OpenAI Realtime connection.
-- OpenAI Realtime API for voice expense extraction.
-- JSON backup import/export for portability.
+- `MARKETING_VERSION` is the user-facing version (`1.2.0`).
+- `CURRENT_PROJECT_VERSION` is the App Store Connect build number (`9`).
 
-Voice mode uses direct WebSocket-based OpenAI Realtime sessions.
+Use `scripts/bump-version.sh` before creating a new archive. See [RELEASING.md](RELEASING.md) for the full release workflow and [CHANGELOG.md](CHANGELOG.md) for user-facing release notes.
 
-## Requirements
+## Repository guide
 
-To build the app locally:
+- `Maeuse/` — application source, resources, and privacy manifest
+- `MaeuseTests/` — unit tests
+- `AppStore/` — localized listing copy, screenshots, compliance notes, and submission checklist
+- `scripts/` — versioning and screenshot helpers
 
-- macOS with Xcode 16 or newer.
-- iOS 17 or newer target device/simulator.
-- An Apple developer team for running on a physical device.
-- Optional: an OpenAI API key with access to `gpt-realtime-2` for voice mode.
-
-## Running Locally
-
-1. Clone the repository.
-2. Open `Maeuse.xcodeproj` in Xcode.
-3. Select your Apple development team under Signing & Capabilities.
-4. Build and run the `Maeuse` scheme on a simulator or device.
-
-Manual expense tracking works immediately. Voice mode needs a user-provided OpenAI API key:
-
-1. Open Settings in the app.
-2. Enter an OpenAI API key.
-3. Tap Verify & Save Key.
-4. Enable voice mode.
-5. Use the microphone button from the main expense screen.
-
-## Testing
-
-The repository includes unit tests for the realtime voice workspace, including:
-
-- Realtime session configuration.
-- Realtime event parsing.
-- Workspace draft replacement.
-- Date and split defaults.
-- Raw transcript handling.
-- Multi-expense save behavior.
-
-Run tests from Xcode with the `Maeuse` scheme, or use `xcodebuild test` with an available iOS simulator.
-
-## Relationship To The PWA
-
-This app is a native iOS version of the Mäuse expense-splitting idea. Backup files are JSON-based so data can remain portable between implementations.
+Product information and support are available at [mäuse.app](https://xn--muse-loa.app/).
 
 ## License
 
-No open-source license has been selected yet. Until a license is added, all rights are reserved by the repository owner.
+No open-source license has been selected. All rights are reserved by the repository owner.
