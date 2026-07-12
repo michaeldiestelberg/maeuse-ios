@@ -4,16 +4,16 @@
 
 - [x] Apple Developer Program membership is active (confirmed by account holder July 12, 2026).
 - [x] All updated Apple agreements have been accepted (confirmed by account holder July 12, 2026).
-- [ ] App record uses bundle ID `com.michaeldiestelberg.maeuse`.
-- [ ] Primary language is English (U.S.); German localization is added.
-- [ ] App name `Mäuse` is reserved.
-- [ ] Primary category is Finance; secondary category is Lifestyle.
-- [ ] Price is Free.
-- [ ] Availability/storefronts are selected.
-- [ ] DSA status is entered in App Store Connect as **EU non-trader** (account-holder decision confirmed July 12, 2026).
-- [ ] Updated 2026 age-rating questionnaire is complete.
-- [ ] Content-rights question is answered accurately for the OpenAI integration.
-- [ ] Compliance questions are entered from `compliance-answers.md` and rechecked against the live form.
+- [x] App record uses bundle ID `com.michaeldiestelberg.maeuse`.
+- [x] Primary language is German; English (U.S.) localization is added.
+- [x] App name `Mäuse` is reserved.
+- [x] Primary category is Finance; secondary category is Lifestyle.
+- [x] Price is Free.
+- [x] Availability is set to all 175 storefronts.
+- [x] DSA status is entered in App Store Connect as **EU non-trader** (completed July 12, 2026).
+- [x] Updated 2026 age-rating questionnaire is complete with a 4+ rating.
+- [x] Content-rights question is answered conservatively for the OpenAI integration.
+- [x] Compliance questions are entered from `compliance-answers.md` and rechecked against the live form.
 
 ## Public URLs
 
@@ -26,19 +26,19 @@
 
 ## App Store metadata
 
-- [ ] English name, subtitle, description, promotional text, and keywords are entered from `metadata-en.md`.
-- [ ] German localization is entered from `metadata-de.md`.
-- [ ] Support, marketing, and privacy URLs are entered.
-- [ ] Copyright is `2026 Michael Diestelberg` or the exact rights-owning legal entity.
+- [x] English name, subtitle, description, promotional text, and keywords are entered from `metadata-en.md`.
+- [x] German localization is entered from `metadata-de.md`.
+- [x] Support, marketing, and privacy URLs are entered.
+- [x] Copyright is `2026 Michael Diestelberg`.
 - [ ] Four English 6.9-inch screenshots are uploaded in the planned order.
 - [ ] Four German 6.9-inch screenshots are uploaded in the planned order.
 - [x] Prepared screenshots contain no real personal data or secret API key.
 
 ## Privacy and compliance
 
-- [ ] App Privacy answers are published using `privacy-answers.md`.
+- [x] App Privacy answers are published using `privacy-answers.md`.
 - [ ] Accessibility Nutrition Labels are entered conservatively using `compliance-answers.md`.
-- [ ] Privacy Policy URL is entered in App Privacy.
+- [x] Privacy Policy URL is entered in App Privacy.
 - [x] Voice Mode consent screen and withdrawal path are present in the selected build.
 - [x] Microphone purpose string accurately describes OpenAI streaming.
 - [x] Export compliance confirms only exempt/system encryption is used; `ITSAppUsesNonExemptEncryption` remains `false`.
@@ -68,15 +68,15 @@
 - [x] A Release archive is created successfully for Any iOS Device.
 - [x] An App Store Connect distribution-signed IPA exports successfully and passes local signature/archive integrity checks.
 - [ ] Xcode Organizer validation passes.
-- [ ] Archive is uploaded to App Store Connect.
+- [x] Build 8 is uploaded to App Store Connect (confirmed by Apple's duplicate-build response on July 12, 2026).
 - [ ] Build finishes processing without missing-compliance warnings.
 - [ ] TestFlight information is entered from `testflight.md`.
 - [ ] At least one physical-iPhone TestFlight pass covers the listed critical flows.
 - [ ] Correct build is selected for version 1.2.0.
 - [ ] Temporary OpenAI review project/key is created with a low usage limit.
-- [ ] Temporary key and reviewer phone number are entered only in App Store Connect review information.
+- [ ] Temporary key is entered only in App Store Connect review information; the private reviewer phone number is already entered there.
 - [ ] App Review notes are copied from `review-notes.md` and checked for accuracy.
-- [ ] Release method is Manual Release.
+- [x] Release method is Manual Release.
 - [ ] Version is added to review and submitted.
 
 ## After approval

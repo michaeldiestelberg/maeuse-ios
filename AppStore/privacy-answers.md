@@ -28,6 +28,15 @@ Rationale: live microphone audio is sent to OpenAI. Requests are authenticated t
 
 Rationale: Voice Mode specifically asks users to speak expense amounts, descriptions, dates, and split details. This is financial information rather than merely an unrestricted generic text field.
 
+### Other User Content
+
+- Collected: Yes
+- Purpose: App Functionality
+- Linked to the user: Yes
+- Used for tracking: No
+
+Rationale: spoken expense descriptions and related free-form details are sent to OpenAI during an optional Voice Mode session. Some of that content may not fit solely within Apple's financial-information category, so this is the conservative disclosure.
+
 ## Do not select
 
 - Advertising data
