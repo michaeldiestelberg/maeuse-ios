@@ -49,7 +49,7 @@
 
 - [ ] Full Xcode 26 or later is selected: `sudo xcode-select -s /Applications/Xcode.app/Contents/Developer`.
 - [x] Marketing version is `1.2.0`.
-- [ ] Build number is incremented above every previously uploaded build.
+- [x] Build number is incremented above every previously uploaded build (`9`).
 - [x] Release archive succeeds with the iOS 26.5 SDK.
 - [x] Unit tests pass.
 - [x] Xcode Release static analysis succeeds for the app target.
@@ -68,16 +68,16 @@
 - [x] A Release archive is created successfully for Any iOS Device.
 - [x] An App Store Connect distribution-signed IPA exports successfully and passes local signature/archive integrity checks.
 - [ ] Xcode Organizer validation passes.
-- [x] Build 8 is uploaded to App Store Connect (confirmed by Apple's duplicate-build response on July 12, 2026).
-- [x] Build 8 finishes processing and is selectable for App Store version 1.2.0.
-- [x] TestFlight information is entered from `testflight.md`; build 8 is validated and assigned to the internal Family group (2 testers).
+- [x] Build 9, archived from the July 12 source tree, is uploaded to App Store Connect and finishes processing.
+- [x] The stale build 8 review submission is removed before resubmission.
+- [x] TestFlight information is entered from `testflight.md`; build 9 is validated and assigned to the internal Family group (2 testers).
 - [ ] At least one physical-iPhone TestFlight pass covers the listed critical flows.
-- [x] Correct build 8 is selected for version 1.2.0.
+- [x] Correct build 9 is selected for version 1.2.0.
 - [x] Temporary OpenAI review project/key is created with a low usage limit (confirmed by account holder July 12, 2026).
 - [x] Temporary key and private reviewer phone number are entered only in App Store Connect review information.
 - [x] App Review notes are copied from `review-notes.md`, completed with the temporary key, and checked for accuracy.
 - [x] Release method is Manual Release.
-- [x] Version 1.2.0 (build 8) is added to review and submitted (July 12, 2026).
+- [x] Version 1.2.0 (build 9) is added to review and submitted (July 12, 2026); App Store Connect confirms the replacement submission.
 
 ## After approval
 
