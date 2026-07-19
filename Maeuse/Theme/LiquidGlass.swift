@@ -229,15 +229,17 @@ struct FloatingCheeseHole: View {
 
 struct MaeusePlusIcon: View {
     var color: Color = .maeusInk
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
-        Canvas { context, size in
+        let strokeColor = color.resolved(for: colorScheme)
+        return Canvas { context, size in
             var path = Path()
             path.move(to: CGPoint(x: size.width / 2, y: size.height * 0.21))
             path.addLine(to: CGPoint(x: size.width / 2, y: size.height * 0.79))
             path.move(to: CGPoint(x: size.width * 0.21, y: size.height / 2))
             path.addLine(to: CGPoint(x: size.width * 0.79, y: size.height / 2))
-            context.stroke(path, with: .color(color), style: StrokeStyle(lineWidth: 3, lineCap: .round))
+            context.stroke(path, with: .color(strokeColor), style: StrokeStyle(lineWidth: 3, lineCap: .round))
         }.frame(width: 24, height: 24)
     }
 }
@@ -304,16 +306,18 @@ struct MaeuseCheckIcon: View {
 struct MaeuseMicIcon: View {
     var size: CGFloat = 18
     var color: Color = .maeusForeground
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
-        Canvas { context, canvasSize in
+        let strokeColor = color.resolved(for: colorScheme)
+        let lineWidth: CGFloat = size >= 24 ? 2.8 : 2.4
+        return Canvas { context, canvasSize in
             let sx = canvasSize.width / 24, sy = canvasSize.height / 24
-            let lineWidth = size >= 24 ? 2.8 : 2.4
             var path = Path(roundedRect: CGRect(x: 9*sx, y: 3*sy, width: 6*sx, height: 11*sy), cornerRadius: 3*sx)
-            context.stroke(path, with: .color(color), style: StrokeStyle(lineWidth: lineWidth, lineCap: .round))
+            context.stroke(path, with: .color(strokeColor), style: StrokeStyle(lineWidth: lineWidth, lineCap: .round))
             path = Path(); path.move(to: CGPoint(x: 5*sx, y: 11*sy)); path.addCurve(to: CGPoint(x: 19*sx, y: 11*sy), control1: CGPoint(x: 5*sx, y: 20*sy), control2: CGPoint(x: 19*sx, y: 20*sy))
             path.move(to: CGPoint(x: 12*sx, y: 18*sy)); path.addLine(to: CGPoint(x: 12*sx, y: 21*sy))
-            context.stroke(path, with: .color(color), style: StrokeStyle(lineWidth: lineWidth, lineCap: .round))
+            context.stroke(path, with: .color(strokeColor), style: StrokeStyle(lineWidth: lineWidth, lineCap: .round))
         }.frame(width: size, height: size)
     }
 }
@@ -330,5 +334,12 @@ extension Color {
 
     init(light: Color, dark: Color) {
         self.init(UIColor { $0.userInterfaceStyle == .dark ? UIColor(dark) : UIColor(light) })
+    }
+
+    /// Canvas does not reliably resolve dynamic colors from stored properties; bake the scheme first.
+    func resolved(for colorScheme: ColorScheme) -> Color {
+        let style: UIUserInterfaceStyle = colorScheme == .dark ? .dark : .light
+        let resolved = UIColor(self).resolvedColor(with: UITraitCollection(userInterfaceStyle: style))
+        return Color(resolved)
     }
 }
