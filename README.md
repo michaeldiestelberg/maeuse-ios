@@ -13,12 +13,12 @@
 
 | | |
 | --- | --- |
-| Version | 1.2.0 (build 9) |
+| Version | 1.2.0 (build 10) |
 | Platform | iPhone · iOS 17 or later |
 | Status | Submitted to App Review · Internal TestFlight available |
 | Languages | English and German |
 
-Version 1.2.0 was submitted to App Review on July 12, 2026. The release uses manual publishing, so approval will not make it public automatically.
+Version 1.2.0 was submitted to App Review on July 12, 2026. Build 10 adds the voice-primary FAB and is distributed via Internal TestFlight. The release uses manual publishing, so approval will not make it public automatically.
 
 ## What Mäuse does
 

@@ -49,7 +49,7 @@
 
 - [ ] Full Xcode 26 or later is selected: `sudo xcode-select -s /Applications/Xcode.app/Contents/Developer`.
 - [x] Marketing version is `1.2.0`.
-- [x] Build number is incremented above every previously uploaded build (`9`).
+- [x] Build number is incremented above every previously uploaded build (`10`).
 - [x] Release archive succeeds with the iOS 26.5 SDK.
 - [x] Unit tests pass.
 - [x] Xcode Release static analysis succeeds for the app target.
@@ -78,6 +78,7 @@
 - [x] App Review notes are copied from `review-notes.md`, completed with the temporary key, and checked for accuracy.
 - [x] Release method is Manual Release.
 - [x] Version 1.2.0 (build 9) is added to review and submitted (July 12, 2026); App Store Connect confirms the replacement submission.
+- [ ] Build 10 (voice-primary FAB) is uploaded to App Store Connect, processed, and assigned to Internal TestFlight.
 
 ## After approval
 
