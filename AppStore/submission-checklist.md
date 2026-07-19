@@ -78,9 +78,8 @@
 - [x] App Review notes are copied from `review-notes.md`, completed with the temporary key, and checked for accuracy.
 - [x] Release method is Manual Release.
 - [x] Version 1.2.0 (build 9) is added to review and submitted (July 12, 2026); App Store Connect confirms the replacement submission.
-- [ ] Build 10 (voice-primary FAB) is uploaded to App Store Connect, processed, and assigned to Internal TestFlight.
 - [x] Build 11 (`1.2.1`, voice-primary FAB) is uploaded to App Store Connect (July 19, 2026) and is processing for Internal TestFlight.
-- [ ] Build 11 is assigned to the internal Family group after processing completes.
+- [x] Build 11 is available to the internal Family group via automatic distribution (confirmed July 19, 2026).
 
 ## After approval
 
