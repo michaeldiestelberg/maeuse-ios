@@ -267,6 +267,23 @@ struct SettingsSheet: View {
             .tint(Color.maeusPrimary)
             .disabled(!viewModel.voiceSettings.isVerified || !viewModel.hasSavedVoiceAPIKey)
 
+            Toggle(isOn: Binding(
+                get: { viewModel.voiceSettings.hapticsEnabled },
+                set: {
+                    viewModel.voiceSettings.hapticsEnabled = $0
+                    viewModel.saveVoiceSettings()
+                }
+            )) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(loc("VoiceHaptics"))
+                        .font(.subheadline.weight(.medium))
+                    Text(loc("VoiceHapticsDesc"))
+                        .font(.caption)
+                        .foregroundStyle(Color.maeusTextTertiary)
+                }
+            }
+            .tint(Color.maeusPrimary)
+
             if viewModel.hasVoiceConsent {
                 Label(loc("VoiceConsentAcceptedLabel"), systemImage: "checkmark.shield.fill")
                     .font(.system(size: 11, weight: .bold, design: .rounded))

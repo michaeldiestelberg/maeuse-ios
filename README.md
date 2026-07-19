@@ -13,12 +13,12 @@
 
 | | |
 | --- | --- |
-| Version | 1.2.1 (build 11) |
+| Version | 1.2.1 (build 12) |
 | Platform | iPhone · iOS 17 or later |
 | Status | Internal TestFlight · 1.2.0 approved on the App Store |
 | Languages | English and German |
 
-Version 1.2.1 (build 11) ships the voice-primary FAB and is distributed via Internal TestFlight. Version 1.2.0 was approved earlier; App Store publishing remains manual.
+Version 1.2.1 (build 12) adds Voice Mode haptic feedback and ships via Internal TestFlight. Version 1.2.0 was approved earlier; App Store publishing remains manual.
 
 ## What Mäuse does
 

@@ -64,6 +64,8 @@
 "RemoveSavedKey" = "Remove Saved Key";
 "EnableVoiceMode" = "Enable voice mode";
 "ShowsMicButton" = "Shows the mic button on the main screen";
+"VoiceHaptics" = "Haptic feedback";
+"VoiceHapticsDesc" = "Vibrate when listening starts and when expenses are captured";
 "ApiKeyVerifiedMsg" = "API key verified %@";
 "KeychainStorageDesc" = "Your key is stored in iOS Keychain on this device and sent only to OpenAI over HTTPS to create short-lived Realtime client secrets.";
 "VoiceRequirementsDesc" = "Voice mode requires an OpenAI API project with access to gpt-realtime-2; free-tier API keys are not supported for this model.";

@@ -388,8 +388,27 @@ final class RealtimeVoiceWorkspaceTests: XCTestCase {
         let settings = try JSONDecoder().decode(VoiceSettings.self, from: Data(legacy.utf8))
 
         XCTAssertTrue(settings.enabled)
+        XCTAssertTrue(settings.hapticsEnabled)
         XCTAssertFalse(settings.hasCurrentConsent)
         XCTAssertFalse(settings.isReady)
+    }
+
+    func testVoiceSettingsDecodeHapticsDisabled() throws {
+        let json = """
+        {
+          "apiKeySuffix": "7mQ2",
+          "verifiedAt": 796348800,
+          "enabled": true,
+          "hapticsEnabled": false,
+          "consentVersion": 1,
+          "consentedAt": 796348800
+        }
+        """
+
+        let settings = try JSONDecoder().decode(VoiceSettings.self, from: Data(json.utf8))
+
+        XCTAssertFalse(settings.hapticsEnabled)
+        XCTAssertTrue(settings.enabled)
     }
 }
 

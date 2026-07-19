@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import UIKit
 
 /// Manages a fresh Realtime voice workspace for one expense-capture session.
 @MainActor
@@ -19,6 +20,7 @@ final class VoiceModeViewModel {
 
     private let realtime = RealtimeVoiceService()
     private var hasStartedSession = false
+    private var didSignalListeningReady = false
     private var userTranscriptBuffers: [String: String] = [:]
     private var activeUserTranscriptID: String?
 
@@ -176,6 +178,7 @@ final class VoiceModeViewModel {
         microphoneLevel = 0
         isSaving = false
         hasStartedSession = false
+        didSignalListeningReady = false
         userTranscriptBuffers = [:]
         activeUserTranscriptID = nil
     }
@@ -216,11 +219,52 @@ final class VoiceModeViewModel {
             return nil
         }).union(payload.removedExpenseIDs)
 
+        let previousIDs = Set(previousDrafts.keys)
+        let nextIDs = Set(nextDrafts.map(\.id))
+        let addedIDs = nextIDs.subtracting(previousIDs)
+        // Content-only: ignore changed_expense_ids claims with identical fields.
+        let updatedIDs = Set(nextDrafts.compactMap { draft -> String? in
+            guard let previous = previousDrafts[draft.id] else { return nil }
+            return previous.withoutChangeTimestamp != draft.withoutChangeTimestamp ? draft.id : nil
+        })
+
         drafts = nextDrafts
         liveAssistantText = ""
 
+        if !addedIDs.isEmpty {
+            playVoiceHaptic(.success)
+        } else if !updatedIDs.isEmpty {
+            playVoiceHaptic(.soft)
+        }
+
         if phase != .error {
             phase = .listening
+        }
+    }
+
+    private var areVoiceHapticsEnabled: Bool {
+        guard let data = UserDefaults.standard.data(forKey: VoiceSettings.storageKey),
+              let settings = try? JSONDecoder().decode(VoiceSettings.self, from: data) else {
+            return true
+        }
+        return settings.hapticsEnabled
+    }
+
+    private enum VoiceHapticStyle {
+        case success
+        case soft
+        case rigid
+    }
+
+    private func playVoiceHaptic(_ style: VoiceHapticStyle) {
+        guard areVoiceHapticsEnabled else { return }
+        switch style {
+        case .success:
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
+        case .soft:
+            UIImpactFeedbackGenerator(style: .soft).impactOccurred()
+        case .rigid:
+            UIImpactFeedbackGenerator(style: .rigid).impactOccurred()
         }
     }
 
@@ -298,6 +342,10 @@ extension VoiceModeViewModel: RealtimeVoiceServiceDelegate {
             break
         case .microphoneStarted:
             microphoneIsActive = true
+            if !didSignalListeningReady {
+                didSignalListeningReady = true
+                playVoiceHaptic(.rigid)
+            }
         case .microphoneStopped:
             microphoneIsActive = false
             microphoneLevel = 0

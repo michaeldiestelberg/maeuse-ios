@@ -188,6 +188,7 @@ struct VoiceSettings: Codable {
     var apiKeySuffix: String?
     var verifiedAt: Date?
     var enabled: Bool
+    var hapticsEnabled: Bool
     var consentVersion: Int?
     var consentedAt: Date?
 
@@ -199,6 +200,7 @@ struct VoiceSettings: Codable {
             apiKeySuffix: nil,
             verifiedAt: nil,
             enabled: false,
+            hapticsEnabled: true,
             consentVersion: nil,
             consentedAt: nil
         )
@@ -208,12 +210,14 @@ struct VoiceSettings: Codable {
         apiKeySuffix: String?,
         verifiedAt: Date?,
         enabled: Bool,
+        hapticsEnabled: Bool = true,
         consentVersion: Int?,
         consentedAt: Date?
     ) {
         self.apiKeySuffix = apiKeySuffix
         self.verifiedAt = verifiedAt
         self.enabled = enabled
+        self.hapticsEnabled = hapticsEnabled
         self.consentVersion = consentVersion
         self.consentedAt = consentedAt
     }
@@ -222,6 +226,7 @@ struct VoiceSettings: Codable {
         case apiKeySuffix
         case verifiedAt
         case enabled
+        case hapticsEnabled
         case consentVersion
         case consentedAt
     }
@@ -231,6 +236,7 @@ struct VoiceSettings: Codable {
         apiKeySuffix = try container.decodeIfPresent(String.self, forKey: .apiKeySuffix)
         verifiedAt = try container.decodeIfPresent(Date.self, forKey: .verifiedAt)
         enabled = try container.decodeIfPresent(Bool.self, forKey: .enabled) ?? false
+        hapticsEnabled = try container.decodeIfPresent(Bool.self, forKey: .hapticsEnabled) ?? true
         consentVersion = try container.decodeIfPresent(Int.self, forKey: .consentVersion)
         consentedAt = try container.decodeIfPresent(Date.self, forKey: .consentedAt)
     }
@@ -240,6 +246,7 @@ struct VoiceSettings: Codable {
         try container.encodeIfPresent(apiKeySuffix, forKey: .apiKeySuffix)
         try container.encodeIfPresent(verifiedAt, forKey: .verifiedAt)
         try container.encode(enabled, forKey: .enabled)
+        try container.encode(hapticsEnabled, forKey: .hapticsEnabled)
         try container.encodeIfPresent(consentVersion, forKey: .consentVersion)
         try container.encodeIfPresent(consentedAt, forKey: .consentedAt)
     }

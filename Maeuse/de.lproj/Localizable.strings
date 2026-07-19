@@ -64,6 +64,8 @@
 "RemoveSavedKey" = "Gespeicherten Schlüssel löschen";
 "EnableVoiceMode" = "Sprachmodus aktivieren";
 "ShowsMicButton" = "Zeigt das Mikrofonsymbol auf dem Hauptbildschirm";
+"VoiceHaptics" = "Haptisches Feedback";
+"VoiceHapticsDesc" = "Vibrieren beim Start des Zuhörens und beim Erfassen von Ausgaben";
 "ApiKeyVerifiedMsg" = "API-Schlüssel verifiziert %@";
 "KeychainStorageDesc" = "Dein Schlüssel wird im iOS-Schlüsselbund (Keychain) auf diesem Gerät gespeichert und nur über HTTPS an OpenAI gesendet, um kurzlebige temporäre Realtime-Client-Secrets zu erstellen.";
 "VoiceRequirementsDesc" = "Der Sprachmodus erfordert ein OpenAI-API-Projekt mit Zugriff auf gpt-realtime-2; API-Schlüssel der kostenlosen Stufe (Free Tier) werden für dieses Modell nicht unterstützt.";
