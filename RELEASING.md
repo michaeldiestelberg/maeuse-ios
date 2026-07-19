@@ -1,28 +1,28 @@
 # Releasing Mäuse
 
-Mäuse follows Apple's two-part versioning model. The Xcode project is the only source of truth:
+Mäuse follows Apple's two-part versioning model. The Xcode project is the source of truth for marketing version; App Store Connect also tracks Xcode Cloud’s **Next Build Number**:
 
 - `MARKETING_VERSION` is the user-facing `major.minor.patch` version.
-- `CURRENT_PROJECT_VERSION` is the monotonically increasing App Store Connect build number.
+- `CURRENT_PROJECT_VERSION` is the App Store Connect build number. Keep it aligned with (or ahead of) builds already on App Store Connect, and with Xcode Cloud → Settings → Build Number → **Next Build Number**.
 
-The current App Store candidate is **1.2.0 (9)**.
+App Store live: **1.2.0 (9)**. Internal TestFlight: see `README.md` for the current `1.2.1` build.
 
 ## 1. Choose the version change
 
 Run one command from the repository root:
 
 ```sh
-scripts/bump-version.sh build  # 1.2.0 (9) -> 1.2.0 (10)
-scripts/bump-version.sh patch  # 1.2.0 (9) -> 1.2.1 (10)
-scripts/bump-version.sh minor  # 1.2.0 (9) -> 1.3.0 (10)
-scripts/bump-version.sh major  # 1.2.0 (9) -> 2.0.0 (10)
+scripts/bump-version.sh build  # 1.2.1 (13) -> 1.2.1 (14)
+scripts/bump-version.sh patch  # 1.2.1 (13) -> 1.2.2 (14)
+scripts/bump-version.sh minor  # 1.2.1 (13) -> 1.3.0 (14)
+scripts/bump-version.sh major  # 1.2.1 (13) -> 2.0.0 (14)
 ```
 
 Use `build` for another upload of the same user-facing release. Never reuse a build number already uploaded to App Store Connect.
 
 ## 2. Prepare the release record
 
-Before archiving:
+Before shipping a build:
 
 1. Add user-facing changes to `CHANGELOG.md`.
 2. Update the current version and status in `README.md`.
@@ -41,15 +41,24 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
 
 Run the unit tests and perform the physical-device checks listed in `AppStore/submission-checklist.md`. A release candidate should also be checked in English and German, light and dark appearance, offline mode, backup import/export, and every Voice Mode consent state.
 
-## 4. Archive and upload
+## 4. Build and distribute (Xcode Cloud)
 
-Create a Release archive for Any iOS Device, validate the archive, and upload it to App Store Connect. Wait for processing to finish before assigning the build to TestFlight or an App Store version.
+Routine Internal TestFlight builds use **Xcode Cloud** workflow **Maeuse | Default**:
 
-Verify all three identifiers before submission:
+1. Commit the version bump and release-record updates on `main`.
+2. Push to `origin/main`. That starts the workflow.
+3. Wait for the GitHub commit status **Maeuse | Default** to succeed.
+4. Confirm the build appears in TestFlight. The workflow’s **TestFlight Internal Testing** post-action distributes it to the internal testing group automatically.
+
+Xcode Cloud assigns the App Store Connect build number from its **Next Build Number** setting. If that counter drifts below builds already on App Store Connect, raise it in App Store Connect → Xcode Cloud → Settings → Build Number, bump `CURRENT_PROJECT_VERSION` to match, and push again.
+
+For App Store submission, pick a processed build in App Store Connect (from Cloud or a local Organizer upload), attach it to the version, and submit. Local Organizer archive/upload remains optional when Cloud is unavailable; prefer Cloud for day-to-day TestFlight.
+
+Verify before treating a build as the release candidate:
 
 - App version
 - Build number
-- Git commit used for the archive
+- Git commit that triggered the Cloud build (or that produced the archive)
 
 ## 5. Publish the source release
 
@@ -61,3 +70,5 @@ git push origin v1.2.0
 ```
 
 Use the matching section from `CHANGELOG.md` as the GitHub Release notes. Mark the GitHub Release as a pre-release while the App Store build is still under review; promote it after the app is publicly available.
+
+See [AGENTS.md](AGENTS.md) for agent-oriented TestFlight / Xcode Cloud notes.
