@@ -228,6 +228,8 @@ struct FloatingCheeseHole: View {
 // MARK: - Prototype-faithful line icons
 
 struct MaeusePlusIcon: View {
+    var color: Color = .maeusInk
+
     var body: some View {
         Canvas { context, size in
             var path = Path()
@@ -235,7 +237,7 @@ struct MaeusePlusIcon: View {
             path.addLine(to: CGPoint(x: size.width / 2, y: size.height * 0.79))
             path.move(to: CGPoint(x: size.width * 0.21, y: size.height / 2))
             path.addLine(to: CGPoint(x: size.width * 0.79, y: size.height / 2))
-            context.stroke(path, with: .color(.maeusInk), style: StrokeStyle(lineWidth: 3, lineCap: .round))
+            context.stroke(path, with: .color(color), style: StrokeStyle(lineWidth: 3, lineCap: .round))
         }.frame(width: 24, height: 24)
     }
 }
