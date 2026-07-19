@@ -2,6 +2,11 @@
 
 This file records user-facing changes to Mäuse. App Store and GitHub release notes should be based on the matching version section.
 
+## 1.2.1 — 2026-07-19
+
+- When Voice Mode is ready, the mic button is the primary action on the main screen and the plus button is secondary.
+- Secondary plus icon uses a crisp white glyph in dark mode for readable contrast.
+
 ## 1.2.0 — 2026-07-12
 
 Mäuse 1.2.0 is the first App Store-ready release: a focused, local-first way for two people to record and settle everyday expenses.
@@ -22,14 +27,12 @@ Mäuse 1.2.0 is the first App Store-ready release: a focused, local-first way fo
 - Keep the OpenAI API key in iOS Keychain.
 - Manage microphone access, consent, Voice Mode, and the saved key independently.
 - Continue using manual expense tracking without an API key or network connection.
-- When Voice Mode is ready, the mic button is the primary action on the main screen.
 
 ### App Store preparation
 
 - Added the final app icon, brand assets, privacy manifest, localized metadata, and screenshot set.
 - Added clear in-app privacy explanations and consent withdrawal controls.
 - Prepared and submitted version 1.2.0 build 9 for App Review.
-- Distributed build 10 to Internal TestFlight with the voice-primary FAB.
 
 ## 1.0.0 — 2026-05-14
 
