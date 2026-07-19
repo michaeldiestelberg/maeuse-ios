@@ -300,15 +300,19 @@ struct MaeuseCheckIcon: View {
 }
 
 struct MaeuseMicIcon: View {
+    var size: CGFloat = 18
+    var color: Color = .maeusForeground
+
     var body: some View {
-        Canvas { context, size in
-            let sx = size.width / 24, sy = size.height / 24
+        Canvas { context, canvasSize in
+            let sx = canvasSize.width / 24, sy = canvasSize.height / 24
+            let lineWidth = size >= 24 ? 2.8 : 2.4
             var path = Path(roundedRect: CGRect(x: 9*sx, y: 3*sy, width: 6*sx, height: 11*sy), cornerRadius: 3*sx)
-            context.stroke(path, with: .color(.maeusForeground), style: StrokeStyle(lineWidth: 2.4, lineCap: .round))
+            context.stroke(path, with: .color(color), style: StrokeStyle(lineWidth: lineWidth, lineCap: .round))
             path = Path(); path.move(to: CGPoint(x: 5*sx, y: 11*sy)); path.addCurve(to: CGPoint(x: 19*sx, y: 11*sy), control1: CGPoint(x: 5*sx, y: 20*sy), control2: CGPoint(x: 19*sx, y: 20*sy))
             path.move(to: CGPoint(x: 12*sx, y: 18*sy)); path.addLine(to: CGPoint(x: 12*sx, y: 21*sy))
-            context.stroke(path, with: .color(.maeusForeground), style: StrokeStyle(lineWidth: 2.4, lineCap: .round))
-        }.frame(width: 18, height: 18)
+            context.stroke(path, with: .color(color), style: StrokeStyle(lineWidth: lineWidth, lineCap: .round))
+        }.frame(width: size, height: size)
     }
 }
 

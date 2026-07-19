@@ -140,13 +140,17 @@ struct MainExpenseView: View {
     private var fabStack: some View {
         HStack(alignment: .bottom, spacing: 12) {
             if settingsVM.voiceSettings.isReady {
+                Button { editorVM.prepareForNew() } label: {
+                    MaeusePlusIcon()
+                }.buttonStyle(FABStyle(isPrimary: false)).accessibilityLabel(loc("AddExpense"))
                 Button { voiceVM.open() } label: {
-                    MaeuseMicIcon()
-                }.buttonStyle(FABStyle(isPrimary: false)).accessibilityLabel(loc("StartVoiceMode"))
+                    MaeuseMicIcon(size: 24, color: .maeusInk)
+                }.buttonStyle(FABStyle()).accessibilityLabel(loc("StartVoiceMode"))
+            } else {
+                Button { editorVM.prepareForNew() } label: {
+                    MaeusePlusIcon()
+                }.buttonStyle(FABStyle()).accessibilityLabel(loc("AddExpense"))
             }
-            Button { editorVM.prepareForNew() } label: {
-                MaeusePlusIcon()
-            }.buttonStyle(FABStyle()).accessibilityLabel(loc("AddExpense"))
         }
     }
 }
