@@ -47,6 +47,7 @@ struct ContentView: View {
             } else if !onboardingHidden {
                 showOnboarding = true
             }
+            applyDemoCaptureLaunchArgumentIfNeeded()
             consumeCaptureLaunchIfNeeded()
         }
         .onChange(of: showOnboarding) { _, isShowing in
