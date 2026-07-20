@@ -11,6 +11,7 @@ struct ContentView: View {
     @State private var editorVM = ExpenseEditorViewModel()
     @State private var voiceVM = VoiceModeViewModel()
     @State private var settingsVM = SettingsViewModel()
+    @State private var deferredCaptureLaunch: CaptureLaunchDestination?
 
     @Environment(\.modelContext) private var modelContext
     @Environment(\.scenePhase) private var scenePhase
@@ -26,6 +27,9 @@ struct ContentView: View {
                 expenses: allExpenses,
                 onShowWelcomeGuide: {
                     showOnboarding = true
+                },
+                onCaptureModalDismissed: {
+                    resumeDeferredCaptureLaunchIfNeeded()
                 }
             )
 
@@ -88,26 +92,60 @@ struct ContentView: View {
         switch destination {
         case .addExpense:
             if voiceVM.isPresented {
+                deferredCaptureLaunch = destination
                 voiceVM.cancelSession()
+                return
+            }
+            if settingsVM.isPresented {
+                deferredCaptureLaunch = destination
+                settingsVM.isPresented = false
+                return
             }
             // Keep an in-progress new expense; replace an edit session.
             if editorVM.isPresented && editorVM.editingExpense == nil {
                 return
             }
+            if editorVM.isPresented {
+                deferredCaptureLaunch = destination
+                editorVM.isPresented = false
+                return
+            }
             editorVM.prepareForNew()
 
         case .dictateExpense:
-            if editorVM.isPresented {
-                editorVM.isPresented = false
-            }
             if settingsVM.voiceSettings.isReady {
-                if !voiceVM.isPresented {
-                    voiceVM.open()
+                guard !voiceVM.isPresented else { return }
+                if editorVM.isPresented || settingsVM.isPresented {
+                    deferredCaptureLaunch = destination
+                    editorVM.isPresented = false
+                    settingsVM.isPresented = false
+                    return
                 }
+                voiceVM.open()
             } else {
+                if voiceVM.isPresented {
+                    deferredCaptureLaunch = destination
+                    voiceVM.cancelSession()
+                    return
+                }
+                if editorVM.isPresented {
+                    deferredCaptureLaunch = destination
+                    editorVM.isPresented = false
+                    return
+                }
                 settingsVM.isPresented = true
             }
         }
+    }
+
+    /// SwiftUI cannot swap two sheet/cover presentations during the same
+    /// transition. Resume only after the outgoing presentation's `onDismiss`
+    /// callback confirms that it has left the hierarchy.
+    private func resumeDeferredCaptureLaunchIfNeeded() {
+        guard let destination = deferredCaptureLaunch else { return }
+        guard !editorVM.isPresented, !voiceVM.isPresented, !settingsVM.isPresented else { return }
+        deferredCaptureLaunch = nil
+        applyCaptureLaunch(destination)
     }
 
     /// Simulator / UI demo helper: `--capture-launch=add|dictate`

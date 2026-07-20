@@ -7,6 +7,7 @@ struct MainExpenseView: View {
     @Bindable var settingsVM: SettingsViewModel
     let expenses: [Expense]
     let onShowWelcomeGuide: () -> Void
+    let onCaptureModalDismissed: () -> Void
 
     @State private var direction: CGFloat = 1
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -29,9 +30,13 @@ struct MainExpenseView: View {
             fabStack.padding(.trailing, 22).padding(.bottom, 30)
         }
         .fontDesign(.rounded)
-        .sheet(isPresented: $editorVM.isPresented) { ExpenseEditorSheet(viewModel: editorVM) }
-        .fullScreenCover(isPresented: $voiceVM.isPresented) { VoiceSheet(viewModel: voiceVM) }
-        .sheet(isPresented: $settingsVM.isPresented) {
+        .sheet(isPresented: $editorVM.isPresented, onDismiss: onCaptureModalDismissed) {
+            ExpenseEditorSheet(viewModel: editorVM)
+        }
+        .fullScreenCover(isPresented: $voiceVM.isPresented, onDismiss: onCaptureModalDismissed) {
+            VoiceSheet(viewModel: voiceVM)
+        }
+        .sheet(isPresented: $settingsVM.isPresented, onDismiss: onCaptureModalDismissed) {
             SettingsSheet(
                 viewModel: settingsVM,
                 expenses: expenses,
