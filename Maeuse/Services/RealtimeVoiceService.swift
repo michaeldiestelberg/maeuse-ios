@@ -211,7 +211,11 @@ final class RealtimeVoiceService: NSObject, @unchecked Sendable {
         let inputNode = engine.inputNode
         let inputFormat = inputNode.outputFormat(forBus: 0)
 
-        guard inputFormat.channelCount > 0 else {
+        // Simulator and disconnected Bluetooth routes can report channel
+        // metadata while still exposing a zero-rate, unusable input format.
+        // Installing a tap with that format raises an Objective-C exception
+        // instead of returning a Swift error, so validate both dimensions.
+        guard inputFormat.channelCount > 0, inputFormat.sampleRate > 0 else {
             throw RealtimeVoiceError.noMicrophoneInput
         }
 

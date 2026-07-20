@@ -1,0 +1,6 @@
+/* German — Control Center / Lock Screen control strings */
+
+"ControlAddExpenseTitle" = "Ausgabe hinzufügen";
+"ControlAddExpenseDescription" = "Ausgaben-Tastatur öffnen";
+"ControlDictateExpenseTitle" = "Ausgabe diktieren";
+"ControlDictateExpenseDescription" = "Voice Mode starten und sofort sprechen";

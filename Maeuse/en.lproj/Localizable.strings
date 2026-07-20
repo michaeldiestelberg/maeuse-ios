@@ -31,6 +31,12 @@
 "PreviousMonth" = "Previous month";
 "NextMonth" = "Next month";
 
+/* Lock Screen / Control Center controls */
+"ControlAddExpenseTitle" = "Add expense";
+"ControlAddExpenseDescription" = "Open the expense keypad";
+"ControlDictateExpenseTitle" = "Dictate expense";
+"ControlDictateExpenseDescription" = "Start Voice Mode and talk right away";
+
 /* Settings Sheet */
 "App" = "App";
 "Preferences" = "Preferences";
