@@ -1,0 +1,6 @@
+/* English — Control Center / Lock Screen control strings */
+
+"ControlAddExpenseTitle" = "Add expense";
+"ControlAddExpenseDescription" = "Open the expense keypad";
+"ControlDictateExpenseTitle" = "Dictate expense";
+"ControlDictateExpenseDescription" = "Start Voice Mode and talk right away";

@@ -13,6 +13,7 @@ struct ContentView: View {
     @State private var settingsVM = SettingsViewModel()
 
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.scenePhase) private var scenePhase
     @Query private var allExpenses: [Expense]
 
     var body: some View {
@@ -40,8 +41,22 @@ struct ContentView: View {
         }
         .animation(.easeOut(duration: 0.35), value: showOnboarding)
         .onAppear {
-            if !onboardingHidden {
+            if ProcessInfo.processInfo.arguments.contains(where: { $0.hasPrefix("--capture-launch=") }) {
+                onboardingHidden = true
+                showOnboarding = false
+            } else if !onboardingHidden {
                 showOnboarding = true
+            }
+            consumeCaptureLaunchIfNeeded()
+        }
+        .onChange(of: showOnboarding) { _, isShowing in
+            if !isShowing {
+                consumeCaptureLaunchIfNeeded()
+            }
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active {
+                consumeCaptureLaunchIfNeeded()
             }
         }
         .task {
@@ -54,6 +69,58 @@ struct ContentView: View {
             #else
             settingsVM.reconcileStoredAPIKey()
             #endif
+
+            applyDemoCaptureLaunchArgumentIfNeeded()
+            consumeCaptureLaunchIfNeeded()
+        }
+    }
+
+    // MARK: - Capture control handoff
+
+    private func consumeCaptureLaunchIfNeeded() {
+        guard !showOnboarding else { return }
+        guard let destination = CaptureLaunchRouter.consumePending() else { return }
+        applyCaptureLaunch(destination)
+    }
+
+    private func applyCaptureLaunch(_ destination: CaptureLaunchDestination) {
+        switch destination {
+        case .addExpense:
+            if voiceVM.isPresented {
+                voiceVM.cancelSession()
+            }
+            // Keep an in-progress new expense; replace an edit session.
+            if editorVM.isPresented && editorVM.editingExpense == nil {
+                return
+            }
+            editorVM.prepareForNew()
+
+        case .dictateExpense:
+            if editorVM.isPresented {
+                editorVM.isPresented = false
+            }
+            if settingsVM.voiceSettings.isReady {
+                if !voiceVM.isPresented {
+                    voiceVM.open()
+                }
+            } else {
+                settingsVM.isPresented = true
+            }
+        }
+    }
+
+    /// Simulator / UI demo helper: `--capture-launch=add|dictate`
+    private func applyDemoCaptureLaunchArgumentIfNeeded() {
+        let argument = ProcessInfo.processInfo.arguments.first { $0.hasPrefix("--capture-launch=") }
+        guard let argument else { return }
+        let value = String(argument.dropFirst("--capture-launch=".count))
+        switch value {
+        case "add":
+            CaptureLaunchRouter.setPending(.addExpense)
+        case "dictate":
+            CaptureLaunchRouter.setPending(.dictateExpense)
+        default:
+            break
         }
     }
 

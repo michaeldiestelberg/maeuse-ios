@@ -31,6 +31,12 @@
 "PreviousMonth" = "Vorheriger Monat";
 "NextMonth" = "Nächster Monat";
 
+/* Lock Screen / Control Center controls */
+"ControlAddExpenseTitle" = "Ausgabe hinzufügen";
+"ControlAddExpenseDescription" = "Ausgaben-Tastatur öffnen";
+"ControlDictateExpenseTitle" = "Ausgabe diktieren";
+"ControlDictateExpenseDescription" = "Voice Mode starten und sofort sprechen";
+
 /* Settings Sheet */
 "App" = "App";
 "Preferences" = "Einstellungen";
