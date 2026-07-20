@@ -1,16 +1,25 @@
 import AppIntents
 
-/// Opens Mäuse into the manual expense editor.
+/// Opens Mäuse into the requested expense-capture destination.
 @available(iOS 18.0, *)
-struct AddExpenseIntent: AppIntent {
-    static let title: LocalizedStringResource = "ControlAddExpenseTitle"
-    static let description = IntentDescription("ControlAddExpenseDescription")
-    static let openAppWhenRun: Bool = true
+struct CaptureExpenseIntent: OpenIntent {
+    static let title: LocalizedStringResource = "Mäuse"
     static let isDiscoverable: Bool = true
+
+    @Parameter(title: "Mäuse")
+    var target: CaptureLaunchDestination
+
+    init() {
+        target = .addExpense
+    }
+
+    init(target: CaptureLaunchDestination) {
+        self.target = target
+    }
 
     @MainActor
     func perform() async throws -> some IntentResult {
-        CaptureLaunchRouter.setPending(.addExpense)
+        CaptureLaunchRouter.setPending(target)
         return .result()
     }
 }
