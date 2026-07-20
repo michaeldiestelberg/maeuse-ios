@@ -9,7 +9,7 @@ struct AddExpenseControl: ControlWidget {
     var body: some ControlWidgetConfiguration {
         StaticControlConfiguration(kind: Self.kind) {
             ControlWidgetButton(action: CaptureExpenseIntent(target: .addExpense)) {
-                Label(LocalizedStringResource("ControlAddExpenseTitle"), systemImage: "plus")
+                Label(LocalizedStringResource("ControlAddExpenseTitle"), image: "mouse.plus")
             }
         }
         .displayName(LocalizedStringResource("ControlAddExpenseTitle"))

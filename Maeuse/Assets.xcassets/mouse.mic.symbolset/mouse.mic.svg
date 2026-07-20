@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="3300" height="2200" viewBox="0 0 3300 2200" xmlns="http://www.w3.org/2000/svg" version="1.1">
+ <!--glyph: "mouse.mic", point size: 100.0, template writer version: "124"-->
+ <g id="Notes">
+  <rect height="2200" id="artboard" style="fill:#ffffff;opacity:1" width="3300" x="0" y="0"/>
+  <text style="stroke:none;fill:black;font-family:sans-serif;font-size:13px;" x="263" y="292">Weight/Scale Variations</text>
+  <text style="stroke:none;fill:black;font-family:sans-serif;font-size:13px;text-anchor:middle;" x="550.0" y="292">Ultralight</text>
+  <text style="stroke:none;fill:black;font-family:sans-serif;font-size:13px;text-anchor:middle;" x="1650.0" y="292">Regular</text>
+  <text style="stroke:none;fill:black;font-family:sans-serif;font-size:13px;text-anchor:middle;" x="2750.0" y="292">Black</text>
+  <text style="stroke:none;fill:black;font-family:sans-serif;font-size:13px;" x="263" y="726.0">S</text>
+  <text style="stroke:none;fill:black;font-family:sans-serif;font-size:13px;" x="263" y="1131.25">M</text>
+  <text style="stroke:none;fill:black;font-family:sans-serif;font-size:13px;" x="263" y="1536.5">L</text>
+ </g>
+ <g id="Guides">
+  <line id="Capline-S" style="fill:none;stroke:#27AAE1;stroke-width:0.5;" x1="263" x2="3036" y1="625.541" y2="625.541"/>
+  <line id="Baseline-S" style="fill:none;stroke:#27AAE1;stroke-width:0.5;" x1="263" x2="3036" y1="696.0" y2="696.0"/>
+  <line id="Capline-M" style="fill:none;stroke:#27AAE1;stroke-width:0.5;" x1="263" x2="3036" y1="1030.79" y2="1030.79"/>
+  <line id="Baseline-M" style="fill:none;stroke:#27AAE1;stroke-width:0.5;" x1="263" x2="3036" y1="1101.25" y2="1101.25"/>
+  <line id="Capline-L" style="fill:none;stroke:#27AAE1;stroke-width:0.5;" x1="263" x2="3036" y1="1436.04" y2="1436.04"/>
+  <line id="Baseline-L" style="fill:none;stroke:#27AAE1;stroke-width:0.5;" x1="263" x2="3036" y1="1506.5" y2="1506.5"/>
+  <line id="left-margin" style="fill:none;stroke:#00AEEF;stroke-width:0.5;" x1="1606.0" x2="1606.0" y1="1030.79" y2="1101.25"/>
+  <line id="right-margin" style="fill:none;stroke:#00AEEF;stroke-width:0.5;" x1="1694.0" x2="1694.0" y1="1030.79" y2="1101.25"/>
+ </g>
+ <g id="Symbols">
+  <g id="Ultralight-S" transform="matrix(1.32 0 0 1.32 550.0 668.2705000000001)">
+   <path fill-rule="nonzero" style="fill:#000000;stroke:none;" d="M -34 0 A 34 34 0 1 1 34 0 A 34 34 0 1 1 -34 0 Z M -40 -33 A 16 16 0 1 1 -8 -33 A 16 16 0 1 1 -40 -33 Z M 8 -33 A 16 16 0 1 1 40 -33 A 16 16 0 1 1 8 -33 Z M -6.5 -10.5 L -6.5 2.5 A 6.5 6.5 0 0 0 6.5 2.5 L 6.5 -10.5 A 6.5 6.5 0 0 0 -6.5 -10.5 Z M -13.25 4 A 13.25 13.25 0 0 0 -3 16.85 L -3 20.5 L -6.25 20.5 A 2.25 2.25 0 0 0 -8.5 22.75 L -8.5 23.75 A 2.25 2.25 0 0 0 -6.25 26 L 6.25 26 A 2.25 2.25 0 0 0 8.5 23.75 L 8.5 22.75 A 2.25 2.25 0 0 0 6.25 20.5 L 3 20.5 L 3 16.85 A 13.25 13.25 0 0 0 13.25 4 L 8.25 4 A 8.25 8.25 0 0 1 -8.25 4 Z"/>
+  </g>
+  <g id="Ultralight-M" transform="matrix(1.32 0 0 1.32 550.0 1073.52)">
+   <path fill-rule="nonzero" style="fill:#000000;stroke:none;" d="M -34 0 A 34 34 0 1 1 34 0 A 34 34 0 1 1 -34 0 Z M -40 -33 A 16 16 0 1 1 -8 -33 A 16 16 0 1 1 -40 -33 Z M 8 -33 A 16 16 0 1 1 40 -33 A 16 16 0 1 1 8 -33 Z M -6.5 -10.5 L -6.5 2.5 A 6.5 6.5 0 0 0 6.5 2.5 L 6.5 -10.5 A 6.5 6.5 0 0 0 -6.5 -10.5 Z M -13.25 4 A 13.25 13.25 0 0 0 -3 16.85 L -3 20.5 L -6.25 20.5 A 2.25 2.25 0 0 0 -8.5 22.75 L -8.5 23.75 A 2.25 2.25 0 0 0 -6.25 26 L 6.25 26 A 2.25 2.25 0 0 0 8.5 23.75 L 8.5 22.75 A 2.25 2.25 0 0 0 6.25 20.5 L 3 20.5 L 3 16.85 A 13.25 13.25 0 0 0 13.25 4 L 8.25 4 A 8.25 8.25 0 0 1 -8.25 4 Z"/>
+  </g>
+  <g id="Ultralight-L" transform="matrix(1.32 0 0 1.32 550.0 1478.77)">
+   <path fill-rule="nonzero" style="fill:#000000;stroke:none;" d="M -34 0 A 34 34 0 1 1 34 0 A 34 34 0 1 1 -34 0 Z M -40 -33 A 16 16 0 1 1 -8 -33 A 16 16 0 1 1 -40 -33 Z M 8 -33 A 16 16 0 1 1 40 -33 A 16 16 0 1 1 8 -33 Z M -6.5 -10.5 L -6.5 2.5 A 6.5 6.5 0 0 0 6.5 2.5 L 6.5 -10.5 A 6.5 6.5 0 0 0 -6.5 -10.5 Z M -13.25 4 A 13.25 13.25 0 0 0 -3 16.85 L -3 20.5 L -6.25 20.5 A 2.25 2.25 0 0 0 -8.5 22.75 L -8.5 23.75 A 2.25 2.25 0 0 0 -6.25 26 L 6.25 26 A 2.25 2.25 0 0 0 8.5 23.75 L 8.5 22.75 A 2.25 2.25 0 0 0 6.25 20.5 L 3 20.5 L 3 16.85 A 13.25 13.25 0 0 0 13.25 4 L 8.25 4 A 8.25 8.25 0 0 1 -8.25 4 Z"/>
+  </g>
+  <g id="Regular-S" transform="matrix(1.32 0 0 1.32 1650.0 668.2705000000001)">
+   <path fill-rule="nonzero" style="fill:#000000;stroke:none;" d="M -34 0 A 34 34 0 1 1 34 0 A 34 34 0 1 1 -34 0 Z M -40 -33 A 16 16 0 1 1 -8 -33 A 16 16 0 1 1 -40 -33 Z M 8 -33 A 16 16 0 1 1 40 -33 A 16 16 0 1 1 8 -33 Z M -6.5 -10.5 L -6.5 2.5 A 6.5 6.5 0 0 0 6.5 2.5 L 6.5 -10.5 A 6.5 6.5 0 0 0 -6.5 -10.5 Z M -13.25 4 A 13.25 13.25 0 0 0 -3 16.85 L -3 20.5 L -6.25 20.5 A 2.25 2.25 0 0 0 -8.5 22.75 L -8.5 23.75 A 2.25 2.25 0 0 0 -6.25 26 L 6.25 26 A 2.25 2.25 0 0 0 8.5 23.75 L 8.5 22.75 A 2.25 2.25 0 0 0 6.25 20.5 L 3 20.5 L 3 16.85 A 13.25 13.25 0 0 0 13.25 4 L 8.25 4 A 8.25 8.25 0 0 1 -8.25 4 Z"/>
+  </g>
+  <g id="Regular-M" transform="matrix(1.32 0 0 1.32 1650.0 1073.52)">
+   <path fill-rule="nonzero" style="fill:#000000;stroke:none;" d="M -34 0 A 34 34 0 1 1 34 0 A 34 34 0 1 1 -34 0 Z M -40 -33 A 16 16 0 1 1 -8 -33 A 16 16 0 1 1 -40 -33 Z M 8 -33 A 16 16 0 1 1 40 -33 A 16 16 0 1 1 8 -33 Z M -6.5 -10.5 L -6.5 2.5 A 6.5 6.5 0 0 0 6.5 2.5 L 6.5 -10.5 A 6.5 6.5 0 0 0 -6.5 -10.5 Z M -13.25 4 A 13.25 13.25 0 0 0 -3 16.85 L -3 20.5 L -6.25 20.5 A 2.25 2.25 0 0 0 -8.5 22.75 L -8.5 23.75 A 2.25 2.25 0 0 0 -6.25 26 L 6.25 26 A 2.25 2.25 0 0 0 8.5 23.75 L 8.5 22.75 A 2.25 2.25 0 0 0 6.25 20.5 L 3 20.5 L 3 16.85 A 13.25 13.25 0 0 0 13.25 4 L 8.25 4 A 8.25 8.25 0 0 1 -8.25 4 Z"/>
+  </g>
+  <g id="Regular-L" transform="matrix(1.32 0 0 1.32 1650.0 1478.77)">
+   <path fill-rule="nonzero" style="fill:#000000;stroke:none;" d="M -34 0 A 34 34 0 1 1 34 0 A 34 34 0 1 1 -34 0 Z M -40 -33 A 16 16 0 1 1 -8 -33 A 16 16 0 1 1 -40 -33 Z M 8 -33 A 16 16 0 1 1 40 -33 A 16 16 0 1 1 8 -33 Z M -6.5 -10.5 L -6.5 2.5 A 6.5 6.5 0 0 0 6.5 2.5 L 6.5 -10.5 A 6.5 6.5 0 0 0 -6.5 -10.5 Z M -13.25 4 A 13.25 13.25 0 0 0 -3 16.85 L -3 20.5 L -6.25 20.5 A 2.25 2.25 0 0 0 -8.5 22.75 L -8.5 23.75 A 2.25 2.25 0 0 0 -6.25 26 L 6.25 26 A 2.25 2.25 0 0 0 8.5 23.75 L 8.5 22.75 A 2.25 2.25 0 0 0 6.25 20.5 L 3 20.5 L 3 16.85 A 13.25 13.25 0 0 0 13.25 4 L 8.25 4 A 8.25 8.25 0 0 1 -8.25 4 Z"/>
+  </g>
+  <g id="Black-S" transform="matrix(1.32 0 0 1.32 2750.0 668.2705000000001)">
+   <path fill-rule="nonzero" style="fill:#000000;stroke:none;" d="M -34 0 A 34 34 0 1 1 34 0 A 34 34 0 1 1 -34 0 Z M -40 -33 A 16 16 0 1 1 -8 -33 A 16 16 0 1 1 -40 -33 Z M 8 -33 A 16 16 0 1 1 40 -33 A 16 16 0 1 1 8 -33 Z M -6.5 -10.5 L -6.5 2.5 A 6.5 6.5 0 0 0 6.5 2.5 L 6.5 -10.5 A 6.5 6.5 0 0 0 -6.5 -10.5 Z M -13.25 4 A 13.25 13.25 0 0 0 -3 16.85 L -3 20.5 L -6.25 20.5 A 2.25 2.25 0 0 0 -8.5 22.75 L -8.5 23.75 A 2.25 2.25 0 0 0 -6.25 26 L 6.25 26 A 2.25 2.25 0 0 0 8.5 23.75 L 8.5 22.75 A 2.25 2.25 0 0 0 6.25 20.5 L 3 20.5 L 3 16.85 A 13.25 13.25 0 0 0 13.25 4 L 8.25 4 A 8.25 8.25 0 0 1 -8.25 4 Z"/>
+  </g>
+  <g id="Black-M" transform="matrix(1.32 0 0 1.32 2750.0 1073.52)">
+   <path fill-rule="nonzero" style="fill:#000000;stroke:none;" d="M -34 0 A 34 34 0 1 1 34 0 A 34 34 0 1 1 -34 0 Z M -40 -33 A 16 16 0 1 1 -8 -33 A 16 16 0 1 1 -40 -33 Z M 8 -33 A 16 16 0 1 1 40 -33 A 16 16 0 1 1 8 -33 Z M -6.5 -10.5 L -6.5 2.5 A 6.5 6.5 0 0 0 6.5 2.5 L 6.5 -10.5 A 6.5 6.5 0 0 0 -6.5 -10.5 Z M -13.25 4 A 13.25 13.25 0 0 0 -3 16.85 L -3 20.5 L -6.25 20.5 A 2.25 2.25 0 0 0 -8.5 22.75 L -8.5 23.75 A 2.25 2.25 0 0 0 -6.25 26 L 6.25 26 A 2.25 2.25 0 0 0 8.5 23.75 L 8.5 22.75 A 2.25 2.25 0 0 0 6.25 20.5 L 3 20.5 L 3 16.85 A 13.25 13.25 0 0 0 13.25 4 L 8.25 4 A 8.25 8.25 0 0 1 -8.25 4 Z"/>
+  </g>
+  <g id="Black-L" transform="matrix(1.32 0 0 1.32 2750.0 1478.77)">
+   <path fill-rule="nonzero" style="fill:#000000;stroke:none;" d="M -34 0 A 34 34 0 1 1 34 0 A 34 34 0 1 1 -34 0 Z M -40 -33 A 16 16 0 1 1 -8 -33 A 16 16 0 1 1 -40 -33 Z M 8 -33 A 16 16 0 1 1 40 -33 A 16 16 0 1 1 8 -33 Z M -6.5 -10.5 L -6.5 2.5 A 6.5 6.5 0 0 0 6.5 2.5 L 6.5 -10.5 A 6.5 6.5 0 0 0 -6.5 -10.5 Z M -13.25 4 A 13.25 13.25 0 0 0 -3 16.85 L -3 20.5 L -6.25 20.5 A 2.25 2.25 0 0 0 -8.5 22.75 L -8.5 23.75 A 2.25 2.25 0 0 0 -6.25 26 L 6.25 26 A 2.25 2.25 0 0 0 8.5 23.75 L 8.5 22.75 A 2.25 2.25 0 0 0 6.25 20.5 L 3 20.5 L 3 16.85 A 13.25 13.25 0 0 0 13.25 4 L 8.25 4 A 8.25 8.25 0 0 1 -8.25 4 Z"/>
+  </g>
+ </g>
+</svg>

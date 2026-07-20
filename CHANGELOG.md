@@ -4,7 +4,7 @@ This file records user-facing changes to Mäuse. App Store and GitHub release no
 
 ## 1.2.1 — 2026-07-20
 
-- Lock Screen and Control Center controls now start manual or voice expense capture directly, with clear, optically centered add and microphone icons.
+- Lock Screen and Control Center controls now start manual or voice expense capture directly, with custom mouse-themed add and microphone icons that match the app's brand.
 - When Voice Mode is ready, the mic button is the primary action on the main screen and the plus button is secondary.
 - Secondary plus icon uses a crisp white glyph in dark mode for readable contrast.
 - Voice Mode adds haptic feedback when listening starts, when new expenses are captured, and a subtler cue when drafts are updated. Haptics can be turned off in Settings.
