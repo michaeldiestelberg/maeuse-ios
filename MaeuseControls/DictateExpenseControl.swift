@@ -9,7 +9,7 @@ struct DictateExpenseControl: ControlWidget {
     var body: some ControlWidgetConfiguration {
         StaticControlConfiguration(kind: Self.kind) {
             ControlWidgetButton(action: CaptureExpenseIntent(target: .dictateExpense)) {
-                Label(LocalizedStringResource("ControlDictateExpenseTitle"), image: "maeuse.mouse.mic")
+                Label(LocalizedStringResource("ControlDictateExpenseTitle"), systemImage: "mic.fill")
             }
         }
         .displayName(LocalizedStringResource("ControlDictateExpenseTitle"))
