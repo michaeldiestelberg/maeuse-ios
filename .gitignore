@@ -78,3 +78,6 @@ fastlane/.env.*
 *~
 *.tmp
 *.log
+
+# Local demo / agent artifacts
+.artifacts/
