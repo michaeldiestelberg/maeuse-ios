@@ -759,6 +759,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 1.2.1;
+				APPLICATION_EXTENSION_API_ONLY = YES;
 				PRODUCT_BUNDLE_IDENTIFIER = com.michaeldiestelberg.maeuse.controls;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -786,6 +787,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 1.2.1;
+				APPLICATION_EXTENSION_API_ONLY = YES;
 				PRODUCT_BUNDLE_IDENTIFIER = com.michaeldiestelberg.maeuse.controls;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
