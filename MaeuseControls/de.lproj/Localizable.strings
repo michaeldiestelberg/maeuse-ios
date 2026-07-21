@@ -4,3 +4,12 @@
 "ControlAddExpenseDescription" = "Ausgaben-Tastatur öffnen";
 "ControlDictateExpenseTitle" = "Ausgabe diktieren";
 "ControlDictateExpenseDescription" = "Voice Mode starten und sofort sprechen";
+
+/* Home-Bildschirm- / Sperrbildschirm-Widgets */
+
+"WidgetAddExpenseTitle" = "Ausgabe hinzufügen";
+"WidgetAddExpenseDescription" = "Mäuse direkt mit der manuellen Ausgabenerfassung öffnen.";
+"WidgetAddExpensePrompt" = "Manuell eingeben";
+"WidgetDictateExpenseTitle" = "Ausgabe diktieren";
+"WidgetDictateExpenseDescription" = "Mäuse direkt im Voice Mode öffnen.";
+"WidgetDictateExpensePrompt" = "Voice Mode starten";

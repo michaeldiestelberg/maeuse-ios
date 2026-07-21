@@ -25,6 +25,9 @@ struct ExpenseEditorSheet: View {
             hero.padding(.top, 14)
             datePicker.padding(.horizontal, 22).padding(.top, 12)
             details.padding(.horizontal, 22).padding(.top, 12)
+            if viewModel.isEditing {
+                deleteAction.padding(.horizontal, 22).padding(.top, 12)
+            }
             Spacer(minLength: 10)
             keypad.padding(.horizontal, 22).padding(.bottom, 24)
         }
@@ -108,9 +111,33 @@ struct ExpenseEditorSheet: View {
                         setPartnerPercent(viewModel.partnerPercent + change)
                     }
                 }.frame(height: 30)
-                if viewModel.isEditing { Button(loc("DeleteExpense"), role: .destructive) { showDeleteConfirmation = true }.font(.system(.caption, design: .rounded, weight: .heavy)) }
             }.padding(.horizontal, 18).padding(.vertical, 14)
         }
+    }
+
+    private var deleteAction: some View {
+        Button(role: .destructive) { showDeleteConfirmation = true } label: {
+            Label {
+                Text(loc("DeleteExpense"))
+                    .font(.system(size: 14, weight: .heavy, design: .rounded))
+            } icon: {
+                Image(systemName: "trash")
+                    .font(.system(size: 14, weight: .bold))
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: 46)
+        }
+        .buttonStyle(
+            StampedButtonStyle(
+                fill: .maeusSurface,
+                foreground: .maeusDestructive,
+                cornerRadius: 15,
+                borderColor: .maeusDestructive,
+                shadow: 3,
+                shadowColor: .maeusDestructive.opacity(0.22)
+            )
+        )
+        .accessibilityHint(loc("DeleteConfirmationTitle"))
     }
 
     private var datePicker: some View {

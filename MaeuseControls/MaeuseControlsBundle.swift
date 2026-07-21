@@ -6,5 +6,7 @@ struct MaeuseControlsBundle: WidgetBundle {
     var body: some Widget {
         AddExpenseControl()
         DictateExpenseControl()
+        AddExpenseWidget()
+        DictateExpenseWidget()
     }
 }

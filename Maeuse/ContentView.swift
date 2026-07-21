@@ -64,6 +64,11 @@ struct ContentView: View {
                 consumeCaptureLaunchIfNeeded()
             }
         }
+        .onOpenURL { url in
+            guard let destination = CaptureLaunchRouter.destination(from: url) else { return }
+            CaptureLaunchRouter.setPending(destination)
+            consumeCaptureLaunchIfNeeded()
+        }
         .task {
             #if targetEnvironment(simulator)
             if screenshotScenario == nil {

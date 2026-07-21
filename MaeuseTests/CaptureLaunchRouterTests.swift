@@ -25,4 +25,16 @@ final class CaptureLaunchRouterTests: XCTestCase {
         XCTAssertEqual(CaptureLaunchRouter.consumePending(), .dictateExpense)
         XCTAssertNil(CaptureLaunchRouter.peekPending())
     }
+
+    func testCaptureURLsRoundTripBothDestinations() {
+        for destination in [CaptureLaunchDestination.addExpense, .dictateExpense] {
+            let url = CaptureLaunchRouter.url(for: destination)
+            XCTAssertEqual(url.scheme, "maeuse")
+            XCTAssertEqual(CaptureLaunchRouter.destination(from: url), destination)
+        }
+    }
+
+    func testUnrelatedURLIsIgnored() {
+        XCTAssertNil(CaptureLaunchRouter.destination(from: URL(string: "https://example.com/capture/addExpense")!))
+    }
 }

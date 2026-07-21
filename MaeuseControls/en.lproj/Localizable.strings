@@ -4,3 +4,12 @@
 "ControlAddExpenseDescription" = "Open the expense keypad";
 "ControlDictateExpenseTitle" = "Dictate expense";
 "ControlDictateExpenseDescription" = "Start Voice Mode and talk right away";
+
+/* Home Screen / Lock Screen widgets */
+
+"WidgetAddExpenseTitle" = "Add expense";
+"WidgetAddExpenseDescription" = "Open Mäuse directly in manual expense entry.";
+"WidgetAddExpensePrompt" = "Enter it manually";
+"WidgetDictateExpenseTitle" = "Dictate expense";
+"WidgetDictateExpenseDescription" = "Open Mäuse directly in Voice Mode.";
+"WidgetDictateExpensePrompt" = "Start Voice Mode";
