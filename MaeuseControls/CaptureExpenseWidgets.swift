@@ -30,7 +30,7 @@ struct AddExpenseWidget: Widget {
         }
         .configurationDisplayName(LocalizedStringResource("WidgetAddExpenseTitle"))
         .description(LocalizedStringResource("WidgetAddExpenseDescription"))
-        .supportedFamilies([.systemSmall, .accessoryCircular, .accessoryRectangular, .accessoryInline])
+        .supportedFamilies([.systemSmall, .accessoryCircular])
         .contentMarginsDisabled()
     }
 }
@@ -45,7 +45,7 @@ struct DictateExpenseWidget: Widget {
         }
         .configurationDisplayName(LocalizedStringResource("WidgetDictateExpenseTitle"))
         .description(LocalizedStringResource("WidgetDictateExpenseDescription"))
-        .supportedFamilies([.systemSmall, .accessoryCircular, .accessoryRectangular, .accessoryInline])
+        .supportedFamilies([.systemSmall, .accessoryCircular])
         .contentMarginsDisabled()
     }
 }
@@ -73,7 +73,7 @@ private struct CaptureExpenseWidgetView: View {
         }
     }
 
-    private var symbolName: String {
+    private var accessorySymbol: String {
         switch target {
         case .addExpense: "mouse.plus"
         case .dictateExpense: "mouse.mic"
@@ -98,37 +98,15 @@ private struct CaptureExpenseWidgetView: View {
     private var content: some View {
         switch family {
         case .accessoryCircular:
-            Image(symbolName)
-                .resizable()
-                .scaledToFit()
-                .padding(11)
-                .widgetAccentable()
-
-        case .accessoryRectangular:
-            HStack(spacing: 8) {
-                Image(symbolName)
+            // The translucent background gives the mouse glyph a consistent, high-contrast
+            // base so it stays legible over any wallpaper.
+            ZStack {
+                AccessoryWidgetBackground()
+                Image(accessorySymbol)
                     .resizable()
                     .scaledToFit()
-                    .frame(width: 28, height: 28)
+                    .padding(14)
                     .widgetAccentable()
-
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(title)
-                        .font(.headline)
-                        .lineLimit(1)
-                    Text(prompt)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                }
-            }
-            .padding(.horizontal, 4)
-            .padding(.vertical, 2)
-
-        case .accessoryInline:
-            HStack(spacing: 4) {
-                Image(symbolName)
-                Text(title)
             }
 
         default:
