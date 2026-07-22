@@ -81,17 +81,17 @@ private struct CaptureExpenseWidgetView: View {
     }
 
     var body: some View {
-        Link(destination: CaptureLaunchRouter.url(for: target)) {
-            content
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .containerBackground(for: .widget) {
-            widgetBackground
-        }
-        .accessibilityLabel(Text(title))
-        .accessibilityHint(Text(prompt))
+        // Small and accessory widgets are a single tap target, so the tap URL must be
+        // declared with `widgetURL`. A `Link` is only honored in medium/large widgets;
+        // using it here launched the app without delivering the capture deep link.
+        content
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .containerBackground(for: .widget) {
+                widgetBackground
+            }
+            .widgetURL(CaptureLaunchRouter.url(for: target))
+            .accessibilityLabel(Text(title))
+            .accessibilityHint(Text(prompt))
     }
 
     @ViewBuilder
