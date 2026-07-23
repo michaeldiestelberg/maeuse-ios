@@ -67,6 +67,7 @@
 "VoiceModeDesc" = "Enable a realtime voice workspace that captures one or more expenses in a fresh session.";
 "OpenAIApiKey" = "OpenAI API key";
 "VerifySaveKey" = "Verify & Save Key";
+"HowToGetApiKey" = "How to get an API key";
 "RemoveSavedKey" = "Remove Saved Key";
 "EnableVoiceMode" = "Enable voice mode";
 "ShowsMicButton" = "Shows the mic button on the main screen";

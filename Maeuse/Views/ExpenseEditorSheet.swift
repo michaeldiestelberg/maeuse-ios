@@ -9,6 +9,7 @@ struct ExpenseEditorSheet: View {
     @State private var showDatePicker = false
     @State private var showPersistenceError = false
     @State private var persistenceErrorMessage = ""
+    @FocusState private var noteFocused: Bool
 
     private var decimalSeparator: String {
         LanguageManager.shared.activeLanguageCode == "de" ? "," : "."
@@ -23,6 +24,7 @@ struct ExpenseEditorSheet: View {
             Capsule().fill(Color.maeusTextTertiary.opacity(0.45)).frame(width: 40, height: 5).padding(.top, 10)
             topBar.padding(.horizontal, 22).padding(.top, 8)
             hero.padding(.top, 14)
+            noteField.padding(.horizontal, 22).padding(.top, 16)
             datePicker.padding(.horizontal, 22).padding(.top, 12)
             details.padding(.horizontal, 22).padding(.top, 12)
             if viewModel.isEditing {
@@ -69,16 +71,46 @@ struct ExpenseEditorSheet: View {
     }
 
     private var hero: some View {
-        VStack(spacing: 8) {
-            HStack(alignment: .firstTextBaseline, spacing: 6) {
-                Text("€").font(.system(size: 24, weight: .bold, design: .rounded)).foregroundStyle(Color.maeusTextSecondary)
-                Text(viewModel.amountText.isEmpty ? "0.00" : viewModel.amountText)
-                    .font(.system(size: 48, weight: .heavy, design: .rounded)).tracking(-2).monospacedDigit()
-                    .foregroundStyle(viewModel.amountText.isEmpty ? Color.maeusTextTertiary : Color.maeusForeground)
-                    .overlay(alignment: .bottom) { Rectangle().fill(Color.maeusCheese).frame(height: 4).offset(y: 4) }
-            }
+        HStack(alignment: .firstTextBaseline, spacing: 6) {
+            Text("€").font(.system(size: 24, weight: .bold, design: .rounded)).foregroundStyle(Color.maeusTextSecondary)
+            Text(viewModel.amountText.isEmpty ? "0.00" : viewModel.amountText)
+                .font(.system(size: 48, weight: .heavy, design: .rounded)).tracking(-2).monospacedDigit()
+                .foregroundStyle(viewModel.amountText.isEmpty ? Color.maeusTextTertiary : Color.maeusForeground)
+                .overlay(alignment: .bottom) { Rectangle().fill(Color.maeusCheese).frame(height: 4).offset(y: 4) }
+        }
+    }
+
+    private var noteField: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "square.and.pencil")
+                .font(.system(size: 13, weight: .heavy))
+                .frame(width: 24, height: 24)
+                .foregroundStyle(Color.maeusInk)
+                .background(Color.maeusCheese, in: Circle())
+                .overlay(Circle().stroke(Color.maeusInk, lineWidth: 1.5))
+                .accessibilityHidden(true)
             TextField(loc("AddNote"), text: $viewModel.description)
-                .font(.system(size: 15, weight: .bold, design: .rounded)).multilineTextAlignment(.center).textFieldStyle(.plain).frame(width: 240)
+                .font(.system(size: 14, weight: .heavy, design: .rounded))
+                .foregroundStyle(Color.maeusForeground)
+                .textFieldStyle(.plain)
+                .focused($noteFocused)
+                .submitLabel(.done)
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 16)
+        .frame(height: 50)
+        .background { fieldBackground }
+        .contentShape(RoundedRectangle(cornerRadius: 15, style: .continuous))
+        .onTapGesture { noteFocused = true }
+    }
+
+    private var fieldBackground: some View {
+        let shape = RoundedRectangle(cornerRadius: 15, style: .continuous)
+        return ZStack {
+            shape.fill(Color(light: Color.maeusInk.opacity(0.12), dark: Color.black.opacity(0.5)))
+                .offset(y: 3)
+            shape.fill(Color.maeusSurface)
+            shape.stroke(Color.maeusCardBorder, lineWidth: 2)
         }
     }
 
@@ -162,16 +194,8 @@ struct ExpenseEditorSheet: View {
         }
         .buttonStyle(.plain)
         .padding(.horizontal, 16)
-        .frame(height: 46)
-        .background {
-            let shape = RoundedRectangle(cornerRadius: 15, style: .continuous)
-            ZStack {
-                shape.fill(Color(light: Color.maeusInk.opacity(0.12), dark: Color.black.opacity(0.5)))
-                    .offset(y: 3)
-                shape.fill(Color.maeusSurface)
-                shape.stroke(Color.maeusCardBorder, lineWidth: 2)
-            }
-        }
+        .frame(height: 50)
+        .background { fieldBackground }
         .accessibilityLabel(loc("Date"))
         .accessibilityValue(viewModel.dateDisplay)
     }

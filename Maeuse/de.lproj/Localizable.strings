@@ -67,6 +67,7 @@
 "VoiceModeDesc" = "Aktiviere einen Echtzeit-Sprachbereich, um eine oder mehrere Ausgaben in einer neuen Sitzung zu erfassen.";
 "OpenAIApiKey" = "OpenAI-API-Schlüssel";
 "VerifySaveKey" = "Schlüssel prüfen & speichern";
+"HowToGetApiKey" = "So erhältst du einen API-Schlüssel";
 "RemoveSavedKey" = "Gespeicherten Schlüssel löschen";
 "EnableVoiceMode" = "Sprachmodus aktivieren";
 "ShowsMicButton" = "Zeigt das Mikrofonsymbol auf dem Hauptbildschirm";

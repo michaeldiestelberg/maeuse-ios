@@ -215,6 +215,17 @@ struct SettingsSheet: View {
                 savedVoiceKeyRow
             } else {
                 voiceKeyEntryField
+
+                Link(destination: URL(string: "https://xn--muse-loa.app/openai-api-key.html")!) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "questionmark.circle")
+                        Text(loc("HowToGetApiKey"))
+                        Image(systemName: "arrow.up.right")
+                            .font(.caption2.weight(.heavy))
+                    }
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Color.maeusPrimaryHover)
+                }
             }
 
             if !viewModel.hasSavedVoiceAPIKey || !viewModel.voiceSettings.isVerified {
