@@ -57,7 +57,7 @@ numbers, device QA — was reset for 1.3.0 and needs re-verification before subm
 
 - [ ] Full Xcode 26 or later is selected: `sudo xcode-select -s /Applications/Xcode.app/Contents/Developer`.
 - [x] Marketing version is `1.3.0`.
-- [x] Build number is incremented above every previously uploaded build (`25`; builds 23 and 24 were already taken in TestFlight).
+- [x] Build number is incremented above every previously uploaded build (`27`; TestFlight already holds 21–24 and 26).
 - [ ] Release archive succeeds with the iOS 26.5 SDK.
 - [x] Unit tests pass (30 tests, August 1, 2026).
 - [x] Xcode Release static analysis succeeds for the app target (the scheme no longer analyzes `MaeuseTests`, whose `@testable import` cannot resolve against a non-testable Release build).
@@ -92,10 +92,10 @@ numbers, device QA — was reset for 1.3.0 and needs re-verification before subm
 - [x] Build 11 (`1.2.1`, voice-primary FAB) is uploaded to App Store Connect (July 19, 2026) and is processing for Internal TestFlight.
 - [x] Build 11 is available to the internal Family group via automatic distribution (confirmed July 19, 2026).
 - [x] Builds 12–22 (`1.2.1`) were distributed to Internal TestFlight via Xcode Cloud; build 22 (keyboard-stability fix) succeeded on August 1, 2026. Version 1.2.1 was never submitted to the App Store and is superseded by 1.3.0.
-- [x] Builds 23 and 24 were already taken in TestFlight, so `CURRENT_PROJECT_VERSION` skipped to 25. Raise Xcode Cloud → Settings → **Next Build Number** to at least 26 in App Store Connect — the Cloud counter, not the repo, assigns the uploaded number, so bumping the repo alone keeps colliding.
-- [ ] Build 25 (`1.3.0`) is uploaded via Xcode Cloud and reaches Internal TestFlight.
-- [ ] Correct build 25 is selected for version 1.3.0 in App Store Connect.
-- [ ] Version 1.3.0 (build 25) is added to review and submitted.
+- [x] `CURRENT_PROJECT_VERSION` is synced to 27 to match Xcode Cloud → Settings → **Next Build Number**. Cloud assigns the uploaded number from that counter, not from the repo, which is why repo builds 23 and 25 were published as TestFlight 24 and 26. Keep the two aligned so the repo value and the uploaded build agree.
+- [ ] Build 27 (`1.3.0`) is uploaded via Xcode Cloud and reaches Internal TestFlight.
+- [ ] Correct build 27 is selected for version 1.3.0 in App Store Connect.
+- [ ] Version 1.3.0 (build 27) is added to review and submitted.
 
 ## After approval
 

@@ -13,12 +13,12 @@
 
 | | |
 | --- | --- |
-| Version | 1.3.0 (build 25) |
+| Version | 1.3.0 (build 27) |
 | Platform | iPhone · iOS 17 or later |
 | Status | Internal TestFlight · 1.2.0 approved on the App Store |
 | Languages | English and German |
 
-Version 1.3.0 (build 25) adds Lock Screen, Home Screen, and Control Center expense capture, improves the control icons and expense deletion experience, adds Voice Mode haptic feedback, and keeps the expense editor stable while the keyboard is open. It ships via Internal TestFlight. Version 1.2.0 was approved earlier; App Store publishing remains manual.
+Version 1.3.0 (build 27) adds Lock Screen, Home Screen, and Control Center expense capture, improves the control icons and expense deletion experience, adds Voice Mode haptic feedback, and keeps the expense editor stable while the keyboard is open. It ships via Internal TestFlight. Version 1.2.0 was approved earlier; App Store publishing remains manual.
 
 ## What Mäuse does
 
@@ -80,7 +80,7 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
 The Xcode project is the source of truth for both version values:
 
 - `MARKETING_VERSION` is the user-facing version (`1.3.0`).
-- `CURRENT_PROJECT_VERSION` is the App Store Connect build number (`25`).
+- `CURRENT_PROJECT_VERSION` is the App Store Connect build number (`27`).
 
 Use `scripts/bump-version.sh` before creating a new archive. See [RELEASING.md](RELEASING.md) for the full release workflow and [CHANGELOG.md](CHANGELOG.md) for user-facing release notes.
 
