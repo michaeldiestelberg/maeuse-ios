@@ -16,6 +16,8 @@ Getrennte Konten, gemeinsame Kosten: Ausgaben direkt vom Sperrbildschirm diktier
 
 Getrennte Konten. Gemeinsames Leben. Mäuse ist der Ausgaben-Tracker für Paare, die Alltagskosten teilen möchten - ohne gemeinsames Bankkonto.
 
+Der Name ist Programm: „Mäuse“ ist umgangssprachlich für Geld.
+
 Erfasst, wer was bezahlt hat, teilt die Kosten fair auf und wisst am Monatsende genau, wer wem wie viel schuldet.
 
 FÜR ZWEI GEMACHT
@@ -55,6 +57,7 @@ teilen,rechnungen,budget,gemeinsam,partner,haushalt,geld,sprache,widget,abrechnu
 2. In Sekunden eine Ausgabe erfassen.
 3. Sagen. Prüfen. Speichern.
 4. Eure Daten bleiben auf dem iPhone.
+5. Erfassen, bevor es vergessen ist.
 
 ## Versionshinweise für den ersten Store-Release
 

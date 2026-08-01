@@ -14,10 +14,12 @@ let specs = [
     ScreenshotSpec(language: "en", sourceName: "02-editor", caption: "Add an expense\nin seconds."),
     ScreenshotSpec(language: "en", sourceName: "03-voice", caption: "Just say it. Review it.\nSave it."),
     ScreenshotSpec(language: "en", sourceName: "04-settings", caption: "Your data stays\non your iPhone."),
+    ScreenshotSpec(language: "en", sourceName: "05-widgets", caption: "Capture it before\nyou forget."),
     ScreenshotSpec(language: "de", sourceName: "01-dashboard", caption: "Getrennte Konten.\nKlare Bilanz."),
     ScreenshotSpec(language: "de", sourceName: "02-editor", caption: "In Sekunden eine\nAusgabe erfassen."),
     ScreenshotSpec(language: "de", sourceName: "03-voice", caption: "Sagen. Prüfen.\nSpeichern."),
-    ScreenshotSpec(language: "de", sourceName: "04-settings", caption: "Eure Daten bleiben\nauf dem iPhone.")
+    ScreenshotSpec(language: "de", sourceName: "04-settings", caption: "Eure Daten bleiben\nauf dem iPhone."),
+    ScreenshotSpec(language: "de", sourceName: "05-widgets", caption: "Erfassen, bevor\nes vergessen ist.")
 ]
 
 let fileManager = FileManager.default

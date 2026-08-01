@@ -34,10 +34,11 @@ numbers, device QA — was reset for 1.3.0 and needs re-verification before subm
 - [ ] German localization is re-entered from `metadata-de.md` (same 1.3.0 update).
 - [x] Support, marketing, and privacy URLs are entered.
 - [x] Copyright is `2026 Michael Diestelberg`.
-- [ ] Screenshots are refreshed for 1.3.0 — the current set (`01-dashboard`, `02-editor`, `03-voice`, `04-settings`) predates widgets, Lock Screen, and Control Center capture and shows none of the headline features.
-- [ ] Framed screenshots are regenerated with `scripts/frame-app-store-screenshots.swift` — the captions in `AppStore/screenshots/framed/` are still the pre-1.3.0 wording, since the script's caption text changed with the new marketing copy.
-- [ ] Four English 6.9-inch screenshots are uploaded in the planned order.
-- [ ] Four German 6.9-inch screenshots are uploaded in the planned order.
+- [x] A fifth scene, `05-widgets`, was captured on iPhone 17 Pro Max showing the Home Screen widget, and framed in both languages.
+- [ ] Scenes `01-dashboard`, `02-editor`, `03-voice`, and `04-settings` are re-captured for 1.3.0 — those four still predate widgets, Lock Screen, and Control Center capture.
+- [x] Framed screenshots regenerated with `scripts/frame-app-store-screenshots.swift`; all ten carry the new marketing captions.
+- [ ] Five English 6.9-inch screenshots are uploaded in the planned order.
+- [ ] Five German 6.9-inch screenshots are uploaded in the planned order.
 - [ ] Prepared screenshots contain no real personal data or secret API key.
 - [ ] `AppStore/release-notes.md` 1.3.0 “What’s New” text is pasted for English (U.S.) and German.
 - [ ] The 1.3.0 long form is mirrored on `https://xn--muse-loa.app/changelog.html`.

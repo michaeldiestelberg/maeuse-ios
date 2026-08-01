@@ -16,6 +16,8 @@ Keep separate accounts without keeping score. Dictate shared expenses from your 
 
 Separate accounts. Shared life. Mäuse is the expense tracker built for couples who want to share everyday costs without sharing a bank account.
 
+The name Mäuse is German slang for "money" - a playful fit for keeping shared finances in balance.
+
 Record what you paid, choose a fair split, and always know what needs to be settled at the end of the month.
 
 BUILT FOR TWO
@@ -55,6 +57,7 @@ shared,bills,split,budget,partner,household,money,voice,widget,reconcile,settle,
 2. Add an expense in seconds.
 3. Just say it. Review it. Save it.
 4. Your data stays on your iPhone.
+5. Capture it before you forget.
 
 ## First-version release notes
 

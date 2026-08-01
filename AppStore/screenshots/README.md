@@ -24,6 +24,11 @@ Capture real app UI from the iPhone 17 Pro Max simulator in portrait orientation
    - German caption: Eure Daten bleiben auf dem iPhone.
    - Settings showing verified Voice Mode, consent status, backup controls, and privacy/support access. The visible API suffix is synthetic.
 
+5. `05-widgets`
+   - English caption: Capture it before you forget.
+   - German caption: Erfassen, bevor es vergessen ist.
+   - Home Screen with the medium Mäuse widget in place, showing that a new expense starts without opening the app first. Capture on a stock Home Screen page; keep the widget in the top-left slot so it reads first.
+
 ## Rules
 
 - Use only synthetic sample expenses.
