@@ -10,14 +10,14 @@ struct ScreenshotSpec {
 }
 
 let specs = [
-    ScreenshotSpec(language: "en", sourceName: "01-dashboard", caption: "Shared spending\nat a glance"),
-    ScreenshotSpec(language: "en", sourceName: "02-editor", caption: "Add an expense\nin seconds"),
-    ScreenshotSpec(language: "en", sourceName: "03-voice", caption: "Say it. Review it.\nSave it."),
-    ScreenshotSpec(language: "en", sourceName: "04-settings", caption: "Voice Mode you control.\nBackups you own."),
-    ScreenshotSpec(language: "de", sourceName: "01-dashboard", caption: "Gemeinsame Ausgaben\nim Blick"),
-    ScreenshotSpec(language: "de", sourceName: "02-editor", caption: "Ausgabe in Sekunden\nerfassen"),
+    ScreenshotSpec(language: "en", sourceName: "01-dashboard", caption: "Separate accounts.\nOne clear balance."),
+    ScreenshotSpec(language: "en", sourceName: "02-editor", caption: "Add an expense\nin seconds."),
+    ScreenshotSpec(language: "en", sourceName: "03-voice", caption: "Just say it. Review it.\nSave it."),
+    ScreenshotSpec(language: "en", sourceName: "04-settings", caption: "Your data stays\non your iPhone."),
+    ScreenshotSpec(language: "de", sourceName: "01-dashboard", caption: "Getrennte Konten.\nKlare Bilanz."),
+    ScreenshotSpec(language: "de", sourceName: "02-editor", caption: "In Sekunden eine\nAusgabe erfassen."),
     ScreenshotSpec(language: "de", sourceName: "03-voice", caption: "Sagen. Prüfen.\nSpeichern."),
-    ScreenshotSpec(language: "de", sourceName: "04-settings", caption: "Sprachmodus unter\ndeiner Kontrolle.")
+    ScreenshotSpec(language: "de", sourceName: "04-settings", caption: "Eure Daten bleiben\nauf dem iPhone.")
 ]
 
 let fileManager = FileManager.default

@@ -6,40 +6,34 @@ Mäuse
 
 ## Subtitle
 
-Shared expenses, made simple
+Expense tracker for couples
 
 ## Promotional text
 
-Shared expenses without the spreadsheet: add costs from the Lock Screen or a widget, split them fairly, and optionally enter several expenses at once by voice.
+Keep separate accounts without keeping score. Dictate shared expenses from your Lock Screen, split them fairly, and know exactly what to settle at month's end.
 
 ## Description
 
-Shared expenses don't have to be complicated. Mäuse helps the two of you record everyday costs, split them in whatever way feels fair, and instantly see who owes what.
+Separate accounts. Shared life. Mäuse is the expense tracker built for couples who want to share everyday costs without sharing a bank account.
 
-EVERYTHING AT A GLANCE
+Record what you paid, choose a fair split, and always know what needs to be settled at the end of the month.
 
-• Add and edit expenses in seconds
-• See monthly totals and your partner's share
+BUILT FOR TWO
+
+• Track groceries, rent, trips, meals out, and other shared costs
+• Split by percentage or enter the exact amount your partner should cover
+• See monthly totals, your partner's share, and the current balance at a glance
 • Move easily between previous and upcoming months
-• Great for groceries, rent, trips, meals out, and more
 
-START FROM ANYWHERE
+CAPTURE IT BEFORE YOU FORGET
 
-• Home Screen and Lock Screen widgets that jump straight to a new expense
-• Lock Screen and Control Center controls for adding or dictating an expense
-• Custom mouse-themed icons that match the app
+Open a new expense straight from a Home Screen or Lock Screen widget, the Lock Screen, or Control Center. Manual entry takes seconds.
 
-SPLIT THINGS YOUR WAY
+OR JUST SAY IT
 
-Choose a percentage split or enter the exact amount your partner should cover. Mäuse takes care of the rest.
+Optional Voice Mode turns a quick sentence into one or more expense drafts. A real-time voice model extracts the details while you speak. Review every draft before saving, so you stay in control.
 
-OPTIONALLY, JUST SAY IT
-
-“10 euros for groceries and 5 euros for coffee, split both in half.”
-
-With optional Voice Mode, you can add several expenses in one go. Mäuse creates drafts first, so you can check every detail before saving anything.
-
-YOUR EXPENSES STAY WITH YOU
+PRIVATE BY DEFAULT
 
 • No Mäuse account required
 • Expenses are stored on your iPhone
@@ -47,22 +41,20 @@ YOUR EXPENSES STAY WITH YOU
 • Export and restore a portable JSON backup
 • Manual entry works offline
 
-Optional Voice Mode requires your own compatible OpenAI API key. Only during a voice session, and after you consent, microphone audio and spoken expense details are sent directly to OpenAI. OpenAI may charge your API project for usage; Mäuse receives none of those fees.
+Optional Voice Mode requires your own compatible OpenAI API key. Only during a voice session, and after you consent, microphone audio and spoken expense details are sent directly to OpenAI.
 
-Use Mäuse in English or German, with light, dark, or system appearance.
-
-“Mäuse” is German slang for money—literally, “mice.”
+Enjoy Dark Mode, or choose light or system appearance.
 
 ## Keywords
 
-expenses,couples,split,bills,budget,shared,partner,household,money,widget
+shared,bills,split,budget,partner,household,money,voice,widget,reconcile,settle,spending
 
 ## Screenshot captions
 
-1. Shared spending at a glance
-2. Add an expense in seconds
-3. Say it. Review it. Save it.
-4. Voice Mode you control. Backups you own.
+1. Separate accounts. One clear balance.
+2. Add an expense in seconds.
+3. Just say it. Review it. Save it.
+4. Your data stays on your iPhone.
 
 ## First-version release notes
 

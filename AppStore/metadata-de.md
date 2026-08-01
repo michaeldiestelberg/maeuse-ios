@@ -6,63 +6,55 @@ Mäuse
 
 ## Untertitel
 
-Gemeinsame Ausgaben teilen
+Ausgaben-Tracker für Paare
 
 ## Werbetext
 
-Gemeinsame Ausgaben ohne Rechnerei: direkt vom Sperrbildschirm oder Widget erfassen, fair aufteilen und auf Wunsch mehrere Einträge einfach per Sprache hinzufügen.
+Getrennte Konten, gemeinsame Kosten: Ausgaben direkt vom Sperrbildschirm diktieren, fair aufteilen und am Monatsende wissen, wer wem wie viel schuldet.
 
 ## Beschreibung
 
-Gemeinsame Ausgaben müssen nicht kompliziert sein. Mit Mäuse erfasst ihr eure Alltagskosten, teilt sie so auf, wie es für euch passt, und seht sofort, wer wem wie viel schuldet.
+Getrennte Konten. Gemeinsames Leben. Mäuse ist der Ausgaben-Tracker für Paare, die Alltagskosten teilen möchten - ohne gemeinsames Bankkonto.
 
-ALLES AUF EINEN BLICK
+Erfasst, wer was bezahlt hat, teilt die Kosten fair auf und wisst am Monatsende genau, wer wem wie viel schuldet.
 
-• Ausgaben in wenigen Sekunden hinzufügen und bearbeiten
-• Monatssummen und Partneranteil direkt sehen
+FÜR ZWEI GEMACHT
+
+• Einkäufe, Miete, Reisen, Restaurantbesuche und andere gemeinsame Kosten erfassen
+• Prozentual aufteilen oder den genauen Partneranteil eintragen
+• Monatssummen, Partneranteil und aktuellen Saldo auf einen Blick sehen
 • Einfach zwischen vergangenen und kommenden Monaten wechseln
-• Perfekt für Einkäufe, Miete, Urlaub, Restaurantbesuche und mehr
 
-VON ÜBERALL STARTEN
+ERFASSEN, BEVOR ES VERGESSEN IST
 
-• Widgets auf dem Home- und Sperrbildschirm, die direkt zur neuen Ausgabe führen
-• Bedienelemente im Sperrbildschirm und Kontrollzentrum zum Erfassen oder Diktieren
-• Eigene Maus-Icons, passend zur App
+Startet eine neue Ausgabe direkt über ein Widget auf dem Home- oder Sperrbildschirm, den Sperrbildschirm oder das Kontrollzentrum. Die manuelle Eingabe dauert nur Sekunden.
 
-SO FAIR, WIE IHR ES BRAUCHT
+ODER EINFACH SAGEN
 
-Teilt eine Ausgabe prozentual oder tragt direkt den Betrag ein, den dein Partner übernimmt. Mäuse rechnet den Rest für euch aus.
+Der optionale Sprachmodus verwandelt einen kurzen Satz in einen oder mehrere Ausgabenentwürfe. Ein Echtzeit-Sprachmodell erkennt beim Sprechen die relevanten Angaben. Vor dem Speichern könnt ihr jeden Entwurf prüfen und behaltet so die Kontrolle.
 
-AUF WUNSCH EINFACH SAGEN
-
-„10 Euro für Lebensmittel und 5 Euro für Kaffee, beides halbieren.“
-
-Mit dem optionalen Sprachmodus kannst du sogar mehrere Ausgaben auf einmal erfassen. Mäuse erstellt zuerst Entwürfe, damit du alles in Ruhe prüfen kannst, bevor es gespeichert wird.
-
-DEINE AUSGABEN BLEIBEN BEI DIR
+PRIVAT VON ANFANG AN
 
 • Kein Mäuse-Konto erforderlich
-• Ausgaben werden auf deinem iPhone gespeichert
+• Ausgaben werden auf eurem iPhone gespeichert
 • Keine Werbung und kein App-übergreifendes Tracking
 • Backup als JSON-Datei exportieren und wiederherstellen
-• Manuelle Erfassung funktioniert auch offline
+• Manuelle Erfassung funktioniert offline
 
-Für den optionalen Sprachmodus brauchst du einen eigenen kompatiblen OpenAI-API-Schlüssel. Nur während einer Sprachsitzung werden Mikrofonaudio und gesprochene Ausgabendetails nach deiner Einwilligung direkt an OpenAI übertragen. Dabei können Kosten in deinem OpenAI-Projekt entstehen; Mäuse verdient daran nichts.
+Der optionale Sprachmodus erfordert einen eigenen kompatiblen OpenAI-API-Schlüssel. Nur während einer Sprachsitzung und nach eurer Zustimmung werden Mikrofon-Audio und gesprochene Ausgabendetails direkt an OpenAI gesendet.
 
-Nutze Mäuse auf Deutsch oder Englisch und im hellen, dunklen oder systemweiten Erscheinungsbild.
-
-„Mäuse“ ist umgangssprachlich Geld – und wortwörtlich natürlich: Mäuse.
+Mäuse unterstützt Dark Mode sowie ein helles oder systemweites Erscheinungsbild.
 
 ## Schlüsselwörter
 
-ausgaben,paare,teilen,rechnungen,budget,gemeinsam,partner,haushalt,geld,widget
+teilen,rechnungen,budget,gemeinsam,partner,haushalt,geld,sprache,widget,abrechnung,schulden
 
 ## Screenshot-Texte
 
-1. Gemeinsame Ausgaben im Blick
-2. In Sekunden eine Ausgabe erfassen
+1. Getrennte Konten. Klare Bilanz.
+2. In Sekunden eine Ausgabe erfassen.
 3. Sagen. Prüfen. Speichern.
-4. Sprachmodus unter deiner Kontrolle
+4. Eure Daten bleiben auf dem iPhone.
 
 ## Versionshinweise für den ersten Store-Release
 

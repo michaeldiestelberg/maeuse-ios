@@ -35,6 +35,7 @@ numbers, device QA — was reset for 1.3.0 and needs re-verification before subm
 - [x] Support, marketing, and privacy URLs are entered.
 - [x] Copyright is `2026 Michael Diestelberg`.
 - [ ] Screenshots are refreshed for 1.3.0 — the current set (`01-dashboard`, `02-editor`, `03-voice`, `04-settings`) predates widgets, Lock Screen, and Control Center capture and shows none of the headline features.
+- [ ] Framed screenshots are regenerated with `scripts/frame-app-store-screenshots.swift` — the captions in `AppStore/screenshots/framed/` are still the pre-1.3.0 wording, since the script's caption text changed with the new marketing copy.
 - [ ] Four English 6.9-inch screenshots are uploaded in the planned order.
 - [ ] Four German 6.9-inch screenshots are uploaded in the planned order.
 - [ ] Prepared screenshots contain no real personal data or secret API key.

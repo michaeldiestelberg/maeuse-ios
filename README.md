@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  Shared expenses, made simple. A local-first iPhone app for two people who want to keep everyday spending fair without maintaining a spreadsheet.
+  The expense tracker for couples. A local-first iPhone app for two people who share everyday costs without sharing a bank account.
 </p>
 
 ## Current release

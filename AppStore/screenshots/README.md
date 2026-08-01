@@ -5,23 +5,23 @@ Capture real app UI from the iPhone 17 Pro Max simulator in portrait orientation
 ## Order
 
 1. `01-dashboard`
-   - English caption: Shared spending at a glance
-   - German caption: Gemeinsame Ausgaben im Blick
+   - English caption: Separate accounts. One clear balance.
+   - German caption: Getrennte Konten. Klare Bilanz.
    - Populated current-month dashboard with totals and realistic sample expenses.
 
 2. `02-editor`
-   - English caption: Add an expense in seconds
-   - German caption: In Sekunden eine Ausgabe erfassen
+   - English caption: Add an expense in seconds.
+   - German caption: In Sekunden eine Ausgabe erfassen.
    - New-expense sheet prefilled with groceries and a 50/50 split.
 
 3. `03-voice`
-   - English caption: Say it. Review it. Save it.
+   - English caption: Just say it. Review it. Save it.
    - German caption: Sagen. Prüfen. Speichern.
    - Voice workspace showing two recognized, reviewable expense drafts. No real microphone recording or API credential is used for the screenshot.
 
 4. `04-settings`
-   - English caption: Voice Mode you control. Backups you own.
-   - German caption: Sprachmodus unter deiner Kontrolle
+   - English caption: Your data stays on your iPhone.
+   - German caption: Eure Daten bleiben auf dem iPhone.
    - Settings showing verified Voice Mode, consent status, backup controls, and privacy/support access. The visible API suffix is synthetic.
 
 ## Rules
