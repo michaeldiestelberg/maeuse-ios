@@ -12,10 +12,10 @@ App Store live: **1.2.0 (9)**. Internal TestFlight: see `README.md` for the curr
 Run one command from the repository root:
 
 ```sh
-scripts/bump-version.sh build  # 1.3.0 (24) -> 1.3.0 (25)
-scripts/bump-version.sh patch  # 1.3.0 (24) -> 1.3.1 (25)
-scripts/bump-version.sh minor  # 1.3.0 (24) -> 1.4.0 (25)
-scripts/bump-version.sh major  # 1.3.0 (24) -> 2.0.0 (25)
+scripts/bump-version.sh build  # 1.3.0 (25) -> 1.3.0 (26)
+scripts/bump-version.sh patch  # 1.3.0 (25) -> 1.3.1 (26)
+scripts/bump-version.sh minor  # 1.3.0 (25) -> 1.4.0 (26)
+scripts/bump-version.sh major  # 1.3.0 (25) -> 2.0.0 (26)
 ```
 
 Use `build` for another upload of the same user-facing release. Never reuse a build number already uploaded to App Store Connect.
