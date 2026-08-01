@@ -74,10 +74,6 @@
 "VoiceHaptics" = "Haptic feedback";
 "VoiceHapticsDesc" = "Vibrate when listening starts and when expenses are captured";
 "ApiKeyVerifiedMsg" = "API key verified %@";
-"KeychainStorageDesc" = "Your key is stored in iOS Keychain on this device and sent only to OpenAI over HTTPS to create short-lived Realtime client secrets.";
-"VoiceRequirementsDesc" = "Voice mode requires an OpenAI API project with access to gpt-realtime-2; free-tier API keys are not supported for this model.";
-"VoiceConsentAcceptedLabel" = "Voice data sharing accepted";
-"WithdrawVoiceConsent" = "Withdraw Voice Consent";
 "VoicePrivacyTitle" = "Before You Use Voice Mode";
 "VoicePrivacyIntro" = "Voice Mode is optional. Manual expense tracking remains available without an OpenAI API key or microphone access.";
 "VoicePrivacyDataTitle" = "Data sent to OpenAI";
@@ -100,7 +96,6 @@
 "ApiKeyVerifiedKeychain" = "API key verified and saved in Keychain.";
 "ApiKeyVerificationFailed" = "API key verification failed: %@";
 "RemovedApiKeyMsg" = "Removed the saved OpenAI API key.";
-"VoiceConsentWithdrawnMsg" = "Voice consent withdrawn. Voice Mode is now disabled.";
 "CouldNotRemoveApiKey" = "Could not remove API key: %@";
 "BackupReadyMsg" = "Backup ready to share.";
 "BackupExportedMsg" = "Backup saved successfully.";

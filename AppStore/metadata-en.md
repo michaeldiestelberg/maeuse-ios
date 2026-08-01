@@ -10,7 +10,7 @@ Shared expenses, made simple
 
 ## Promotional text
 
-Shared expenses without the spreadsheet: add costs, split them fairly, and optionally enter several expenses at once by voice.
+Shared expenses without the spreadsheet: add costs from the Lock Screen or a widget, split them fairly, and optionally enter several expenses at once by voice.
 
 ## Description
 
@@ -22,6 +22,12 @@ EVERYTHING AT A GLANCE
 • See monthly totals and your partner's share
 • Move easily between previous and upcoming months
 • Great for groceries, rent, trips, meals out, and more
+
+START FROM ANYWHERE
+
+• Home Screen and Lock Screen widgets that jump straight to a new expense
+• Lock Screen and Control Center controls for adding or dictating an expense
+• Custom mouse-themed icons that match the app
 
 SPLIT THINGS YOUR WAY
 
@@ -49,7 +55,7 @@ Use Mäuse in English or German, with light, dark, or system appearance.
 
 ## Keywords
 
-expenses,couples,split,bills,budget,shared,partner,household,money,tracker
+expenses,couples,split,bills,budget,shared,partner,household,money,widget
 
 ## Screenshot captions
 

@@ -39,14 +39,20 @@ final class SettingsViewModel {
 
     // MARK: - Voice Settings
 
+    /// Consent is tied to the Voice Mode toggle: enabling requires the disclosure to be
+    /// accepted first, and turning it off revokes consent again, so re-enabling always
+    /// re-presents the disclosure. There is no separate withdrawal action.
     var voiceEnabled: Bool {
         get { voiceSettings.enabled }
         set {
-            voiceSettings.enabled = newValue
-                && voiceSettings.isVerified
-                && hasSavedVoiceAPIKey
-                && voiceSettings.hasCurrentConsent
-            saveVoiceSettings()
+            if newValue {
+                voiceSettings.enabled = voiceSettings.isVerified
+                    && hasSavedVoiceAPIKey
+                    && voiceSettings.hasCurrentConsent
+                saveVoiceSettings()
+            } else {
+                disableVoiceModeRevokingConsent()
+            }
         }
     }
 
@@ -60,12 +66,14 @@ final class SettingsViewModel {
         saveVoiceSettings()
     }
 
-    func withdrawVoiceConsent() {
+    /// Turns Voice Mode off and clears the stored consent. Used both by the toggle and by
+    /// the paths that force Voice Mode off because the key is gone or no longer verifies —
+    /// consent must never outlive the enabled state, or re-enabling would skip the sheet.
+    private func disableVoiceModeRevokingConsent() {
         voiceSettings.enabled = false
         voiceSettings.consentVersion = nil
         voiceSettings.consentedAt = nil
         saveVoiceSettings()
-        showStatusMessage(loc("VoiceConsentWithdrawnMsg"))
     }
 
     func verifyVoiceAPIKey() {
@@ -108,8 +116,7 @@ final class SettingsViewModel {
                 showStatusMessage(loc("ApiKeyVerifiedKeychain"))
             } catch {
                 voiceSettings.verifiedAt = nil
-                voiceSettings.enabled = false
-                saveVoiceSettings()
+                disableVoiceModeRevokingConsent()
                 showErrorMessage(loc("ApiKeyVerificationFailed", error.localizedDescription))
             }
             isVerifying = false
@@ -196,8 +203,7 @@ final class SettingsViewModel {
             hasSavedVoiceAPIKey = false
             voiceSettings.apiKeySuffix = nil
             voiceSettings.verifiedAt = nil
-            voiceSettings.enabled = false
-            saveVoiceSettings()
+            disableVoiceModeRevokingConsent()
             return
         }
 

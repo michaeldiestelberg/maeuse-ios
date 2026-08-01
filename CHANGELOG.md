@@ -2,7 +2,7 @@
 
 This file records user-facing changes to Mäuse. App Store and GitHub release notes should be based on the matching version section.
 
-## 1.2.1 — 2026-07-20
+## 1.3.0 — 2026-08-01
 
 - Lock Screen and Control Center controls now start manual or voice expense capture directly, with custom mouse-themed add and microphone icons that match the app's brand.
 - Matching Home Screen and Lock Screen widgets provide one-tap access to manual entry or Voice Mode: a small Home Screen widget and two circular Lock Screen widgets.

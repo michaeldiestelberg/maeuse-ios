@@ -74,10 +74,6 @@
 "VoiceHaptics" = "Haptisches Feedback";
 "VoiceHapticsDesc" = "Vibrieren beim Start des Zuhörens und beim Erfassen von Ausgaben";
 "ApiKeyVerifiedMsg" = "API-Schlüssel verifiziert %@";
-"KeychainStorageDesc" = "Dein Schlüssel wird im iOS-Schlüsselbund (Keychain) auf diesem Gerät gespeichert und nur über HTTPS an OpenAI gesendet, um kurzlebige temporäre Realtime-Client-Secrets zu erstellen.";
-"VoiceRequirementsDesc" = "Der Sprachmodus erfordert ein OpenAI-API-Projekt mit Zugriff auf gpt-realtime-2; API-Schlüssel der kostenlosen Stufe (Free Tier) werden für dieses Modell nicht unterstützt.";
-"VoiceConsentAcceptedLabel" = "Datenweitergabe für Sprachmodus akzeptiert";
-"WithdrawVoiceConsent" = "Einwilligung widerrufen";
 "VoicePrivacyTitle" = "Vor der Nutzung des Sprachmodus";
 "VoicePrivacyIntro" = "Der Sprachmodus ist optional. Die manuelle Ausgabenerfassung funktioniert ohne OpenAI-API-Schlüssel und ohne Mikrofonzugriff.";
 "VoicePrivacyDataTitle" = "An OpenAI übermittelte Daten";
@@ -100,7 +96,6 @@
 "ApiKeyVerifiedKeychain" = "API-Schlüssel verifiziert und im Schlüsselbund gespeichert.";
 "ApiKeyVerificationFailed" = "API-Schlüssel-Verifizierung fehlgeschlagen: %@";
 "RemovedApiKeyMsg" = "Gespeicherter OpenAI-API-Schlüssel wurde entfernt.";
-"VoiceConsentWithdrawnMsg" = "Einwilligung widerrufen. Der Sprachmodus ist jetzt deaktiviert.";
 "CouldNotRemoveApiKey" = "API-Schlüssel konnte nicht entfernt werden: %@";
 "BackupReadyMsg" = "Backup bereit zum Teilen.";
 "BackupExportedMsg" = "Backup erfolgreich gespeichert.";

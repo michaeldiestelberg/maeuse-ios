@@ -5,17 +5,17 @@ Mäuse follows Apple's two-part versioning model. The Xcode project is the sourc
 - `MARKETING_VERSION` is the user-facing `major.minor.patch` version.
 - `CURRENT_PROJECT_VERSION` is the App Store Connect build number. Keep it aligned with (or ahead of) builds already on App Store Connect, and with Xcode Cloud → Settings → Build Number → **Next Build Number**.
 
-App Store live: **1.2.0 (9)**. Internal TestFlight: see `README.md` for the current `1.2.1` build.
+App Store live: **1.2.0 (9)**. Internal TestFlight: see `README.md` for the current `1.3.0` build. Version `1.2.1` shipped only to TestFlight and is superseded by `1.3.0`.
 
 ## 1. Choose the version change
 
 Run one command from the repository root:
 
 ```sh
-scripts/bump-version.sh build  # 1.2.1 (13) -> 1.2.1 (14)
-scripts/bump-version.sh patch  # 1.2.1 (13) -> 1.2.2 (14)
-scripts/bump-version.sh minor  # 1.2.1 (13) -> 1.3.0 (14)
-scripts/bump-version.sh major  # 1.2.1 (13) -> 2.0.0 (14)
+scripts/bump-version.sh build  # 1.3.0 (23) -> 1.3.0 (24)
+scripts/bump-version.sh patch  # 1.3.0 (23) -> 1.3.1 (24)
+scripts/bump-version.sh minor  # 1.3.0 (23) -> 1.4.0 (24)
+scripts/bump-version.sh major  # 1.3.0 (23) -> 2.0.0 (24)
 ```
 
 Use `build` for another upload of the same user-facing release. Never reuse a build number already uploaded to App Store Connect.

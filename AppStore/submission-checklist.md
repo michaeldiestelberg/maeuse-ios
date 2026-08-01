@@ -1,4 +1,8 @@
-# Mäuse 1.2.0 Submission Checklist
+# Mäuse 1.3.0 Submission Checklist
+
+Items marked `[x]` with a July 2026 date were verified for the 1.2.0 submission and remain
+valid for the app record itself. Anything version-specific — metadata, screenshots, build
+numbers, device QA — was reset for 1.3.0 and needs re-verification before submitting.
 
 ## Developer account and app record
 
@@ -26,40 +30,47 @@
 
 ## App Store metadata
 
-- [x] English name, subtitle, description, promotional text, and keywords are entered from `metadata-en.md`.
-- [x] German localization is entered from `metadata-de.md`.
+- [ ] English name, subtitle, description, promotional text, and keywords are re-entered from `metadata-en.md` (updated for 1.3.0 with widgets, Lock Screen, and Control Center).
+- [ ] German localization is re-entered from `metadata-de.md` (same 1.3.0 update).
 - [x] Support, marketing, and privacy URLs are entered.
 - [x] Copyright is `2026 Michael Diestelberg`.
-- [x] Four English 6.9-inch screenshots are uploaded in the planned order.
-- [x] Four German 6.9-inch screenshots are uploaded in the planned order.
-- [x] Prepared screenshots contain no real personal data or secret API key.
+- [ ] Screenshots are refreshed for 1.3.0 — the current set (`01-dashboard`, `02-editor`, `03-voice`, `04-settings`) predates widgets, Lock Screen, and Control Center capture and shows none of the headline features.
+- [ ] Four English 6.9-inch screenshots are uploaded in the planned order.
+- [ ] Four German 6.9-inch screenshots are uploaded in the planned order.
+- [ ] Prepared screenshots contain no real personal data or secret API key.
+- [ ] `AppStore/release-notes.md` 1.3.0 “What’s New” text is pasted for English (U.S.) and German.
+- [ ] The 1.3.0 long form is mirrored on `https://xn--muse-loa.app/changelog.html`.
 
 ## Privacy and compliance
 
 - [x] App Privacy answers are published using `privacy-answers.md`.
 - [ ] Accessibility Nutrition Labels are entered conservatively using `compliance-answers.md`.
 - [x] Privacy Policy URL is entered in App Privacy.
-- [x] Voice Mode consent screen and withdrawal path are present in the selected build.
+- [x] Voice Mode consent screen is present in the selected build, and consent is revocable by turning Voice Mode off (there is no separate withdrawal button).
 - [x] Microphone purpose string accurately describes OpenAI streaming.
 - [x] Export compliance confirms only exempt/system encryption is used; `ITSAppUsesNonExemptEncryption` remains `false`.
 - [x] No IDFA, tracking, advertising, or app analytics are introduced after this audit.
-- [x] Current OpenAI Realtime retention and training statements were checked on July 12, 2026; recheck if submission occurs later.
+- [x] Both bundles ship a privacy manifest: `Maeuse/PrivacyInfo.xcprivacy` and `MaeuseControls/PrivacyInfo.xcprivacy` each declare `NSPrivacyAccessedAPICategoryUserDefaults` / `CA92.1` (the extension links `NSUserDefaults` via `CaptureExpenseIntent.perform()`).
+- [ ] Current OpenAI Realtime retention and training statements are rechecked (last checked July 12, 2026 — recheck before this submission).
 
 ## Build and device QA
 
 - [ ] Full Xcode 26 or later is selected: `sudo xcode-select -s /Applications/Xcode.app/Contents/Developer`.
-- [x] Marketing version is `1.2.1`.
-- [x] Build number is incremented above every previously uploaded build (`11`).
-- [x] Release archive succeeds with the iOS 26.5 SDK.
-- [x] Unit tests pass.
-- [x] Xcode Release static analysis succeeds for the app target.
+- [x] Marketing version is `1.3.0`.
+- [x] Build number is incremented above every previously uploaded build (`23`).
+- [ ] Release archive succeeds with the iOS 26.5 SDK.
+- [x] Unit tests pass (27 tests, August 1, 2026).
+- [x] Xcode Release static analysis succeeds for the app target (the scheme no longer analyzes `MaeuseTests`, whose `@testable import` cannot resolve against a non-testable Release build).
+- [x] Release build produces zero compiler warnings across app and extension.
 - [ ] App is tested on a physical iPhone running a currently supported iOS version.
 - [ ] Manual add, edit, delete, split, month navigation, and totals work.
-- [ ] Backup export, import, replacement warning, and malformed-file error handling work.
+- [ ] Backup export, import, replacement warning, and malformed-file error handling work. (Import parsing, duplicate-ID rejection, unparseable dates, malformed JSON, and missing fields are now covered by unit tests; the device pass still needs to confirm the UI flow.)
+- [ ] Home Screen widget, both Lock Screen widgets, and both Control Center controls each launch the correct capture destination on a physical device.
+- [ ] Expense editor stays fully visible with the keyboard open, in both the new-expense and edit layouts.
 - [ ] English and German layouts work in light and dark appearance.
 - [ ] Voice Mode works with valid, invalid, revoked, and insufficient-credit API keys.
 - [ ] Microphone allow, deny, and later-enable flows work.
-- [ ] Voice consent accept, decline, disable, withdraw, and re-consent flows work.
+- [ ] Voice consent accept and decline work, turning Voice Mode off revokes consent, and turning it back on re-presents the disclosure before enabling.
 - [ ] App remains usable offline with Voice Mode unavailable.
 - [ ] Privacy, Support, and Terms links open successfully from Settings.
 
@@ -67,7 +78,7 @@
 
 - [x] A Release archive is created successfully for Any iOS Device.
 - [x] An App Store Connect distribution-signed IPA exports successfully and passes local signature/archive integrity checks.
-- [ ] Xcode Organizer validation passes.
+- [ ] Xcode Organizer validation passes, with no ITMS-91053 “missing API declaration” warning for either bundle.
 - [x] Build 9, archived from the July 12 source tree, is uploaded to App Store Connect and finishes processing.
 - [x] The stale build 8 review submission is removed before resubmission.
 - [x] TestFlight information is entered from `testflight.md`; build 9 is validated and assigned to the internal Family group (2 testers).
@@ -80,8 +91,10 @@
 - [x] Version 1.2.0 (build 9) is added to review and submitted (July 12, 2026); App Store Connect confirms the replacement submission.
 - [x] Build 11 (`1.2.1`, voice-primary FAB) is uploaded to App Store Connect (July 19, 2026) and is processing for Internal TestFlight.
 - [x] Build 11 is available to the internal Family group via automatic distribution (confirmed July 19, 2026).
-- [ ] Build 12 (`1.2.1`, Voice Mode haptics) is uploaded to App Store Connect for Internal TestFlight.
-- [ ] Build 13 (`1.2.1`, Voice Mode haptics) is uploaded via Xcode Cloud for Internal TestFlight.
+- [x] Builds 12–22 (`1.2.1`) were distributed to Internal TestFlight via Xcode Cloud; build 22 (keyboard-stability fix) succeeded on August 1, 2026. Version 1.2.1 was never submitted to the App Store and is superseded by 1.3.0.
+- [ ] Build 23 (`1.3.0`) is uploaded via Xcode Cloud and reaches Internal TestFlight.
+- [ ] Correct build 23 is selected for version 1.3.0 in App Store Connect.
+- [ ] Version 1.3.0 (build 23) is added to review and submitted.
 
 ## After approval
 

@@ -26,7 +26,7 @@ Please focus on these flows:
 6. Test without a network connection. Manual tracking and local backups should continue to work; Voice Mode should remain unavailable.
 7. For Voice Mode, use a compatible OpenAI API project and key. Verify the key, review the disclosure, accept consent, and enable Voice Mode.
 8. Dictate several expenses in one sentence. Review, remove, correct, and save drafts. Confirm that ending the session stops microphone use.
-9. Disable Voice Mode, withdraw consent, remove the saved key, and verify that re-enabling requires consent again.
+9. Turn Voice Mode off, then on again, and verify that the disclosure reappears and consent must be accepted before it re-enables. Then remove the saved key.
 10. Test microphone allow, deny, and later-enable flows through iOS Settings.
 
 Never include a real API key, private expense backup, or other secret in TestFlight feedback screenshots or comments.

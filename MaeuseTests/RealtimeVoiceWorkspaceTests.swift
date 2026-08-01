@@ -5,17 +5,18 @@ import XCTest
 final class RealtimeVoiceWorkspaceTests: XCTestCase {
     private var originalLanguagePreference: AppLanguage = .system
 
-    @MainActor
-    override func setUp() {
-        super.setUp()
+    // The async overrides carry the class's `@MainActor` isolation; the synchronous
+    // `setUp()`/`tearDown()` are nonisolated in XCTestCase, which is an error under
+    // the Swift 6 language mode.
+    override func setUp() async throws {
+        try await super.setUp()
         originalLanguagePreference = LanguageManager.shared.languagePreference
         LanguageManager.shared.languagePreference = .english
     }
 
-    @MainActor
-    override func tearDown() {
+    override func tearDown() async throws {
         LanguageManager.shared.languagePreference = originalLanguagePreference
-        super.tearDown()
+        try await super.tearDown()
     }
 
     func testClientSecretSessionConfigUsesRealtime2AndConstrainedWorkspaceTool() throws {
@@ -356,6 +357,87 @@ final class RealtimeVoiceWorkspaceTests: XCTestCase {
         XCTAssertEqual(imported[0].splitValue, 35)
     }
 
+    // MARK: - Backup import guard clauses
+    //
+    // `parseBackup` is the gate in front of `replaceAllExpenses`, which deletes every
+    // stored expense before inserting. A backup that slips through the gate malformed
+    // is unrecoverable data loss, so each rejection path is covered here.
+
+    private func backupJSON(_ entries: String) -> Data {
+        Data("[\(entries)]".utf8)
+    }
+
+    private func backupEntry(id: String, date: String = "2026-07-11") -> String {
+        """
+        {"id":"\(id)","amount":10.5,"description":"Coffee","date":"\(date)",
+         "splitMode":"percent","splitValue":50,"createdAt":"2026-07-11T09:00:00Z"}
+        """
+    }
+
+    func testParseBackupRejectsDuplicateExpenseIDs() {
+        let data = backupJSON("\(backupEntry(id: "dupe")),\(backupEntry(id: "dupe"))")
+
+        XCTAssertThrowsError(try BackupService.parseBackup(data: data)) { error in
+            XCTAssertEqual(error as? BackupService.BackupError, .duplicateExpenseIDs)
+        }
+    }
+
+    func testParseBackupRejectsUnparseableDate() {
+        let data = backupJSON(backupEntry(id: "bad-date", date: "11.07.2026"))
+
+        XCTAssertThrowsError(try BackupService.parseBackup(data: data)) { error in
+            XCTAssertEqual(error as? BackupService.BackupError, .invalidExpense)
+        }
+    }
+
+    func testParseBackupRejectsMalformedJSON() {
+        XCTAssertThrowsError(try BackupService.parseBackup(data: Data("{not json".utf8))) { error in
+            XCTAssertTrue(error is DecodingError, "expected a decoding failure, got \(error)")
+        }
+    }
+
+    func testParseBackupRejectsEntryMissingRequiredField() {
+        // `amount` omitted entirely — decoding must fail rather than default to zero.
+        let data = backupJSON("""
+        {"id":"no-amount","description":"Coffee","date":"2026-07-11",
+         "splitMode":"percent","splitValue":50}
+        """)
+
+        XCTAssertThrowsError(try BackupService.parseBackup(data: data)) { error in
+            XCTAssertTrue(error is DecodingError, "expected a decoding failure, got \(error)")
+        }
+    }
+
+    func testParseBackupAcceptsEmptyBackup() throws {
+        // An empty array is valid input: it means "replace everything with nothing".
+        XCTAssertEqual(try BackupService.parseBackup(data: Data("[]".utf8)).count, 0)
+    }
+
+    func testParseBackupAcceptsEntryWithoutCreatedAt() throws {
+        // `createdAt` is optional in ExpenseBackup; older exports omit it.
+        let data = backupJSON("""
+        {"id":"legacy","amount":10.5,"description":"Coffee","date":"2026-07-11",
+         "splitMode":"percent","splitValue":50}
+        """)
+
+        let imported = try BackupService.parseBackup(data: data)
+        XCTAssertEqual(imported.count, 1)
+        XCTAssertNil(imported[0].createdAt)
+        XCTAssertNotNil(imported[0].toExpense())
+    }
+
+    func testParseBackupFallsBackToPercentForUnknownSplitMode() throws {
+        // `toExpense()` defaults an unrecognized mode to .percent rather than failing,
+        // so such a backup is accepted; this pins that documented behaviour.
+        let data = backupJSON("""
+        {"id":"odd-mode","amount":10.5,"description":"Coffee","date":"2026-07-11",
+         "splitMode":"quarters","splitValue":50,"createdAt":"2026-07-11T09:00:00Z"}
+        """)
+
+        let expense = try XCTUnwrap(BackupService.parseBackup(data: data).first?.toExpense())
+        XCTAssertEqual(expense.splitMode, .percent)
+    }
+
     func testVoiceSettingsRequireCurrentConsentForReadiness() {
         var settings = VoiceSettings(
             apiKeySuffix: "7mQ2",
@@ -391,6 +473,76 @@ final class RealtimeVoiceWorkspaceTests: XCTestCase {
         XCTAssertTrue(settings.hapticsEnabled)
         XCTAssertFalse(settings.hasCurrentConsent)
         XCTAssertFalse(settings.isReady)
+    }
+
+    // MARK: - Voice consent lifecycle
+    //
+    // Consent is tied to the Voice Mode toggle: there is no separate withdrawal action,
+    // so turning Voice Mode off must clear the stored consent. If consent ever outlived
+    // the enabled state, re-enabling would silently skip the disclosure sheet.
+
+    /// Builds a view model that already has a verified key, then restores whatever was in
+    /// UserDefaults when the test finishes.
+    private func makeVoiceReadyViewModel() -> (SettingsViewModel, Data?) {
+        let previous = UserDefaults.standard.data(forKey: VoiceSettings.storageKey)
+        let viewModel = SettingsViewModel()
+        viewModel.hasSavedVoiceAPIKey = true
+        viewModel.voiceSettings.apiKeySuffix = "7mQ2"
+        viewModel.voiceSettings.verifiedAt = Date()
+        return (viewModel, previous)
+    }
+
+    private func restoreVoiceSettings(_ previous: Data?) {
+        if let previous {
+            UserDefaults.standard.set(previous, forKey: VoiceSettings.storageKey)
+        } else {
+            UserDefaults.standard.removeObject(forKey: VoiceSettings.storageKey)
+        }
+    }
+
+    func testDisablingVoiceModeRevokesConsent() {
+        let (viewModel, previous) = makeVoiceReadyViewModel()
+        defer { restoreVoiceSettings(previous) }
+
+        viewModel.acceptVoiceConsent()
+        viewModel.voiceEnabled = true
+        XCTAssertTrue(viewModel.voiceEnabled)
+        XCTAssertTrue(viewModel.hasVoiceConsent)
+
+        viewModel.voiceEnabled = false
+
+        XCTAssertFalse(viewModel.voiceEnabled)
+        XCTAssertFalse(viewModel.hasVoiceConsent, "turning Voice Mode off must revoke consent")
+    }
+
+    func testEnablingVoiceModeWithoutConsentDoesNotEnable() {
+        let (viewModel, previous) = makeVoiceReadyViewModel()
+        defer { restoreVoiceSettings(previous) }
+
+        // No acceptVoiceConsent() call: the UI shows the disclosure instead of enabling.
+        viewModel.voiceEnabled = true
+
+        XCTAssertFalse(viewModel.voiceEnabled)
+        XCTAssertFalse(viewModel.hasVoiceConsent)
+    }
+
+    func testReEnablingAfterDisableRequiresConsentAgain() {
+        let (viewModel, previous) = makeVoiceReadyViewModel()
+        defer { restoreVoiceSettings(previous) }
+
+        viewModel.acceptVoiceConsent()
+        viewModel.voiceEnabled = true
+        viewModel.voiceEnabled = false
+
+        // Flipping the switch back on without re-accepting must not re-enable.
+        viewModel.voiceEnabled = true
+        XCTAssertFalse(viewModel.voiceEnabled)
+
+        // Accepting the disclosure again restores it.
+        viewModel.acceptVoiceConsent()
+        viewModel.voiceEnabled = true
+        XCTAssertTrue(viewModel.voiceEnabled)
+        XCTAssertTrue(viewModel.hasVoiceConsent)
     }
 
     func testVoiceSettingsDecodeHapticsDisabled() throws {

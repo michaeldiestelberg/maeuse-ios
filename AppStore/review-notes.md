@@ -8,7 +8,7 @@ Mäuse is a local-first shared-expense tracker for iPhone. The core app requires
 
 VOICE MODE
 
-Voice Mode is optional and is the only feature that transmits user content off-device. It sends live microphone audio and spoken expense details directly to OpenAI's Realtime API to create temporary expense drafts. Before Voice Mode can be enabled, the app presents a dedicated disclosure describing the recipient, data types, default retention, and possible OpenAI API charges, and requires explicit consent. Consent can be withdrawn in Settings.
+Voice Mode is optional and is the only feature that transmits user content off-device. It sends live microphone audio and spoken expense details directly to OpenAI's Realtime API to create temporary expense drafts. Before Voice Mode can be enabled, the app presents a dedicated disclosure describing the recipient, data types, default retention, and possible OpenAI API charges, and requires explicit consent. Consent is tied to the Voice Mode switch in Settings: turning Voice Mode off revokes the stored consent, and turning it back on presents the disclosure again.
 
 Voice Mode uses an API key supplied by the user and stored in iOS Keychain. Mäuse does not receive revenue from OpenAI API usage and contains no link or call to action to purchase API credits.
 
@@ -32,7 +32,7 @@ STEPS TO TEST VOICE MODE
 8. Say: “Add groceries for 10 euros and coffee for 5 euros, split both in half.”
 9. Review the two drafts, then tap Save.
 
-The reviewer can disable Voice Mode, withdraw consent, and remove the saved key from Settings.
+The reviewer can turn Voice Mode off in Settings, which revokes consent, and can remove the saved key from Settings.
 
 BACKUP TESTING
 

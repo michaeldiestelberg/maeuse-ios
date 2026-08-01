@@ -13,11 +13,11 @@ When shipping a new marketing version:
 
 ---
 
-## 1.2.1
+## 1.3.0
 
 ### English (long)
 
-What’s New in 1.2.1
+What’s New in 1.3.0
 
 - Start a new expense from the Lock Screen and Control Center — with matching mouse-themed icons
 - New widgets on the Home Screen and Lock Screen: open the app to add an expense, or start dictating by voice
@@ -28,7 +28,7 @@ What’s New in 1.2.1
 
 ### German (long)
 
-Neu in 1.2.1
+Neu in 1.3.0
 
 - Neue Ausgabe direkt vom Sperrbildschirm und aus dem Kontrollzentrum starten – mit passenden Maus-Icons
 - Neue Widgets auf dem Home- und Sperrbildschirm: Ausgabe erfassen oder per Sprache diktieren
@@ -39,11 +39,11 @@ Neu in 1.2.1
 
 ### English (website)
 
-**Version 1.2.1**  
+**Version 1.3.0**  
 Faster ways to log an expense, clearer editing, and small polish for voice entry.
 
 - **Lock Screen & Control Center** — start a new expense or begin dictating without opening the app first; custom mouse-themed icons
-- **Widgets** — Home Screen and Lock Screen widgets to add an expense or start voice dictation; Lock Screen widgets use a light background so icons stay readable
+- **Widgets** — Home Screen and Lock Screen widgets to add an expense or start voice dictation; Lock Screen widgets use a translucent background so icons stay readable over any wallpaper
 - **Safer delete** — delete is its own action, with a confirmation before an expense is removed
 - **Home screen** — when voice entry is set up, dictating is the main action
 - **Haptics while dictating** — light feedback when listening starts and when expenses are captured; can be turned off in Settings
@@ -51,11 +51,11 @@ Faster ways to log an expense, clearer editing, and small polish for voice entry
 
 ### German (website)
 
-**Version 1.2.1**  
+**Version 1.3.0**  
 Schneller zur neuen Ausgabe, klareres Bearbeiten und ein paar Feinschliffe für die Spracheingabe.
 
 - **Sperrbildschirm & Kontrollzentrum** — neue Ausgabe starten oder diktieren, ohne die App erst zu öffnen; eigene Maus-Icons
-- **Widgets** — auf dem Home- und Sperrbildschirm: Ausgabe erfassen oder per Sprache diktieren; leichter Hintergrund, damit die Icons lesbar bleiben
+- **Widgets** — auf dem Home- und Sperrbildschirm: Ausgabe erfassen oder per Sprache diktieren; transparenter Hintergrund, damit die Icons über jedem Hintergrundbild lesbar bleiben
 - **Sicherer löschen** — Löschen als eigene Aktion mit Rückfrage, bevor etwas entfernt wird
 - **Startbildschirm** — ist die Spracheingabe eingerichtet, steht das Diktieren im Vordergrund
 - **Haptik beim Diktieren** — spürbares Feedback beim Starten und beim Erfassen; in den Einstellungen abschaltbar

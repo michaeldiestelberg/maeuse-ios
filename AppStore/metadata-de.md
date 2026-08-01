@@ -10,7 +10,7 @@ Gemeinsame Ausgaben teilen
 
 ## Werbetext
 
-Gemeinsame Ausgaben ohne Rechnerei: schnell erfassen, fair aufteilen und auf Wunsch mehrere Einträge einfach per Sprache hinzufügen.
+Gemeinsame Ausgaben ohne Rechnerei: direkt vom Sperrbildschirm oder Widget erfassen, fair aufteilen und auf Wunsch mehrere Einträge einfach per Sprache hinzufügen.
 
 ## Beschreibung
 
@@ -22,6 +22,12 @@ ALLES AUF EINEN BLICK
 • Monatssummen und Partneranteil direkt sehen
 • Einfach zwischen vergangenen und kommenden Monaten wechseln
 • Perfekt für Einkäufe, Miete, Urlaub, Restaurantbesuche und mehr
+
+VON ÜBERALL STARTEN
+
+• Widgets auf dem Home- und Sperrbildschirm, die direkt zur neuen Ausgabe führen
+• Bedienelemente im Sperrbildschirm und Kontrollzentrum zum Erfassen oder Diktieren
+• Eigene Maus-Icons, passend zur App
 
 SO FAIR, WIE IHR ES BRAUCHT
 
@@ -49,7 +55,7 @@ Nutze Mäuse auf Deutsch oder Englisch und im hellen, dunklen oder systemweiten 
 
 ## Schlüsselwörter
 
-ausgaben,paare,teilen,rechnungen,budget,gemeinsam,partner,haushalt,geld,tracker
+ausgaben,paare,teilen,rechnungen,budget,gemeinsam,partner,haushalt,geld,widget
 
 ## Screenshot-Texte
 

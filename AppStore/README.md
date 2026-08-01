@@ -1,6 +1,6 @@
 # Mäuse App Store Launch Package
 
-This folder contains the product-page copy, compliance answers, reviewer notes, screenshot plan, and final submission checklist for Mäuse 1.2.0.
+This folder contains the product-page copy, compliance answers, reviewer notes, screenshot plan, and final submission checklist for Mäuse 1.3.0.
 
 ## App record
 
@@ -8,7 +8,7 @@ This folder contains the product-page copy, compliance answers, reviewer notes, 
 - Bundle ID: `com.michaeldiestelberg.maeuse`
 - Platform: iOS, iPhone only
 - Minimum OS: iOS 17.0
-- Version: `1.2.0`
+- Version: `1.3.0`
 - Primary language: English (U.S.)
 - Additional localization: German
 - Primary category: Finance

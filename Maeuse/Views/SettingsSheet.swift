@@ -294,29 +294,6 @@ struct SettingsSheet: View {
                 }
             }
             .tint(Color.maeusPrimary)
-
-            if viewModel.hasVoiceConsent {
-                Label(loc("VoiceConsentAcceptedLabel"), systemImage: "checkmark.shield.fill")
-                    .font(.system(size: 11, weight: .bold, design: .rounded))
-                    .foregroundStyle(Color.maeusSuccess)
-
-                Button(role: .destructive) {
-                    viewModel.withdrawVoiceConsent()
-                } label: {
-                    Label(loc("WithdrawVoiceConsent"), systemImage: "hand.raised.slash")
-                }
-                .buttonStyle(GlassSecondaryButtonStyle())
-            }
-
-            Text(loc("KeychainStorageDesc"))
-                .font(.caption)
-                .foregroundStyle(Color.maeusTextSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-
-            Text(loc("VoiceRequirementsDesc"))
-                .font(.caption)
-                .foregroundStyle(Color.maeusTextSecondary)
-                .fixedSize(horizontal: false, vertical: true)
         }
         .padding(18)
         .glassSurface()
