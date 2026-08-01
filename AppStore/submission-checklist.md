@@ -35,7 +35,8 @@ numbers, device QA — was reset for 1.3.0 and needs re-verification before subm
 - [x] Support, marketing, and privacy URLs are entered.
 - [x] Copyright is `2026 Michael Diestelberg`.
 - [x] A fifth scene, `05-widgets`, was captured on iPhone 17 Pro Max showing the Home Screen widget, and framed in both languages.
-- [ ] Scenes `01-dashboard`, `02-editor`, `03-voice`, and `04-settings` are re-captured for 1.3.0 — those four still predate widgets, Lock Screen, and Control Center capture.
+- [x] `04-settings` re-captured for 1.3.0 on the simplified Voice Mode section, and `05-widgets` re-captured showing both widgets.
+- [ ] Scenes `01-dashboard`, `02-editor`, and `03-voice` are re-captured for 1.3.0 — those three still come from the 1.2.0 source tree.
 - [x] Framed screenshots regenerated with `scripts/frame-app-store-screenshots.swift`; all ten carry the new marketing captions.
 - [ ] Five English 6.9-inch screenshots are uploaded in the planned order.
 - [ ] Five German 6.9-inch screenshots are uploaded in the planned order.

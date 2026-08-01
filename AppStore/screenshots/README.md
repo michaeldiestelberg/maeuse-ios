@@ -22,12 +22,13 @@ Capture real app UI from the iPhone 17 Pro Max simulator in portrait orientation
 4. `04-settings`
    - English caption: Your data stays on your iPhone.
    - German caption: Eure Daten bleiben auf dem iPhone.
-   - Settings showing verified Voice Mode, consent status, backup controls, and privacy/support access. The visible API suffix is synthetic.
+   - Settings showing verified Voice Mode, the two Voice Mode toggles, backup controls, and privacy/support access. The visible API suffix is synthetic. Re-captured for 1.3.0 after the consent badge, withdrawal button, and disclosure paragraphs were removed.
 
 5. `05-widgets`
    - English caption: Capture it before you forget.
    - German caption: Erfassen, bevor es vergessen ist.
-   - Home Screen with the medium Mäuse widget in place, showing that a new expense starts without opening the app first. Capture on a stock Home Screen page; keep the widget in the top-left slot so it reads first.
+   - Home Screen with both medium Mäuse widgets side by side — dictate on the left, manual add on the right — showing that a new expense starts without opening the app first. Capture on a stock Home Screen page with the widgets in the top row.
+   - Note: the simulator has no Wallpaper pane, so the stock wallpaper is used. A solid brand-colour backdrop needs a capture from a physical device.
 
 ## Rules
 
