@@ -59,11 +59,19 @@ private struct CaptureExpenseWidgetView: View {
     private let cream = Color(red: 1.00, green: 0.96, blue: 0.87)
     private let ink = Color(red: 0.14, green: 0.11, blue: 0.02)
 
+    /// The Home Screen title. The English strings carry an explicit line break: on one
+    /// line they run into the cheese hole in the bottom-right corner, where the longer
+    /// German titles wrap on their own and clear it.
     private var title: LocalizedStringResource {
         switch target {
         case .addExpense: "WidgetAddExpenseTitle"
         case .dictateExpense: "WidgetDictateExpenseTitle"
         }
+    }
+
+    /// Same title as one line, so VoiceOver reads the label instead of the layout break.
+    private var spokenTitle: String {
+        String(localized: title).replacingOccurrences(of: "\n", with: " ")
     }
 
     private var prompt: LocalizedStringResource {
@@ -90,7 +98,7 @@ private struct CaptureExpenseWidgetView: View {
                 widgetBackground
             }
             .widgetURL(CaptureLaunchRouter.url(for: target))
-            .accessibilityLabel(Text(title))
+            .accessibilityLabel(Text(spokenTitle))
             .accessibilityHint(Text(prompt))
     }
 

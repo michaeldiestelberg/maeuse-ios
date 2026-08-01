@@ -7,9 +7,9 @@
 
 /* Home Screen / Lock Screen widgets */
 
-"WidgetAddExpenseTitle" = "Add expense";
+"WidgetAddExpenseTitle" = "Add\nexpense";
 "WidgetAddExpenseDescription" = "Open Mäuse directly in manual expense entry.";
 "WidgetAddExpensePrompt" = "Enter it manually";
-"WidgetDictateExpenseTitle" = "Dictate expense";
+"WidgetDictateExpenseTitle" = "Dictate\nexpense";
 "WidgetDictateExpenseDescription" = "Open Mäuse directly in Voice Mode.";
 "WidgetDictateExpensePrompt" = "Start Voice Mode";
