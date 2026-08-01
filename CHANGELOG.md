@@ -11,6 +11,7 @@ This file records user-facing changes to Mäuse. App Store and GitHub release no
 - When Voice Mode is ready, the mic button is the primary action on the main screen and the plus button is secondary.
 - Secondary plus icon uses a crisp white glyph in dark mode for readable contrast.
 - Voice Mode adds haptic feedback when listening starts, when new expenses are captured, and a subtler cue when drafts are updated. Haptics can be turned off in Settings.
+- Typing a note in the expense editor no longer pushes the sheet off screen: the close and save buttons and the amount stay in place while the keyboard is open, and the number pad returns as soon as you finish typing.
 
 ## 1.2.0 — 2026-07-12
 

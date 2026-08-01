@@ -13,12 +13,12 @@
 
 | | |
 | --- | --- |
-| Version | 1.2.1 (build 16) |
+| Version | 1.2.1 (build 22) |
 | Platform | iPhone · iOS 17 or later |
 | Status | Internal TestFlight · 1.2.0 approved on the App Store |
 | Languages | English and German |
 
-Version 1.2.1 (build 18) adds Lock Screen, Home Screen, and Control Center expense capture, improves the control icons and expense deletion experience, and adds Voice Mode haptic feedback. It ships via Internal TestFlight. Version 1.2.0 was approved earlier; App Store publishing remains manual.
+Version 1.2.1 (build 22) adds Lock Screen, Home Screen, and Control Center expense capture, improves the control icons and expense deletion experience, adds Voice Mode haptic feedback, and keeps the expense editor stable while the keyboard is open. It ships via Internal TestFlight. Version 1.2.0 was approved earlier; App Store publishing remains manual.
 
 ## What Mäuse does
 

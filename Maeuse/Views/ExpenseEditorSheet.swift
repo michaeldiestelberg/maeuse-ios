@@ -31,8 +31,16 @@ struct ExpenseEditorSheet: View {
                 deleteAction.padding(.horizontal, 22).padding(.top, 12)
             }
             Spacer(minLength: 10)
-            keypad.padding(.horizontal, 22).padding(.bottom, 24)
+            // The keypad is the only row we can afford to drop when the system keyboard takes
+            // over the bottom half of the sheet. Keeping it would leave the fixed-height rows
+            // taller than the remaining space, and the overflow pushes the top bar off screen.
+            // It is unusable behind the keyboard anyway, so trade it for the note field.
+            if !noteFocused {
+                keypad.padding(.horizontal, 22).padding(.bottom, 24)
+                    .transition(.opacity)
+            }
         }
+        .animation(.easeInOut(duration: 0.2), value: noteFocused)
         .fontDesign(.rounded).background(Color.maeusBackground.ignoresSafeArea())
         .presentationDetents([.large]).presentationDragIndicator(.hidden)
         .presentationCornerRadius(30)
@@ -78,6 +86,8 @@ struct ExpenseEditorSheet: View {
                 .foregroundStyle(viewModel.amountText.isEmpty ? Color.maeusTextTertiary : Color.maeusForeground)
                 .overlay(alignment: .bottom) { Rectangle().fill(Color.maeusCheese).frame(height: 4).offset(y: 4) }
         }
+        .contentShape(Rectangle())
+        .onTapGesture { noteFocused = false }
     }
 
     private var noteField: some View {
@@ -95,6 +105,7 @@ struct ExpenseEditorSheet: View {
                 .textFieldStyle(.plain)
                 .focused($noteFocused)
                 .submitLabel(.done)
+                .onSubmit { noteFocused = false }
             Spacer(minLength: 0)
         }
         .padding(.horizontal, 16)
@@ -173,7 +184,7 @@ struct ExpenseEditorSheet: View {
     }
 
     private var datePicker: some View {
-        Button { showDatePicker = true } label: {
+        Button { noteFocused = false; showDatePicker = true } label: {
             HStack(spacing: 10) {
                 Image(systemName: "calendar")
                     .font(.system(size: 14, weight: .heavy))
