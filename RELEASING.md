@@ -26,7 +26,7 @@ Before shipping a build:
 
 1. Add user-facing changes to `CHANGELOG.md`.
 2. Update the current version and status in `README.md`.
-3. Update the English and German release notes in `AppStore/` when the App Store version changes.
+3. Update `AppStore/release-notes.md` (English and German user-facing notes) when the App Store version changes; mirror the long form on the marketing site changelog.
 4. Confirm the submission checklist reflects the build being uploaded.
 
 ## 3. Verify the source tree

@@ -24,6 +24,7 @@ This folder contains the product-page copy, compliance answers, reviewer notes, 
 
 - `metadata-en.md`: English product-page copy.
 - `metadata-de.md`: German product-page copy.
+- `release-notes.md`: bilingual user-facing “What’s New” copy for App Store Connect and the website changelog (prefer this over raw `CHANGELOG.md` for public wording).
 - `privacy-answers.md`: recommended App Privacy answers and their rationale.
 - `compliance-answers.md`: age rating, content rights, export, tracking, business-model, accessibility, and DSA answers.
 - `review-notes.md`: copy-ready App Review notes with placeholders for a temporary reviewer key.
