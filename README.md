@@ -18,7 +18,7 @@
 | Status | Internal TestFlight · 1.2.0 approved on the App Store |
 | Languages | English and German |
 
-Version 1.3.0 (build 27) adds Lock Screen, Home Screen, and Control Center expense capture, improves the control icons and expense deletion experience, adds Voice Mode haptic feedback, and keeps the expense editor stable while the keyboard is open. It ships via Internal TestFlight. Version 1.2.0 was approved earlier; App Store publishing remains manual.
+Build 27 adds Lock Screen, Home Screen, and Control Center capture, improved control icons and expense deletion, Voice Mode haptics, and a more stable expense editor with the keyboard open. On Internal TestFlight; 1.2.0 is on the App Store.
 
 ## What Mäuse does
 
@@ -86,13 +86,13 @@ Use `scripts/bump-version.sh` before creating a new archive. See [RELEASING.md](
 
 ## Repository guide
 
-- `Maeuse/` — application source, resources, and privacy manifest
-- `MaeuseTests/` — unit tests
-- `AppStore/` — localized listing copy, screenshots, compliance notes, and submission checklist
-- `scripts/` — versioning and screenshot helpers
+- `Maeuse/` - application source, resources, and privacy manifest
+- `MaeuseTests/` - unit tests
+- `AppStore/` - localized listing copy, screenshots, compliance notes, and submission checklist
+- `scripts/` - versioning and screenshot helpers
 
-Product information and support are available at [mäuse.app](https://xn--muse-loa.app/).
+Learn more at [mäuse.app](https://xn--muse-loa.app/).
 
 ## License
 
-No open-source license has been selected. All rights are reserved by the repository owner.
+MIT License. See [LICENSE](LICENSE).
