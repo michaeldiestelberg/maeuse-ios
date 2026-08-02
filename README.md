@@ -13,12 +13,12 @@
 
 | | |
 | --- | --- |
-| Version | 1.3.0 (build 27) |
+| Version | 1.3.0 (build 31) |
 | Platform | iPhone · iOS 17 or later |
-| Status | Internal TestFlight · 1.2.0 approved on the App Store |
+| Status | Available on the App Store |
 | Languages | English and German |
 
-Version 1.3.0 (build 27) adds Lock Screen, Home Screen, and Control Center expense capture, improves the control icons and expense deletion experience, adds Voice Mode haptic feedback, and keeps the expense editor stable while the keyboard is open. It ships via Internal TestFlight. Version 1.2.0 was approved earlier; App Store publishing remains manual.
+Latest App Store release (build 31): Lock Screen, Home Screen, and Control Center capture, improved control icons and expense deletion, Voice Mode haptics, and a more stable expense editor with the keyboard open.
 
 ## What Mäuse does
 
@@ -80,19 +80,19 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
 The Xcode project is the source of truth for both version values:
 
 - `MARKETING_VERSION` is the user-facing version (`1.3.0`).
-- `CURRENT_PROJECT_VERSION` is the App Store Connect build number (`27`).
+- `CURRENT_PROJECT_VERSION` is the App Store Connect build number (`31`).
 
 Use `scripts/bump-version.sh` before creating a new archive. See [RELEASING.md](RELEASING.md) for the full release workflow and [CHANGELOG.md](CHANGELOG.md) for user-facing release notes.
 
 ## Repository guide
 
-- `Maeuse/` — application source, resources, and privacy manifest
-- `MaeuseTests/` — unit tests
-- `AppStore/` — localized listing copy, screenshots, compliance notes, and submission checklist
-- `scripts/` — versioning and screenshot helpers
+- `Maeuse/` - application source, resources, and privacy manifest
+- `MaeuseTests/` - unit tests
+- `AppStore/` - localized listing copy, screenshots, compliance notes, and submission checklist
+- `scripts/` - versioning and screenshot helpers
 
-Product information and support are available at [mäuse.app](https://xn--muse-loa.app/).
+Learn more at [mäuse.app](https://xn--muse-loa.app/).
 
 ## License
 
-No open-source license has been selected. All rights are reserved by the repository owner.
+MIT License. See [LICENSE](LICENSE).
