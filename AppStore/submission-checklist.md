@@ -60,7 +60,7 @@ numbers, device QA — was reset for 1.3.0 and needs re-verification before subm
 
 - [ ] Full Xcode 26 or later is selected: `sudo xcode-select -s /Applications/Xcode.app/Contents/Developer`.
 - [x] Marketing version is `1.3.0`.
-- [x] Build number is incremented above every previously uploaded build (`31`; latest App Store release).
+- [x] Build number is incremented above every previously uploaded build (`32`; latest App Store release).
 - [ ] Release archive succeeds with the iOS 26.5 SDK.
 - [x] Unit tests pass (30 tests, August 1, 2026).
 - [x] Xcode Release static analysis succeeds for the app target (the scheme no longer analyzes `MaeuseTests`, whose `@testable import` cannot resolve against a non-testable Release build).
@@ -95,10 +95,10 @@ numbers, device QA — was reset for 1.3.0 and needs re-verification before subm
 - [x] Build 11 (`1.2.1`, voice-primary FAB) is uploaded to App Store Connect (July 19, 2026) and is processing for Internal TestFlight.
 - [x] Build 11 is available to the internal Family group via automatic distribution (confirmed July 19, 2026).
 - [x] Builds 12–22 (`1.2.1`) were distributed to Internal TestFlight via Xcode Cloud; build 22 (keyboard-stability fix) succeeded on August 1, 2026. Version 1.2.1 was never submitted to the App Store and is superseded by 1.3.0.
-- [x] `CURRENT_PROJECT_VERSION` is synced to 31 to match the latest App Store build and Xcode Cloud → Settings → **Next Build Number**.
-- [x] Build 31 (`1.3.0`) is uploaded via Xcode Cloud and published on the App Store.
-- [x] Correct build 31 is selected for version 1.3.0 in App Store Connect.
-- [x] Version 1.3.0 (build 31) is added to review and submitted.
+- [x] `CURRENT_PROJECT_VERSION` is synced to 32 to match the latest App Store build and Xcode Cloud → Settings → **Next Build Number**.
+- [x] Build 32 (`1.3.0`) is uploaded via Xcode Cloud and published on the App Store.
+- [x] Correct build 32 is selected for version 1.3.0 in App Store Connect.
+- [x] Version 1.3.0 (build 32) is added to review and submitted.
 
 ## After approval
 
