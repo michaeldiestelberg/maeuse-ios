@@ -160,10 +160,8 @@
 // Voice draft workspace
 "VoiceYourDrafts" = "Your drafts";
 "VoiceSaveCount" = "Save %d";
-"VoiceContinue" = "Add another, or say a correction";
-"VoicePreparing" = "Preparing your drafts…";
 "VoiceUnderstandingRequest" = "Understanding your request…";
-"VoiceDraftWillAppear" = "Your drafts will appear here";
+"VoiceEmptyWorkspace" = "Your expenses will appear here";
 "VoiceLatestRequest" = "Latest request";
 "VoiceWhatUnderstood" = "What I understood";
 "VoiceOneDraftUnsaved" = "1 draft · Not saved yet";

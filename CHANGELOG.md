@@ -4,8 +4,10 @@ This file records user-facing changes to Mäuse. App Store and GitHub release no
 
 ## 1.3.1 — 2026-09-13
 
-Internal TestFlight candidate (build 37; follows build 36).
+Internal TestFlight candidate (build 38; follows build 37).
 
+- Voice Mode opens with orbiting cheese crumbs that transform into the mouse when microphone capture starts; the mouse's audio bars respond to speech.
+- Removed the visible connection/listening labels and repeated dictation hint. VoiceOver keeps the status labels, and Reduce Motion uses a short crossfade.
 - Voice Mode now uses GPT-Realtime-2.1 for audio understanding and expense capture, without a separately billed transcription model.
 - Voice drafts now stay in a compact vertical list, with a smaller listening header, a save count, and an explicit unsaved total.
 - One expandable “What I understood” / “So habe ich dich verstanden” section replaces the repetitive chat bubbles.

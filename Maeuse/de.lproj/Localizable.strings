@@ -160,10 +160,8 @@
 // Voice draft workspace
 "VoiceYourDrafts" = "Deine Entwürfe";
 "VoiceSaveCount" = "%d speichern";
-"VoiceContinue" = "Weitere Ausgabe oder Korrektur diktieren";
-"VoicePreparing" = "Entwürfe werden vorbereitet …";
 "VoiceUnderstandingRequest" = "Deine Anfrage wird verarbeitet …";
-"VoiceDraftWillAppear" = "Deine Entwürfe erscheinen hier";
+"VoiceEmptyWorkspace" = "Deine Ausgaben erscheinen hier";
 "VoiceLatestRequest" = "Letzte Anfrage";
 "VoiceWhatUnderstood" = "So habe ich dich verstanden";
 "VoiceOneDraftUnsaved" = "1 Entwurf · Noch nicht gespeichert";

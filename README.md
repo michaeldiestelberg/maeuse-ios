@@ -13,7 +13,7 @@
 
 | | |
 | --- | --- |
-| Version | 1.3.1 (build 37) |
+| Version | 1.3.1 (build 38) |
 | Platform | iPhone · iOS 17 or later |
 | Status | Internal TestFlight candidate; 1.3.0 (32) remains live on the App Store |
 | Languages | English and German |
@@ -44,6 +44,8 @@ Mäuse has no account system, app backend, advertising, or tracking SDK. Expense
 Voice Mode is optional. When a user enables it and starts a session, microphone audio and expense context are sent directly to OpenAI. The user supplies their own compatible OpenAI API key, which Mäuse stores in iOS Keychain. Drafts can be reviewed, corrected, or removed before anything is saved.
 
 Voice Mode uses `gpt-realtime-2.1` to interpret audio and create expense drafts in one session, without a separate transcription model. Drafts appear in a compact vertical list and stay in place when corrected. Expand **What I understood** to review the latest request; clarification questions appear only when more information is needed. The summary is not a word-for-word transcript.
+
+The voice connection indicator starts as a cheese wheel with orbiting crumbs, then transforms into the mouse when microphone capture is ready. Its bars react to microphone input. Reduce Motion replaces the orbit and transformation with a short crossfade; connection errors still appear as readable text.
 
 ## Technology
 

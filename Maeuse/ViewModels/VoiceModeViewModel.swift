@@ -25,11 +25,15 @@ final class VoiceModeViewModel {
         realtime.setDelegate(self)
     }
 
+    var microphoneIsReady: Bool {
+        microphoneIsActive && (phase == .listening || phase == .thinking)
+    }
+
     var stateLabel: String {
         switch phase {
         case .idle: return loc("StateReady")
         case .connecting: return loc("StateConnecting")
-        case .listening: return loc("StateListening")
+        case .listening: return loc(microphoneIsReady ? "StateListening" : "StateConnecting")
         case .thinking: return loc("StateThinking")
         case .finalizing: return loc("StateSaving")
         case .error: return loc("StateIssue")
@@ -70,6 +74,8 @@ final class VoiceModeViewModel {
         resetWorkspace()
         hasStartedSession = true
         phase = .listening
+        microphoneIsActive = true
+        microphoneLevel = 0.3
         isPresented = true
 
         let german = LanguageManager.shared.activeLanguageCode == "de"
@@ -89,6 +95,27 @@ final class VoiceModeViewModel {
                               splitValue: 50, confidence: 1, missingFields: [])
         }
         // Simulator-only fixtures exercise the production event handler and layout.
+        if ProcessInfo.processInfo.arguments.contains("--voice-connection-error") {
+            drafts = []
+            latestUnderstanding = ""
+            realtimeVoiceService(realtime, didReceive: .error(loc("SessionDisconnectedMsg")))
+        }
+        if ProcessInfo.processInfo.arguments.contains("--voice-connecting") ||
+           ProcessInfo.processInfo.arguments.contains("--voice-connect-transition") {
+            drafts = []
+            latestUnderstanding = ""
+            microphoneIsActive = false
+            microphoneLevel = 0
+            phase = .connecting
+            if ProcessInfo.processInfo.arguments.contains("--voice-connect-transition") {
+                Task { @MainActor [weak self] in
+                    try? await Task.sleep(for: .seconds(6))
+                    guard let self, self.isPresented, self.phase == .connecting else { return }
+                    self.realtimeVoiceService(self.realtime, didReceive: .microphoneStarted)
+                    self.microphoneLevel = 0.45
+                }
+            }
+        }
         if ProcessInfo.processInfo.arguments.contains("--voice-processing") {
             drafts = []
             latestUnderstanding = ""
@@ -286,7 +313,7 @@ extension VoiceModeViewModel: RealtimeVoiceServiceDelegate {
     func realtimeVoiceService(_ service: RealtimeVoiceService, didReceive event: RealtimeVoiceServiceEvent) {
         switch event {
         case .connected:
-            phase = .listening
+            phase = microphoneIsActive ? .listening : .connecting
         case .disconnected:
             microphoneIsActive = false
             microphoneLevel = 0
@@ -298,6 +325,7 @@ extension VoiceModeViewModel: RealtimeVoiceServiceDelegate {
             break
         case .microphoneStarted:
             microphoneIsActive = true
+            if phase != .error && phase != .finalizing { phase = .listening }
             if !didSignalListeningReady {
                 didSignalListeningReady = true
                 playVoiceHaptic(.rigid)

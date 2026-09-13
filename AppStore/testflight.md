@@ -2,6 +2,12 @@
 
 TestFlight is strongly recommended before App Store submission, especially for microphone permission, Voice Mode, Keychain persistence, backup import/export, and real-device layout checks. Internal testing does not require Beta App Review; the first external build may.
 
+## Build 38 focus
+
+- Open Voice Mode and watch the cheese crumbs orbit while connecting, then transform into the mouse when microphone capture starts. Begin speaking after the mouse appears and the readiness haptic fires.
+- Verify that audio bars react to your voice, the draft area stays in place, and no connection/listening labels or repeated dictation hint appear.
+- Enable Reduce Motion: the cheese should remain still and crossfade to the mouse. Check VoiceOver status, larger text sizes, and readable connection errors.
+
 ## Build 37 focus
 
 - Dictate three expenses together, then correct just one amount. Cards should keep their positions, highlight only real corrections, and update the total.

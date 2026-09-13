@@ -77,14 +77,9 @@ struct VoiceSheet: View {
             .accessibilityLabel(loc("Close"))
 
             Spacer(minLength: 0)
-            HStack(spacing: 6) {
-                Circle().fill(stateColor).frame(width: 9, height: 9)
-                Text(viewModel.stateLabel)
-                    .font(.system(.subheadline, design: .rounded, weight: .bold))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.75)
+            if dynamicTypeSize.isAccessibilitySize {
+                connectionEmblem.frame(width: 44, height: 44)
             }
-            .foregroundStyle(Color.maeusForeground)
             Spacer(minLength: 0)
             Button { endAndSave() } label: {
                 Text(viewModel.drafts.isEmpty ? loc("Save") : loc("VoiceSaveCount", viewModel.drafts.count))
@@ -104,42 +99,29 @@ struct VoiceSheet: View {
     }
 
     private var canSave: Bool { viewModel.canSaveDrafts && viewModel.canEndSession }
-    private var isProcessing: Bool { viewModel.phase == .thinking || viewModel.phase == .connecting }
+    private var isProcessing: Bool { viewModel.phase == .thinking && viewModel.microphoneIsReady }
 
-    private var listeningHero: some View {
-        VStack(spacing: 8) {
-            MouseCoin(size: 42, shadow: 3, wigglePeriod: 3.5) {
-                VoiceBars(level: viewModel.microphoneLevel, isActive: viewModel.microphoneIsActive)
-                    .scaleEffect(0.5)
-            }
-            HStack(spacing: 7) {
-                if isProcessing { ProgressView().controlSize(.mini) }
-                Text(loc(isProcessing ? "VoicePreparing" : "VoiceContinue"))
-                    .font(.system(.caption, design: .rounded, weight: .bold))
-                    .foregroundStyle(Color.maeusTextSecondary)
-                    .multilineTextAlignment(.center)
-            }
-            .frame(minHeight: 24)
-        }
-        .padding(.horizontal, 20)
-        .padding(.top, 4)
-        .padding(.bottom, 8)
+    private var connectionEmblem: some View {
+        VoiceConnectionEmblem(isReady: viewModel.microphoneIsReady,
+            hasError: viewModel.phase == .error,
+            level: viewModel.microphoneLevel)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(viewModel.stateLabel)
+            .accessibilityIdentifier("voice-connection-emblem")
     }
 
-    private var stateColor: Color {
-        switch viewModel.phase {
-        case .idle, .connecting: return .maeusTextTertiary
-        case .listening: return .maeusSuccess
-        case .thinking, .finalizing: return .maeusPrimary
-        case .error: return .maeusDestructive
-        }
+    private var listeningHero: some View {
+        connectionEmblem
+            .frame(width: 128, height: 128)
+            .frame(maxWidth: .infinity)
+            .padding(.bottom, 4)
     }
 
     private var emptyCard: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text(loc(isProcessing ? "VoiceUnderstandingRequest" : "NothingCapturedYet"))
-                .font(.system(.headline, design: .rounded, weight: .bold))
             if isProcessing {
+                Text(loc("VoiceUnderstandingRequest"))
+                    .font(.system(.headline, design: .rounded, weight: .bold))
                 VStack(alignment: .leading, spacing: 10) {
                     Capsule().frame(height: 12)
                     Capsule().frame(width: 140, height: 12)
@@ -147,11 +129,11 @@ struct VoiceSheet: View {
                 .foregroundStyle(Color.maeusInputBackground)
                 .accessibilityHidden(true)
             }
-            Text(loc(isProcessing ? "VoiceDraftWillAppear" : "SqueakAway"))
+            Text(loc("VoiceEmptyWorkspace"))
                 .font(.callout)
                 .foregroundStyle(Color.maeusTextSecondary)
         }
-        .frame(maxWidth: .infinity, minHeight: 120, alignment: .leading)
+        .frame(maxWidth: .infinity, minHeight: isProcessing ? 120 : 64, alignment: .leading)
         .padding(16)
         .background(Color.maeusSurface, in: RoundedRectangle(cornerRadius: 18))
         .overlay(RoundedRectangle(cornerRadius: 18).stroke(Color.maeusCardBorder, lineWidth: 2))
@@ -225,21 +207,143 @@ struct VoiceSheet: View {
     }
 }
 
-private struct VoiceBars: View {
+/// The same fixed canvas carries the connection loop, readiness transition and live input.
+private struct VoiceConnectionEmblem: View {
+    let isReady: Bool
+    let hasError: Bool
     let level: Double
-    let isActive: Bool
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    private let heights: [CGFloat] = [26, 32, 22, 34, 20]
+    @State private var progress = 0.0
+    @State private var orbitStart = Date.now
+    @State private var settledAngle = 0.0
+
+    private func orbitAngle(at date: Date) -> Double {
+        date.timeIntervalSince(orbitStart) * .pi * 2 / 2.4 - .pi * 0.7
+    }
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1 / 20, paused: reduceMotion || !isActive)) { timeline in
-            let time = timeline.date.timeIntervalSinceReferenceDate
-            HStack(spacing: 4) {
-                ForEach(heights.indices, id: \.self) { index in
-                    let pulse = reduceMotion || !isActive ? 0.5 : 0.35 + 0.65 * abs(sin(time * (4.5 + Double(index) * 0.35) + Double(index)))
-                    Capsule().fill(Color.maeusInk).frame(width: 5, height: heights[index] * max(CGFloat(level), CGFloat(pulse)))
+        Group {
+            if reduceMotion {
+                ZStack {
+                    VoiceEmblemDrawing(progress: 0, level: 0, orbitAngle: -.pi * 0.7, hasError: hasError)
+                        .opacity(isReady ? 0 : 1)
+                    VoiceEmblemDrawing(progress: 1, level: level, orbitAngle: 0, hasError: hasError)
+                        .opacity(isReady ? 1 : 0)
                 }
-            }.frame(height: 38)
+                .animation(.easeInOut(duration: 0.15), value: isReady)
+            } else {
+                TimelineView(.animation(minimumInterval: 1.0 / 30, paused: isReady || hasError)) { timeline in
+                    VoiceEmblemDrawing(progress: progress, level: level,
+                        orbitAngle: isReady || hasError ? settledAngle : orbitAngle(at: timeline.date),
+                        hasError: hasError)
+                        .animation(.easeOut(duration: 0.12), value: level)
+                }
+            }
+        }
+        .onAppear {
+            progress = isReady ? 1 : 0
+            settledAngle = orbitAngle(at: .now)
+        }
+        .onChange(of: isReady) { _, ready in
+            // Freeze the crumbs where they are before moving them into the ears.
+            settledAngle = orbitAngle(at: .now)
+            if ready {
+                withAnimation(reduceMotion ? nil : .smooth(duration: 0.55)) { progress = 1 }
+            } else {
+                progress = 0
+                orbitStart = .now
+            }
+        }
+        .onChange(of: hasError) { _, failed in
+            if failed { settledAngle = orbitAngle(at: .now) }
+        }
+    }
+}
+
+private struct VoiceEmblemDrawing: View, Animatable {
+    var progress: Double
+    var level: Double
+    let orbitAngle: Double
+    let hasError: Bool
+
+    nonisolated var animatableData: AnimatablePair<Double, Double> {
+        get { AnimatablePair(progress, level) }
+        set { progress = newValue.first; level = newValue.second }
+    }
+
+    var body: some View {
+        Canvas { context, size in
+            let scale = min(size.width, size.height) / 100
+            context.translateBy(x: (size.width - 100 * scale) / 2, y: (size.height - 100 * scale) / 2)
+            context.scaleBy(x: scale, y: scale)
+            let p = min(1, max(0, progress))
+            let center = CGPoint(x: 50, y: 54)
+            func mix(_ from: Double, _ to: Double) -> Double { from + (to - from) * p }
+            func stamped(_ path: Path) {
+                context.fill(path.offsetBy(dx: 2, dy: 3), with: .color(.maeusInk))
+                context.fill(path, with: .color(.maeusCheese))
+                context.stroke(path, with: .color(.maeusInk), lineWidth: 2.5)
+            }
+
+            // Orbit trails fade as the crumbs settle behind the mouse's face.
+            if !hasError && p < 1 {
+                for index in 0..<2 {
+                    let angle = orbitAngle + Double(index) * .pi
+                    var trail = Path()
+                    trail.addArc(center: center, radius: 40,
+                        startAngle: .radians(angle - 0.75), endAngle: .radians(angle - 0.25), clockwise: false)
+                    context.stroke(trail, with: .color(Color.maeusInk.opacity(0.3 * (1 - p))),
+                        style: StrokeStyle(lineWidth: 1.5, lineCap: .round))
+                }
+            }
+            for index in 0..<2 {
+                let angle = orbitAngle + Double(index) * .pi
+                let x = mix(50 + cos(angle) * 40, index == 0 ? 28 : 72)
+                let y = mix(54 + sin(angle) * 40, 28)
+                let radius = mix(index == 0 ? 5 : 4, 11)
+                stamped(Path(ellipseIn: CGRect(x: x - radius, y: y - radius,
+                    width: radius * 2, height: radius * 2)))
+            }
+
+            // Fill the cheese's bite while its holes become the microphone waveform.
+            let radius = 28.0
+            let biteRadius = 11 * (1 - p)
+            var face = Path()
+            if biteRadius > 2 {
+                let distance = radius + 2
+                let x = (radius * radius + distance * distance - biteRadius * biteRadius) / (2 * distance)
+                let y = sqrt(max(0, radius * radius - x * x))
+                let angle = acos(x / radius)
+                face.addArc(center: center, radius: radius, startAngle: .radians(angle),
+                    endAngle: .radians(2 * .pi - angle), clockwise: false)
+                face.addArc(center: CGPoint(x: center.x + distance, y: center.y), radius: biteRadius,
+                    startAngle: .radians(atan2(-y, x - distance)),
+                    endAngle: .radians(atan2(y, x - distance)), clockwise: true)
+                face.closeSubpath()
+            } else {
+                face = Path(ellipseIn: CGRect(x: 22, y: 26, width: 56, height: 56))
+            }
+            stamped(face)
+
+            if hasError {
+                let mark = context.resolve(Text("!").font(.system(size: 30, weight: .heavy, design: .rounded))
+                    .foregroundColor(.maeusInk))
+                context.draw(mark, at: center)
+            } else {
+                let holes: [(Double, Double, Double)] = [(38, 41, 6), (54, 43, 9), (36, 57, 10), (64, 60, 6), (49, 69, 8)]
+                let heights = [12.0, 19, 27, 19, 12]
+                let strength = min(1, max(0, level))
+                for index in holes.indices {
+                    let (holeX, holeY, diameter) = holes[index]
+                    let width = mix(diameter, 4.5)
+                    let height = mix(diameter, heights[index] * (0.65 + strength * 0.65))
+                    let x = mix(holeX, 36 + Double(index) * 7)
+                    let y = mix(holeY, 54)
+                    let hole = Path(roundedRect: CGRect(x: x - width / 2, y: y - height / 2,
+                        width: width, height: height), cornerRadius: width / 2)
+                    context.fill(hole, with: .color(Color.maeusInk.opacity(mix(0.4, 1))))
+                }
+            }
         }
     }
 }

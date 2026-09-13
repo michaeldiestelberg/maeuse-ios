@@ -274,6 +274,44 @@ final class RealtimeVoiceWorkspaceTests: XCTestCase {
         XCTAssertEqual(viewModel.phase, .idle)
     }
 
+    func testMouseReadinessWaitsForCaptureRatherThanConnectionOrPermission() {
+        let viewModel = VoiceModeViewModel()
+        let service = RealtimeVoiceService()
+        viewModel.phase = .connecting
+
+        viewModel.realtimeVoiceService(service, didReceive: .connected)
+        viewModel.realtimeVoiceService(service, didReceive: .microphoneReady)
+        XCTAssertFalse(viewModel.microphoneIsReady)
+        XCTAssertEqual(viewModel.phase, .connecting)
+
+        viewModel.realtimeVoiceService(service, didReceive: .microphoneStarted)
+        XCTAssertTrue(viewModel.microphoneIsReady)
+        XCTAssertEqual(viewModel.phase, .listening)
+
+        viewModel.realtimeVoiceService(service, didReceive: .responseStarted)
+        XCTAssertTrue(viewModel.microphoneIsReady, "Processing does not restart the connection animation")
+        viewModel.realtimeVoiceService(service, didReceive: .microphoneStopped)
+        XCTAssertFalse(viewModel.microphoneIsReady)
+    }
+
+    func testFailureAndSessionEndNeverShowAReadyMicrophone() {
+        let viewModel = VoiceModeViewModel()
+        let service = RealtimeVoiceService()
+        viewModel.realtimeVoiceService(service, didReceive: .microphoneStarted)
+        viewModel.realtimeVoiceService(service, didReceive: .error("Connection failed"))
+        XCTAssertFalse(viewModel.microphoneIsReady)
+        XCTAssertEqual(viewModel.errorMessage, "Connection failed")
+
+        viewModel.resetWorkspace()
+        XCTAssertFalse(viewModel.microphoneIsReady)
+        viewModel.realtimeVoiceService(service, didReceive: .microphoneStarted)
+        viewModel.phase = .finalizing
+        XCTAssertFalse(viewModel.microphoneIsReady)
+        viewModel.realtimeVoiceService(service, didReceive: .disconnected)
+        XCTAssertFalse(viewModel.microphoneIsReady)
+        XCTAssertEqual(viewModel.phase, .finalizing)
+    }
+
     func testStatusEventsDoNotAddSessionBubbles() {
         let viewModel = VoiceModeViewModel()
         let service = RealtimeVoiceService()
