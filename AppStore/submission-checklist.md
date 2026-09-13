@@ -1,15 +1,17 @@
 # Mäuse 1.3.1 TestFlight Checklist
 
-- [x] Marketing version bumped to `1.3.1`; repository build number bumped to `36`.
+- [x] Marketing version bumped to `1.3.1`; repository build number bumped to `37`.
 - [x] GPT-Realtime-2.1 migration and removal of the separate transcription path are included.
-- [x] Unit tests pass: 31 tests, September 13, 2026.
+- [x] Unit tests pass: 33 tests, September 13, 2026.
 - [x] Simulator build and UI checks cover draft review/removal/save, expense editing, persistence, and cancelling manual entry.
 - [x] Live API checks accept the new session configuration and process recorded English and German speech, including German corrections/removal.
 - [x] English and German release notes and TestFlight focus are prepared.
-- [x] Xcode Cloud Next Build Number confirmed as `36` and repository aligned before the final push (September 13, 2026).
+- [x] Compact cards, stable correction order, expandable request details, and explicit clarification handling are covered by simulator and regression checks.
+- [x] Live API verification of the revised tool contract covers three drafts, stable-ID correction, a missing amount, and its answer.
+- [x] Xcode Cloud Next Build Number confirmed as `37` and repository aligned before the final push (September 13, 2026).
 - [ ] Push the release commit to `main` and confirm **Maeuse | Default** succeeds.
 - [ ] Confirm version `1.3.1` is processed and distributed to the internal Family group.
-- [ ] Complete a physical-iPhone microphone test; this Mac has no microphone input. One recorded-audio API run timed out; a focused retry passed.
+- [ ] Complete a physical-iPhone microphone test; this Mac has no microphone input. Recorded German speech passed the build 37 contract for creation, correction, and removal.
 
 Version 1.3.0 (32) remains the public App Store release. The checklist below preserves the earlier App Store submission record; this release is for internal TestFlight testing.
 

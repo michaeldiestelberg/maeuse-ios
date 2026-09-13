@@ -18,13 +18,15 @@ When shipping a new marketing version:
 ### English
 
 - Voice Mode now uses GPT-Realtime-2.1 to understand your spoken expenses and prepare drafts in one session.
-- An “Understood” summary shows how each request was interpreted. It replaces the live transcript.
+- Review several voice drafts in a compact list. Corrections update the same card with a brief highlight.
+- Expand “What I understood” to check the latest request, without repetitive chat messages.
 - Removed the separate transcription model and its additional transcription charges.
 
 ### German
 
 - Der Sprachmodus nutzt jetzt GPT-Realtime-2.1, um gesprochene Ausgaben zu verstehen und in einer Sitzung als Entwürfe vorzubereiten.
-- Eine „Verstanden“-Zusammenfassung zeigt, wie jede Anfrage interpretiert wurde. Sie ersetzt das Live-Transkript.
+- Prüfe mehrere Sprachentwürfe in einer kompakten Liste. Korrekturen aktualisieren dieselbe Karte und werden kurz hervorgehoben.
+- Klappe „So habe ich dich verstanden“ auf, um die letzte Anfrage ohne wiederholte Chat-Nachrichten zu prüfen.
 - Das separate Transkriptionsmodell und dessen zusätzliche Transkriptionskosten entfallen.
 
 ---

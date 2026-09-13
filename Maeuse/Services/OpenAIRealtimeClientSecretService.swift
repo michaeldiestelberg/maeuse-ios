@@ -214,7 +214,7 @@ enum RealtimeSessionConfiguration {
             "type": "realtime",
             "instructions": instructions(currentDateISO: isoDateFormatter.string(from: now)),
             "tools": [syncExpenseWorkspaceTool],
-            "tool_choice": "auto",
+            "tool_choice": "required",
             "output_modalities": ["text"],
             "audio": [
                 "input": [
@@ -245,8 +245,8 @@ enum RealtimeSessionConfiguration {
         - Capture one or more expenses from the conversation.
         - The user may correct, rename, split, date, or remove expenses by voice.
         - Do not save expenses yourself. The app saves the active workspace only when the user ends the session.
-        - Use the sync_expense_workspace tool whenever the understood workspace changes or whenever a concise confirmation helps the user trust what you understood.
-        - The app displays user_understanding as "Understood": your interpretation of the latest request, not a verbatim transcript.
+        - Use sync_expense_workspace for every request, including clarification questions. The draft cards are the confirmation; do not produce separate text messages or preambles.
+        - The app displays user_understanding in an expandable "What I understood" section: your interpretation of the latest request, not a verbatim transcript.
 
         # Expense Fields
         - title: concise merchant, item, or purpose. Use null if not provided.
@@ -263,12 +263,12 @@ enum RealtimeSessionConfiguration {
         - Missing split defaults to split_mode percent and split_value 50.
         - Only leave title or amount null when missing.
 
-        # Conversation Log Text
+        # Request Details
         - user_understanding is a short, user-visible restatement of the latest expense request. Preserve amounts, dates, and split details that you clearly heard. Do not invent missing words or details.
-        - Use the user's language (English or German) for user_understanding and assistant_confirmation.
-        - assistant_confirmation should be short and concrete, naming what changed.
+        - Use the user's language (English or German) for user_understanding and clarification_question.
+        - clarification_question must be empty when the request is complete. Only use it for one short question when you need missing or unclear information to finish a draft. Never put acknowledgments, confirmations, or progress messages in this field.
         - Return these texts through sync_expense_workspace; avoid repeating them in a separate text response.
-        - If the audio is unclear, leave user_understanding empty, ask one short clarification in assistant_confirmation, and keep the previous workspace unchanged.
+        - If the audio is unclear, leave user_understanding empty, ask one short clarification in clarification_question, and keep the previous workspace unchanged.
         - For app-generated workspace notes, leave user_understanding empty; do not present them as speech from the user.
         - Ignore silence and background noise. Do not invent expense requests from them.
 
@@ -290,11 +290,11 @@ enum RealtimeSessionConfiguration {
                 "properties": [
                     "user_understanding": [
                         "type": "string",
-                        "description": "A short user-visible interpretation of the latest spoken expense request, displayed as Understood, not a verbatim transcript. Use the user's language. Empty for unclear audio or app-generated workspace notes."
+                        "description": "A short user-visible interpretation of the latest spoken expense request, displayed as What I understood, not a verbatim transcript. Use the user's language. Empty for unclear audio or app-generated workspace notes."
                     ],
-                    "assistant_confirmation": [
+                    "clarification_question": [
                         "type": "string",
-                        "description": "A short user-facing confirmation or clarification."
+                        "description": "One short question only when more information is needed. Empty for successful updates, acknowledgments, and app-generated notes."
                     ],
                     "expenses": [
                         "type": "array",
@@ -366,7 +366,7 @@ enum RealtimeSessionConfiguration {
                 ],
                 "required": [
                     "user_understanding",
-                    "assistant_confirmation",
+                    "clarification_question",
                     "expenses",
                     "changed_expense_ids",
                     "removed_expense_ids"

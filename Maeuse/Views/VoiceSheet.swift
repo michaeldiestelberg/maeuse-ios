@@ -1,307 +1,242 @@
 import SwiftUI
 import SwiftData
 
-/// Full-screen Realtime voice workspace for capturing one or more expenses.
+/// One stable list of drafts, with details for the latest spoken request.
 struct VoiceSheet: View {
     @Bindable var viewModel: VoiceModeViewModel
-
+    @State private var showsUnderstanding = false
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        ZStack {
-            background
-                .ignoresSafeArea()
+        VStack(spacing: 0) {
+            topBar
+                .padding(.horizontal, 20)
+                .padding(.vertical, 10)
+            if !dynamicTypeSize.isAccessibilitySize { listeningHero }
+            ScrollView {
+                VStack(alignment: .leading, spacing: 14) {
+                    Text(loc("VoiceYourDrafts"))
+                        .font(.system(.headline, design: .rounded, weight: .heavy))
 
-            VStack(spacing: 0) {
-                topBar
-                    .padding(.horizontal, 22)
-                    .padding(.top, 12)
-                    .padding(.bottom, 12)
-
-                listeningHero
-
-                conversationArea
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-
-                workspaceArea
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 14)
+                    if viewModel.drafts.isEmpty {
+                        emptyCard
+                    }
+                    ForEach(viewModel.drafts) { draft in
+                        VoiceExpenseDraftCard(draft: draft,
+                            wasUpdated: viewModel.updatedExpenseIDs.contains(draft.id),
+                            onRemove: { viewModel.removeDraft(draft) })
+                    }
+                    if !viewModel.clarificationQuestion.isEmpty {
+                        Label(viewModel.clarificationQuestion, systemImage: "questionmark.bubble")
+                            .font(.system(.body, design: .rounded, weight: .semibold))
+                            .padding(16)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(Color.maeusInputBackground, in: RoundedRectangle(cornerRadius: 16))
+                            .accessibilityIdentifier("voice-clarification")
+                    }
+                    if !viewModel.latestUnderstanding.isEmpty {
+                        understandingDetail
+                    }
+                    if viewModel.phase == .error {
+                        Label(viewModel.errorMessage, systemImage: "exclamationmark.triangle.fill")
+                            .font(.callout)
+                            .foregroundStyle(Color.maeusDestructive)
+                            .padding(14)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(Color.maeusDestructive.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
+                    }
+                }
+                .foregroundStyle(Color.maeusForeground)
+                .padding(.horizontal, 20)
+                .padding(.top, 12)
+                .padding(.bottom, 20)
             }
+            .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: viewModel.drafts.map(\.id))
+            footer
+                .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
         }
+        .background(Color.maeusBackground.ignoresSafeArea())
         .interactiveDismissDisabled(true)
-        .task {
-            viewModel.startSession()
-        }
-    }
-
-    private var background: some View {
-        Color.maeusBackground
+        .task { viewModel.startSession() }
     }
 
     private var topBar: some View {
-        ZStack {
-            HStack {
-                Button {
-                    viewModel.cancelSession()
-                    dismiss()
-                } label: {
-                    MaeuseCloseIcon().frame(width: 38, height: 38)
-                }
-                .buttonStyle(.plain)
-                .background(Color.maeusSurface, in: Circle())
-                .overlay(Circle().stroke(Color.maeusCardBorder, lineWidth: 2))
-
-                Spacer()
-
-                Button { endAndSave() } label: {
-                    HStack(spacing: 7) {
-                        Image(systemName: "checkmark")
-                            .font(.system(size: 12, weight: .heavy))
-
-                        Text(loc("Save"))
-                    }
-                    .font(.system(size: 13, weight: .heavy, design: .rounded))
-                    .padding(.horizontal, 16).padding(.vertical, 9)
-                }
-                .buttonStyle(StampedButtonStyle(fill: .maeusCheese, foreground: .maeusInk, cornerRadius: 18, borderColor: .maeusInk, shadow: 2.5))
-                .opacity(viewModel.canSaveDrafts ? 1 : 0.4)
-                .disabled(!viewModel.canSaveDrafts || !viewModel.canEndSession)
+        HStack(spacing: 10) {
+            Button {
+                viewModel.cancelSession()
+                dismiss()
+            } label: {
+                MaeuseCloseIcon().frame(width: 42, height: 42)
             }
+            .buttonStyle(.plain)
+            .background(Color.maeusSurface, in: Circle())
+            .overlay(Circle().stroke(Color.maeusCardBorder, lineWidth: 2))
+            .accessibilityLabel(loc("Close"))
 
-            HStack(spacing: 8) {
-                Circle().fill(stateColor).frame(width: 10, height: 10)
-                    .overlay(Circle().stroke(Color.maeusCardBorder, lineWidth: 2))
+            Spacer(minLength: 0)
+            HStack(spacing: 6) {
+                Circle().fill(stateColor).frame(width: 9, height: 9)
                 Text(viewModel.stateLabel)
-                    .font(.system(size: 14, weight: .heavy, design: .rounded))
-                    .foregroundStyle(Color.maeusForeground)
+                    .font(.system(.subheadline, design: .rounded, weight: .bold))
                     .lineLimit(1)
+                    .minimumScaleFactor(0.75)
             }
+            .foregroundStyle(Color.maeusForeground)
+            Spacer(minLength: 0)
+            Button { endAndSave() } label: {
+                Text(viewModel.drafts.isEmpty ? loc("Save") : loc("VoiceSaveCount", viewModel.drafts.count))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                    .font(.system(.subheadline, design: .rounded, weight: .heavy))
+                    .padding(.horizontal, 14)
+                    .frame(minHeight: 42)
+            }
+            .buttonStyle(StampedButtonStyle(fill: .maeusCheese, foreground: .maeusInk,
+                cornerRadius: 20, borderColor: .maeusInk, shadow: 2.5))
+            .opacity(canSave ? 1 : 0.4)
+            .disabled(!canSave)
+            .accessibilityIdentifier("voice-save")
         }
+        .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
     }
 
+    private var canSave: Bool { viewModel.canSaveDrafts && viewModel.canEndSession }
+    private var isProcessing: Bool { viewModel.phase == .thinking || viewModel.phase == .connecting }
+
     private var listeningHero: some View {
-        VStack(spacing: 12) {
-            MouseCoin(size: 84, shadow: 5, wigglePeriod: 3.5) {
-                VoiceBars(level: viewModel.microphoneLevel)
+        VStack(spacing: 8) {
+            MouseCoin(size: 42, shadow: 3, wigglePeriod: 3.5) {
+                VoiceBars(level: viewModel.microphoneLevel, isActive: viewModel.microphoneIsActive)
+                    .scaleEffect(0.5)
             }
-            Text(loc("SqueakAway"))
-                .font(.system(size: 13, weight: .bold, design: .rounded))
-                .foregroundStyle(Color.maeusTextSecondary)
-                .multilineTextAlignment(.center)
+            HStack(spacing: 7) {
+                if isProcessing { ProgressView().controlSize(.mini) }
+                Text(loc(isProcessing ? "VoicePreparing" : "VoiceContinue"))
+                    .font(.system(.caption, design: .rounded, weight: .bold))
+                    .foregroundStyle(Color.maeusTextSecondary)
+                    .multilineTextAlignment(.center)
+            }
+            .frame(minHeight: 24)
         }
-        .padding(.horizontal, 22).padding(.top, 18).padding(.bottom, 4)
+        .padding(.horizontal, 20)
+        .padding(.top, 4)
+        .padding(.bottom, 8)
     }
 
     private var stateColor: Color {
         switch viewModel.phase {
-        case .idle, .connecting:
-            return Color.maeusTextTertiary
-        case .listening:
-            return Color.maeusSuccess
-        case .thinking:
-            return Color.maeusPrimary
-        case .finalizing:
-            return Color.maeusPrimary
-        case .error:
-            return Color.maeusDestructive
+        case .idle, .connecting: return .maeusTextTertiary
+        case .listening: return .maeusSuccess
+        case .thinking, .finalizing: return .maeusPrimary
+        case .error: return .maeusDestructive
         }
     }
 
-    private var conversationArea: some View {
-        ScrollViewReader { proxy in
-            ScrollView {
-                LazyVStack(spacing: 14) {
-                    ForEach(viewModel.conversation) { entry in
-                        ConversationBubble(entry: entry)
-                            .id(entry.id)
-                    }
-
-                    if !viewModel.liveAssistantText.isEmpty {
-                        ConversationBubble(
-                            entry: VoiceConversationEntry(
-                                role: .assistant,
-                                text: viewModel.liveAssistantText
-                            ),
-                            isLive: true
-                        )
-                        .id("live-assistant-text")
-                    }
-
-                    if viewModel.phase == .error {
-                        errorBanner
-                    }
+    private var emptyCard: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text(loc(isProcessing ? "VoiceUnderstandingRequest" : "NothingCapturedYet"))
+                .font(.system(.headline, design: .rounded, weight: .bold))
+            if isProcessing {
+                VStack(alignment: .leading, spacing: 10) {
+                    Capsule().frame(height: 12)
+                    Capsule().frame(width: 140, height: 12)
                 }
-                .padding(.horizontal, 20)
-                .padding(.vertical, 18)
+                .foregroundStyle(Color.maeusInputBackground)
+                .accessibilityHidden(true)
             }
-            .onChange(of: viewModel.conversation) { _, entries in
-                guard let last = entries.last else { return }
-                withAnimation(.spring(duration: 0.3)) {
-                    proxy.scrollTo(last.id, anchor: .bottom)
-                }
-            }
-            .onChange(of: viewModel.liveAssistantText) { _, text in
-                guard !text.isEmpty else { return }
-                withAnimation(.spring(duration: 0.3)) {
-                    proxy.scrollTo("live-assistant-text", anchor: .bottom)
-                }
-            }
-        }
-    }
-
-    private var errorBanner: some View {
-        HStack(alignment: .top, spacing: 10) {
-            Image(systemName: "exclamationmark.triangle.fill")
-                .foregroundStyle(Color.maeusDestructive)
-
-            Text(viewModel.errorMessage)
-                .font(.caption)
+            Text(loc(isProcessing ? "VoiceDraftWillAppear" : "SqueakAway"))
+                .font(.callout)
                 .foregroundStyle(Color.maeusTextSecondary)
-                .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .padding(12)
-        .background(Color.maeusDestructive.opacity(0.08))
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .frame(maxWidth: .infinity, minHeight: 120, alignment: .leading)
+        .padding(16)
+        .background(Color.maeusSurface, in: RoundedRectangle(cornerRadius: 18))
+        .overlay(RoundedRectangle(cornerRadius: 18).stroke(Color.maeusCardBorder, lineWidth: 2))
     }
 
-    private var workspaceArea: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text(loc("InTheTrap", viewModel.drafts.count).uppercased())
-                    .font(.system(size: 11, weight: .heavy, design: .rounded)).tracking(1.5)
+    private var understandingDetail: some View {
+        DisclosureGroup(isExpanded: $showsUnderstanding) {
+            VStack(alignment: .leading, spacing: 8) {
+                Text(loc("VoiceLatestRequest"))
+                    .font(.caption)
                     .foregroundStyle(Color.maeusTextSecondary)
-
-                Spacer()
-
-                if !viewModel.drafts.isEmpty {
-                    Text(loc("TotalAmount", viewModel.totalAmount.euroFormatted))
-                        .font(.system(size: 12, weight: .heavy, design: .rounded)).foregroundStyle(Color.maeusPrimaryHover)
-                }
+                Text(viewModel.latestUnderstanding)
+                    .font(.callout)
+                    .fixedSize(horizontal: false, vertical: true)
             }
-
-            if viewModel.drafts.isEmpty {
-                Text(loc("NothingCapturedYet"))
-                    .font(.system(size: 12, weight: .bold, design: .rounded))
-                    .foregroundStyle(Color.maeusTextTertiary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.vertical, 8)
-            } else {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 10) {
-                        ForEach(viewModel.drafts) { draft in
-                            VoiceExpenseDraftCard(
-                                draft: draft,
-                                onRemove: {
-                                    withAnimation(.spring(duration: 0.25)) {
-                                        viewModel.removeDraft(draft)
-                                    }
-                                }
-                            )
-                            .frame(width: 156)
-                        }
-                    }
-                    .padding(.horizontal, 3)
-                    .padding(.vertical, 3)
-                }
-            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.top, 8)
+        } label: {
+            Text(loc("VoiceWhatUnderstood"))
+                .font(.system(.subheadline, design: .rounded, weight: .bold))
+                .frame(minHeight: 28)
         }
-        .padding(.horizontal, 11).padding(.top, 14)
-        .animation(.spring(duration: 0.3), value: viewModel.drafts)
+        .tint(Color.maeusForeground)
+        .padding(14)
+        .background(Color.maeusSurface.opacity(0.6), in: RoundedRectangle(cornerRadius: 16))
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.maeusCardBorder, lineWidth: 1))
+        .accessibilityIdentifier("voice-understanding")
+    }
+
+    private var footer: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack {
+                footerCount
+                Spacer(minLength: 12)
+                footerTotal
+            }
+            VStack(alignment: .leading, spacing: 6) {
+                footerCount
+                footerTotal
+            }.frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(.horizontal, 22)
+        .padding(.vertical, 16)
+    }
+
+    private var footerCount: some View {
+        Text(loc(viewModel.drafts.count == 1 ? "VoiceOneDraftUnsaved" : "VoiceDraftsUnsaved", viewModel.drafts.count))
+            .font(.system(.caption, design: .rounded, weight: .bold))
+            .foregroundStyle(Color.maeusTextSecondary)
+    }
+
+    private var footerTotal: some View {
+        Text(loc("TotalAmount", viewModel.totalAmount.euroFormatted))
+            .font(.system(.subheadline, design: .rounded, weight: .heavy).monospacedDigit())
+            .foregroundStyle(Color.maeusForeground)
     }
 
     private func endAndSave() {
-        guard viewModel.canSaveDrafts else { return }
+        guard canSave else { return }
         viewModel.phase = .finalizing
-
-        for expense in viewModel.expensesForSaving() {
-            modelContext.insert(expense)
-        }
-
-        do {
-            try modelContext.save()
-        } catch {
+        for expense in viewModel.expensesForSaving() { modelContext.insert(expense) }
+        do { try modelContext.save() }
+        catch {
             modelContext.rollback()
             viewModel.phase = .error
             viewModel.errorMessage = loc("SaveExpensesFailed", error.localizedDescription)
             return
         }
-
         viewModel.finishAfterSave()
         dismiss()
     }
 }
 
-private struct ConversationBubble: View {
-    let entry: VoiceConversationEntry
-    var isLive: Bool = false
-
-    var body: some View {
-        HStack {
-            if entry.role == .understanding { Spacer(minLength: 44) }
-
-            VStack(alignment: .leading, spacing: 5) {
-                if entry.role == .understanding {
-                    Text(loc("VoiceUnderstood"))
-                        .font(.system(size: 11, weight: .bold, design: .rounded))
-                        .foregroundStyle(.white.opacity(0.8))
-                }
-
-                Text(entry.text)
-                    .font(.system(size: 14, weight: entry.role == .understanding ? .semibold : .bold, design: .rounded))
-                    .foregroundStyle(textColor)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .opacity(isLive ? 0.75 : 1)
-            }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 10)
-            .background(backgroundStyle)
-            .overlay(bubbleShape.stroke(entry.role == .assistant ? Color.maeusCardBorder : .clear, lineWidth: 2))
-            .clipShape(bubbleShape)
-
-            if entry.role != .understanding { Spacer(minLength: 44) }
-        }
-    }
-
-    private var textColor: Color {
-        entry.role == .understanding ? .white : Color.maeusForeground
-    }
-
-    private var backgroundStyle: some ShapeStyle {
-        switch entry.role {
-        case .understanding:
-            return AnyShapeStyle(Color.maeusInk)
-        case .assistant:
-            return AnyShapeStyle(Color.maeusSurface)
-        case .system:
-            return AnyShapeStyle(Color.maeusInputBackground.opacity(0.7))
-        }
-    }
-
-    private var bubbleShape: UnevenRoundedRectangle {
-        UnevenRoundedRectangle(
-            cornerRadii: RectangleCornerRadii(
-                topLeading: 18,
-                bottomLeading: entry.role == .understanding ? 18 : 4,
-                bottomTrailing: entry.role == .understanding ? 4 : 18,
-                topTrailing: 18
-            ),
-            style: .continuous
-        )
-    }
-}
-
 private struct VoiceBars: View {
     let level: Double
+    let isActive: Bool
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     private let heights: [CGFloat] = [26, 32, 22, 34, 20]
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1 / 20, paused: reduceMotion)) { timeline in
+        TimelineView(.animation(minimumInterval: 1 / 20, paused: reduceMotion || !isActive)) { timeline in
             let time = timeline.date.timeIntervalSinceReferenceDate
             HStack(spacing: 4) {
                 ForEach(heights.indices, id: \.self) { index in
-                    let pulse = reduceMotion ? 1 : 0.35 + 0.65 * abs(sin(time * (4.5 + Double(index) * 0.35) + Double(index)))
+                    let pulse = reduceMotion || !isActive ? 0.5 : 0.35 + 0.65 * abs(sin(time * (4.5 + Double(index) * 0.35) + Double(index)))
                     Capsule().fill(Color.maeusInk).frame(width: 5, height: heights[index] * max(CGFloat(level), CGFloat(pulse)))
                 }
             }.frame(height: 38)
@@ -311,78 +246,116 @@ private struct VoiceBars: View {
 
 private struct VoiceExpenseDraftCard: View {
     let draft: VoiceExpenseDraft
+    let wasUpdated: Bool
     let onRemove: () -> Void
+    @State private var highlightsUpdate = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(alignment: .top, spacing: 10) {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(alignment: .top, spacing: 8) {
                 Text(draft.normalizedTitle)
-                    .font(.system(size: 14, weight: .heavy, design: .rounded))
-                    .foregroundStyle(Color.maeusForeground)
-                    .lineLimit(1)
-
-                Spacer()
-
+                    .font(.system(.headline, design: .rounded, weight: .heavy))
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, 8)
+                Spacer(minLength: 0)
                 Button(action: onRemove) {
                     Image(systemName: "xmark")
-                        .font(.system(size: 13, weight: .heavy))
-                        .foregroundStyle(Color.maeusTextSecondary)
+                        .font(.system(size: 14, weight: .heavy))
+                        .frame(width: 44, height: 44)
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel(loc("RemoveExpense"))
+                .accessibilityLabel(loc("VoiceRemoveNamed", draft.normalizedTitle))
             }
-
-            Text(draft.normalizedAmount.euroFormatted)
-                .font(.system(size: 20, weight: .heavy, design: .rounded).monospacedDigit())
-                .foregroundStyle(Color.maeusForeground)
-
-            HStack(spacing: 6) {
-                Text(splitText)
-                    .font(.system(size: 11, weight: .heavy, design: .rounded))
-                    .foregroundStyle(Color.maeusInk)
-                    .padding(.horizontal, 9)
-                    .padding(.vertical, 4)
-                    .background(Color.maeusCheese)
-                    .clipShape(Capsule())
-                    .overlay(Capsule().stroke(Color.maeusInk, lineWidth: 1.5))
-
-                Text(formatDate(draft.dateISO))
-                    .font(.system(size: 11, weight: .heavy, design: .rounded))
-                    .foregroundStyle(Color.maeusTextSecondary)
-                    .padding(.horizontal, 9)
-                    .padding(.vertical, 4)
-                    .background(Color.maeusInputBackground)
-                    .clipShape(Capsule())
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 8) {
+                    metadata
+                    Spacer(minLength: 4)
+                    amount
+                }
+                VStack(alignment: .leading, spacing: 8) {
+                    amount
+                    metadata
+                }
+            }
+            if !draft.isReadyForSaving {
+                Text(loc("VoiceNeedsDetails"))
+                    .font(.caption)
+                    .foregroundStyle(Color.maeusDestructive)
+                    .padding(.top, 4)
             }
         }
-        .padding(12)
+        .foregroundStyle(Color.maeusForeground)
+        .padding(.leading, 14)
+        .padding(.trailing, 10)
+        .padding(.top, 4)
+        .padding(.bottom, 14)
         .background {
-            let shape = RoundedRectangle(cornerRadius: 16, style: .continuous)
+            let shape = RoundedRectangle(cornerRadius: 18, style: .continuous)
             ZStack {
-                shape.fill(Color.maeusInk).offset(x: 4, y: 4)
-                shape.fill(Color.maeusSurface)
-                shape.stroke(Color.maeusInk, lineWidth: 2.5)
+                shape.fill(Color.maeusInk).offset(x: 3, y: 4)
+                shape.fill(highlightsUpdate ? Color.maeusInputBackground : Color.maeusSurface)
+                shape.stroke(highlightsUpdate ? Color.maeusPrimary : Color.maeusCardBorder, lineWidth: 2)
             }
         }
+        .overlay(alignment: .topTrailing) {
+            if highlightsUpdate {
+                Text(loc("VoiceUpdated"))
+                    .font(.system(.caption2, design: .rounded, weight: .bold))
+                    .padding(.horizontal, 8).padding(.vertical, 4)
+                    .background(Color.maeusCheese, in: Capsule())
+                    .foregroundStyle(Color.maeusInk)
+                    .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
+                    .padding(.trailing, 48)
+                    .offset(y: -9)
+            }
+        }
+        .task(id: draft.lastChangedAt) {
+            highlightsUpdate = wasUpdated
+            guard wasUpdated else { return }
+            do { try await Task.sleep(for: .seconds(2.5)) } catch { return }
+            withAnimation(reduceMotion ? nil : .easeOut(duration: 0.25)) { highlightsUpdate = false }
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("voice-draft-\(draft.id)")
     }
 
+    private var amount: some View {
+        Text(draft.amount == nil ? "—" : draft.normalizedAmount.euroFormatted)
+            .font(.system(.title3, design: .rounded, weight: .heavy).monospacedDigit())
+            .fixedSize()
+            .accessibilityLabel(draft.amount == nil ? loc("VoiceAmountMissing") : draft.normalizedAmount.euroFormatted)
+    }
+
+    private var metadata: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 6) { dateChip; splitChip }
+            VStack(alignment: .leading, spacing: 6) { dateChip; splitChip }
+        }
+    }
+    private var dateChip: some View { chip(formatDate(draft.dateISO)) }
+    private var splitChip: some View { chip(loc("VoicePartnerShare", splitText)) }
+    private func chip(_ title: String) -> some View {
+        Text(title)
+            .font(.system(.caption2, design: .rounded, weight: .semibold))
+            .fixedSize()
+            .padding(.horizontal, 8)
+            .padding(.vertical, 5)
+            .background(Color.maeusInputBackground, in: Capsule())
+    }
     private var splitText: String {
         switch draft.normalizedSplitMode {
-        case .percent:
-            return "\(Int(draft.normalizedSplitValue))%"
-        case .fixed:
-            return draft.normalizedSplitValue.euroFormatted
+        case .percent: return "\(Int(draft.normalizedSplitValue))%"
+        case .fixed: return draft.normalizedSplitValue.euroFormatted
         }
     }
-
     private func formatDate(_ iso: String?) -> String {
         guard let iso, let date = Expense.dateFromISO(iso) else { return loc("Today") }
-
         let calendar = Calendar.current
         if calendar.isDateInToday(date) { return loc("Today") }
         if calendar.isDateInYesterday(date) { return loc("Yesterday") }
         if calendar.isDateInTomorrow(date) { return loc("Tomorrow") }
-
         let formatter = DateFormatter()
         formatter.dateFormat = LanguageManager.shared.activeLanguageCode == "de" ? "d. MMM" : "d MMM"
         formatter.locale = LanguageManager.shared.activeLocale

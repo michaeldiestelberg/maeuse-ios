@@ -13,7 +13,7 @@
 
 | | |
 | --- | --- |
-| Version | 1.3.1 (build 36) |
+| Version | 1.3.1 (build 37) |
 | Platform | iPhone · iOS 17 or later |
 | Status | Internal TestFlight candidate; 1.3.0 (32) remains live on the App Store |
 | Languages | English and German |
@@ -43,7 +43,7 @@ Mäuse has no account system, app backend, advertising, or tracking SDK. Expense
 
 Voice Mode is optional. When a user enables it and starts a session, microphone audio and expense context are sent directly to OpenAI. The user supplies their own compatible OpenAI API key, which Mäuse stores in iOS Keychain. Drafts can be reviewed, corrected, or removed before anything is saved.
 
-Voice Mode uses `gpt-realtime-2.1` to interpret audio and create expense drafts in one session, without a separate transcription model. After each request, an **Understood** summary shows the model's interpretation alongside its confirmation and draft cards. This is not a live or word-for-word transcript.
+Voice Mode uses `gpt-realtime-2.1` to interpret audio and create expense drafts in one session, without a separate transcription model. Drafts appear in a compact vertical list and stay in place when corrected. Expand **What I understood** to review the latest request; clarification questions appear only when more information is needed. The summary is not a word-for-word transcript.
 
 ## Technology
 
@@ -82,7 +82,7 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
 The Xcode project is the source of truth for both version values:
 
 - `MARKETING_VERSION` is the user-facing version (`1.3.1`).
-- `CURRENT_PROJECT_VERSION` is the App Store Connect build number (`36`).
+- `CURRENT_PROJECT_VERSION` is the App Store Connect build number (`37`).
 
 Use `scripts/bump-version.sh` before creating a new archive. See [RELEASING.md](RELEASING.md) for the full release workflow and [CHANGELOG.md](CHANGELOG.md) for user-facing release notes.
 

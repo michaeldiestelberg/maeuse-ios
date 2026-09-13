@@ -43,6 +43,7 @@ final class RealtimeVoiceWorkspaceTests: XCTestCase {
         let syncTool = try XCTUnwrap(tools.first)
         XCTAssertEqual(syncTool["name"] as? String, "sync_expense_workspace")
         XCTAssertNil(syncTool["strict"])
+        XCTAssertEqual(session["tool_choice"] as? String, "required")
 
         let parameters = try XCTUnwrap(syncTool["parameters"] as? [String: Any])
         XCTAssertEqual(parameters["additionalProperties"] as? Bool, false)
@@ -73,7 +74,7 @@ final class RealtimeVoiceWorkspaceTests: XCTestCase {
         let arguments = """
         {
           "user_understanding": "I bought coffee for 4 euros.",
-          "assistant_confirmation": "Added coffee for 4.00 euros.",
+          "clarification_question": "",
           "expenses": [
             {
               "id": "expense-1",
@@ -123,7 +124,7 @@ final class RealtimeVoiceWorkspaceTests: XCTestCase {
         let arguments = """
         {
           "user_understanding": "Remove the coffee.",
-          "assistant_confirmation": "Removed coffee.",
+          "clarification_question": "",
           "expenses": [],
           "changed_expense_ids": [],
           "removed_expense_ids": ["expense-1"]
@@ -162,7 +163,7 @@ final class RealtimeVoiceWorkspaceTests: XCTestCase {
         let viewModel = VoiceModeViewModel()
         let payload = VoiceWorkspaceSyncPayload(
             userUnderstanding: "I bought groceries for 10 euros.",
-            assistantConfirmation: "Added groceries for 10.00 euros.",
+            clarificationQuestion: "",
             expenses: [
                 VoiceExpenseDraftPayload(
                     id: "expense-1",
@@ -189,11 +190,11 @@ final class RealtimeVoiceWorkspaceTests: XCTestCase {
         XCTAssertEqual(viewModel.takeawayText, "1 expense · €10.00 total · €5.00 partner")
     }
 
-    func testWorkspaceSyncShowsUnderstandingBeforeConfirmationAndAppliesCorrections() {
+    func testWorkspaceSyncReplacesLatestUnderstandingAndAppliesCorrections() {
         let viewModel = VoiceModeViewModel()
         let payload = VoiceWorkspaceSyncPayload(
             userUnderstanding: "I bought coffee for 5 euros.",
-            assistantConfirmation: "Added coffee for 5.00 euros.",
+            clarificationQuestion: "",
             expenses: [
                 VoiceExpenseDraftPayload(
                     id: "expense-1",
@@ -212,14 +213,13 @@ final class RealtimeVoiceWorkspaceTests: XCTestCase {
 
         viewModel.realtimeVoiceService(RealtimeVoiceService(), didReceive: .workspaceSync(payload))
 
-        XCTAssertEqual(viewModel.conversation.map(\.role), [.understanding, .assistant])
-        XCTAssertEqual(viewModel.conversation.first?.text, "I bought coffee for 5 euros.")
-        XCTAssertEqual(viewModel.conversation.last?.text, "Added coffee for 5.00 euros.")
+        XCTAssertEqual(viewModel.latestUnderstanding, "I bought coffee for 5 euros.")
+        XCTAssertTrue(viewModel.clarificationQuestion.isEmpty)
         XCTAssertEqual(viewModel.drafts.first?.amount, 5)
 
         let correction = VoiceWorkspaceSyncPayload(
             userUnderstanding: "The coffee was 6 euros.",
-            assistantConfirmation: "Updated coffee to 6.00 euros.",
+            clarificationQuestion: "",
             expenses: [
                 VoiceExpenseDraftPayload(
                     id: "expense-1", title: "Coffee", amount: 6,
@@ -231,8 +231,7 @@ final class RealtimeVoiceWorkspaceTests: XCTestCase {
         )
         viewModel.realtimeVoiceService(RealtimeVoiceService(), didReceive: .workspaceSync(correction))
 
-        XCTAssertEqual(viewModel.conversation.map(\.role), [.understanding, .assistant, .understanding, .assistant])
-        XCTAssertEqual(viewModel.conversation[2].text, "The coffee was 6 euros.")
+        XCTAssertEqual(viewModel.latestUnderstanding, "The coffee was 6 euros.")
         XCTAssertEqual(viewModel.drafts.count, 1)
         XCTAssertEqual(viewModel.drafts.first?.id, "expense-1")
         XCTAssertEqual(viewModel.drafts.first?.amount, 6)
@@ -242,27 +241,27 @@ final class RealtimeVoiceWorkspaceTests: XCTestCase {
         let viewModel = VoiceModeViewModel()
         let payload = VoiceWorkspaceSyncPayload(
             userUnderstanding: " \n ",
-            assistantConfirmation: "How much was the coffee?",
+            clarificationQuestion: "How much was the coffee?",
             expenses: [], changedExpenseIDs: [], removedExpenseIDs: []
         )
         viewModel.realtimeVoiceService(RealtimeVoiceService(), didReceive: .workspaceSync(payload))
 
-        XCTAssertEqual(viewModel.conversation.map(\.role), [.assistant])
-        XCTAssertEqual(viewModel.conversation.first?.text, "How much was the coffee?")
+        XCTAssertTrue(viewModel.latestUnderstanding.isEmpty)
+        XCTAssertEqual(viewModel.clarificationQuestion, "How much was the coffee?")
         XCTAssertTrue(viewModel.drafts.isEmpty)
     }
 
     func testUnderstandingLabelUsesSelectedAppLanguage() {
-        XCTAssertEqual(loc("VoiceUnderstood"), "Understood")
+        XCTAssertEqual(loc("VoiceWhatUnderstood"), "What I understood")
         LanguageManager.shared.languagePreference = .german
-        XCTAssertEqual(loc("VoiceUnderstood"), "Verstanden")
+        XCTAssertEqual(loc("VoiceWhatUnderstood"), "So habe ich dich verstanden")
     }
 
-    func testResetClearsUnderstandingAndPendingAssistantText() {
+    func testResetClearsUnderstandingAndClarification() {
         let viewModel = VoiceModeViewModel()
         viewModel.realtimeVoiceService(RealtimeVoiceService(), didReceive: .workspaceSync(
             VoiceWorkspaceSyncPayload(
-                userUnderstanding: "Coffee", assistantConfirmation: "How much was it?",
+                userUnderstanding: "Coffee", clarificationQuestion: "How much was it?",
                 expenses: [], changedExpenseIDs: [], removedExpenseIDs: []
             )
         ))
@@ -270,8 +269,8 @@ final class RealtimeVoiceWorkspaceTests: XCTestCase {
 
         viewModel.resetWorkspace()
 
-        XCTAssertTrue(viewModel.conversation.isEmpty)
-        XCTAssertTrue(viewModel.liveAssistantText.isEmpty)
+        XCTAssertTrue(viewModel.latestUnderstanding.isEmpty)
+        XCTAssertTrue(viewModel.clarificationQuestion.isEmpty)
         XCTAssertEqual(viewModel.phase, .idle)
     }
 
@@ -284,11 +283,67 @@ final class RealtimeVoiceWorkspaceTests: XCTestCase {
         viewModel.realtimeVoiceService(service, didReceive: .microphoneLevel(0.4))
         viewModel.realtimeVoiceService(service, didReceive: .listeningStarted)
 
-        XCTAssertEqual(viewModel.conversation, [])
+        XCTAssertTrue(viewModel.latestUnderstanding.isEmpty)
         XCTAssertTrue(viewModel.microphoneIsActive)
         XCTAssertEqual(viewModel.microphoneLevel, 0.4)
         XCTAssertEqual(viewModel.phase, .listening)
         XCTAssertEqual(viewModel.stateLabel, "Listening...")
+    }
+
+    func testThreeDraftsStayInPlaceWhenCorrectionPayloadReordersThem() {
+        let viewModel = VoiceModeViewModel()
+        let service = RealtimeVoiceService()
+        func draft(_ id: String, _ amount: Double, confidence: Double = 1) -> VoiceExpenseDraftPayload {
+            VoiceExpenseDraftPayload(id: id, title: id, amount: amount,
+                dateISO: "2026-09-12", splitMode: "percent", splitValue: 50,
+                confidence: confidence, missingFields: [])
+        }
+        func sync(_ entries: [VoiceExpenseDraftPayload], understanding: String) {
+            viewModel.realtimeVoiceService(service, didReceive: .workspaceSync(
+                VoiceWorkspaceSyncPayload(userUnderstanding: understanding, clarificationQuestion: "",
+                    expenses: entries, changedExpenseIDs: entries.map(\.id), removedExpenseIDs: [])))
+        }
+        sync([draft("flowers", 12), draft("coffee", 4.5), draft("film", 3.99)], understanding: "Three expenses")
+        let coffeeTimestamp = viewModel.drafts[1].lastChangedAt
+        XCTAssertEqual(viewModel.totalAmount, 20.49)
+        XCTAssertTrue(viewModel.updatedExpenseIDs.isEmpty)
+        // Reproduce narration arriving before and after the structured update.
+        viewModel.realtimeVoiceService(service, didReceive: .assistantTextDelta("I'll update that"))
+        viewModel.realtimeVoiceService(service, didReceive: .assistantText("I'll update that"))
+        XCTAssertEqual(viewModel.latestUnderstanding, "Three expenses")
+        sync([draft("film", 3.99), draft("flowers", 13.5), draft("coffee", 4.5, confidence: 0.8)], understanding: "Flowers were 13.50")
+        viewModel.realtimeVoiceService(service, didReceive: .assistantText("Updated the flowers"))
+        XCTAssertEqual(viewModel.drafts.map(\.id), ["flowers", "coffee", "film"])
+        XCTAssertEqual(viewModel.updatedExpenseIDs, ["flowers"])
+        XCTAssertEqual(viewModel.drafts[1].lastChangedAt, coffeeTimestamp)
+        XCTAssertEqual(viewModel.latestUnderstanding, "Flowers were 13.50")
+        XCTAssertTrue(viewModel.clarificationQuestion.isEmpty)
+        XCTAssertEqual(viewModel.totalAmount, 21.99)
+        XCTAssertEqual(viewModel.expensesForSaving().count, 3)
+        viewModel.removeDraft(viewModel.drafts[1])
+        XCTAssertEqual(viewModel.drafts.map(\.id), ["flowers", "film"])
+        XCTAssertEqual(viewModel.totalAmount, 17.49)
+        XCTAssertTrue(viewModel.latestUnderstanding.isEmpty)
+    }
+
+    func testClarificationClearsAfterAnswerAndSavingWaitsForResponse() {
+        let viewModel = VoiceModeViewModel()
+        let service = RealtimeVoiceService()
+        viewModel.realtimeVoiceService(service, didReceive: .workspaceSync(
+            VoiceWorkspaceSyncPayload(userUnderstanding: "Coffee", clarificationQuestion: "How much?",
+                expenses: [], changedExpenseIDs: [], removedExpenseIDs: [])))
+        viewModel.realtimeVoiceService(service, didReceive: .assistantText("Sure, I'll add it"))
+        XCTAssertEqual(viewModel.clarificationQuestion, "How much?")
+        viewModel.realtimeVoiceService(service, didReceive: .responseStarted)
+        XCTAssertFalse(viewModel.canEndSession)
+        viewModel.realtimeVoiceService(service, didReceive: .workspaceSync(
+            VoiceWorkspaceSyncPayload(userUnderstanding: "Coffee for 4.50", clarificationQuestion: "",
+                expenses: [VoiceExpenseDraftPayload(id: "coffee", title: "Coffee", amount: 4.5,
+                    dateISO: nil, splitMode: nil, splitValue: nil, confidence: 1, missingFields: [])],
+                changedExpenseIDs: ["coffee"], removedExpenseIDs: [])))
+        XCTAssertTrue(viewModel.clarificationQuestion.isEmpty)
+        XCTAssertTrue(viewModel.canSaveDrafts)
+        XCTAssertEqual(viewModel.latestUnderstanding, "Coffee for 4.50")
     }
 
     func testRejectsIncompleteDraftsForSaving() {

@@ -78,7 +78,6 @@
 "VoicePrivacyIntro" = "Voice Mode is optional. Manual expense tracking remains available without an OpenAI API key or microphone access.";
 "VoicePrivacyDataTitle" = "Data sent to OpenAI";
 "VoicePrivacyDataDesc" = "While a voice session is active, Mäuse sends live microphone audio and expense details to OpenAI to understand expense requests and create drafts. After each request, Mäuse shows what it understood rather than a word-for-word transcript.";
-"VoiceUnderstood" = "Understood";
 "VoicePrivacyRetentionTitle" = "Retention";
 "VoicePrivacyRetentionDesc" = "OpenAI may retain API content in abuse-monitoring logs for up to 30 days by default. API content is not used to train OpenAI models unless the API account owner opts in.";
 "VoicePrivacyBillingTitle" = "Your OpenAI account";
@@ -157,3 +156,21 @@
 "Title" = "title";
 "Amount" = "amount";
 "UntitledExpense" = "Untitled expense";
+
+// Voice draft workspace
+"VoiceYourDrafts" = "Your drafts";
+"VoiceSaveCount" = "Save %d";
+"VoiceContinue" = "Add another, or say a correction";
+"VoicePreparing" = "Preparing your drafts…";
+"VoiceUnderstandingRequest" = "Understanding your request…";
+"VoiceDraftWillAppear" = "Your drafts will appear here";
+"VoiceLatestRequest" = "Latest request";
+"VoiceWhatUnderstood" = "What I understood";
+"VoiceOneDraftUnsaved" = "1 draft · Not saved yet";
+"VoiceDraftsUnsaved" = "%d drafts · Not saved yet";
+"VoiceUpdated" = "Updated";
+"VoiceRemoveNamed" = "Remove %@";
+"VoiceNeedsDetails" = "More details needed before saving";
+"VoiceAmountMissing" = "Amount missing";
+"VoicePartnerShare" = "Partner %@";
+"Close" = "Close";

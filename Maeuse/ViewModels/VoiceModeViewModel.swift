@@ -9,10 +9,10 @@ final class VoiceModeViewModel {
     var phase: VoicePhase = .idle
     var isPresented: Bool = false
     var errorMessage: String = ""
-    var conversation: [VoiceConversationEntry] = []
+    var latestUnderstanding: String = ""
+    var clarificationQuestion: String = ""
     var drafts: [VoiceExpenseDraft] = []
-    var liveAssistantText: String = ""
-    var changedExpenseIDs: Set<String> = []
+    var updatedExpenseIDs: Set<String> = []
     var microphoneIsActive: Bool = false
     var microphoneLevel: Double = 0
     var isSaving: Bool = false
@@ -37,7 +37,7 @@ final class VoiceModeViewModel {
     }
 
     var canEndSession: Bool {
-        phase != .connecting && phase != .finalizing
+        phase != .connecting && phase != .thinking && phase != .finalizing
     }
 
     var canSaveDrafts: Bool {
@@ -73,42 +73,48 @@ final class VoiceModeViewModel {
         isPresented = true
 
         let german = LanguageManager.shared.activeLanguageCode == "de"
-        conversation = [
-            VoiceConversationEntry(
-                role: .understanding,
-                text: german
-                    ? "Blumen für 12 Euro und Kinokarten für 24 Euro, beides halbe-halbe."
-                    : "Flowers for 12 euros and cinema tickets for 24 euros, split both in half."
-            ),
-            VoiceConversationEntry(
-                role: .assistant,
-                text: german
-                    ? "Zwei Ausgaben erfasst und jeweils 50/50 aufgeteilt."
-                    : "Captured two expenses and split each one 50/50."
-            )
-        ]
+        latestUnderstanding = german
+            ? "Blumen für 12 Euro, Kaffee für 4,50 Euro und ein Film auf Apple TV für 3,99 Euro. Alles gestern, jeweils halbe-halbe."
+            : "Flowers for 12 euros, coffee for 4.50 euros and an Apple TV film for 3.99 euros. All yesterday, split equally."
+        let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: Date()) ?? Date()
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
         drafts = [
-            VoiceExpenseDraft(
-                id: "screenshot-flowers",
-                title: german ? "Blumen" : "Flowers",
-                amount: 12,
-                dateISO: Self.todayISOString(),
-                splitMode: .percent,
-                splitValue: 50,
-                confidence: 1,
-                missingFields: []
-            ),
-            VoiceExpenseDraft(
-                id: "screenshot-cinema",
-                title: german ? "Kinokarten" : "Cinema tickets",
-                amount: 24,
-                dateISO: Self.todayISOString(),
-                splitMode: .percent,
-                splitValue: 50,
-                confidence: 1,
-                missingFields: []
-            )
-        ]
+            ("flowers", german ? "Blumen" : "Flowers", 12.0),
+            ("coffee", german ? "Kaffee" : "Coffee", 4.5),
+            ("film", german ? "Film auf Apple TV" : "Film on Apple TV", 3.99)
+        ].map { id, title, amount in
+            VoiceExpenseDraft(id: id, title: title, amount: amount,
+                              dateISO: formatter.string(from: yesterday), splitMode: .percent,
+                              splitValue: 50, confidence: 1, missingFields: [])
+        }
+        // Simulator-only fixtures exercise the production event handler and layout.
+        if ProcessInfo.processInfo.arguments.contains("--voice-processing") {
+            drafts = []
+            latestUnderstanding = ""
+            phase = .thinking
+        }
+        if ProcessInfo.processInfo.arguments.contains("--voice-clarification") {
+            clarificationQuestion = german ? "Wie viel hat der Kaffee gekostet?" : "How much was the coffee?"
+            drafts[1].amount = nil
+            drafts[1].missingFields = [.amount]
+        }
+        if ProcessInfo.processInfo.arguments.contains("--voice-correction") {
+            Task { @MainActor [weak self] in
+                try? await Task.sleep(for: .seconds(3))
+                guard let self, self.isPresented, self.drafts.count == 3 else { return }
+                let corrected = self.drafts.map { draft in
+                    VoiceExpenseDraftPayload(id: draft.id, title: draft.title,
+                        amount: draft.id == "flowers" ? 13.5 : draft.amount,
+                        dateISO: draft.dateISO, splitMode: "percent", splitValue: 50,
+                        confidence: 1, missingFields: [])
+                }
+                self.applyWorkspaceSync(VoiceWorkspaceSyncPayload(
+                    userUnderstanding: german ? "Die Blumen haben 13,50 Euro gekostet, nicht 12 Euro." : "The flowers were 13.50 euros, not 12 euros.",
+                    clarificationQuestion: "", expenses: corrected,
+                    changedExpenseIDs: ["flowers"], removedExpenseIDs: []))
+            }
+        }
     }
     #endif
 
@@ -124,7 +130,6 @@ final class VoiceModeViewModel {
             } catch {
                 phase = .error
                 errorMessage = error.localizedDescription
-                appendLog(.system, "Connection failed: \(error.localizedDescription)")
             }
         }
     }
@@ -143,8 +148,9 @@ final class VoiceModeViewModel {
 
     func removeDraft(_ draft: VoiceExpenseDraft) {
         drafts.removeAll { $0.id == draft.id }
-        changedExpenseIDs = [draft.id]
-        appendLog(.system, "Removed \(draft.normalizedTitle).")
+        updatedExpenseIDs.remove(draft.id)
+        latestUnderstanding = ""
+        clarificationQuestion = ""
         realtime.sendWorkspaceNote("The user removed expense \(draft.id) named \(draft.normalizedTitle) from the temporary workspace. Keep it removed unless the user asks to add it again.")
     }
 
@@ -166,10 +172,10 @@ final class VoiceModeViewModel {
     func resetWorkspace() {
         phase = .idle
         errorMessage = ""
-        conversation = []
+        latestUnderstanding = ""
+        clarificationQuestion = ""
         drafts = []
-        liveAssistantText = ""
-        changedExpenseIDs = []
+        updatedExpenseIDs = []
         microphoneIsActive = false
         microphoneLevel = 0
         isSaving = false
@@ -187,32 +193,29 @@ final class VoiceModeViewModel {
     // MARK: - Workspace Sync
 
     private func applyWorkspaceSync(_ payload: VoiceWorkspaceSyncPayload) {
-        appendLog(.understanding, payload.userUnderstanding)
-        appendLog(.assistant, payload.assistantConfirmation)
+        latestUnderstanding = payload.userUnderstanding.trimmingCharacters(in: .whitespacesAndNewlines)
+        clarificationQuestion = payload.clarificationQuestion.trimmingCharacters(in: .whitespacesAndNewlines)
 
         let todayISO = Self.todayISOString()
         let previousDrafts = drafts.reduce(into: [String: VoiceExpenseDraft]()) { result, draft in
             result[draft.id] = draft
         }
-        let explicitChanges = Set(payload.changedExpenseIDs + payload.removedExpenseIDs)
 
-        let nextDrafts = payload.expenses.map { payloadDraft -> VoiceExpenseDraft in
+        let incomingDrafts = payload.expenses.map { payloadDraft -> VoiceExpenseDraft in
             var next = applyDefaultWorkspaceFields(to: payloadDraft.draft, todayISO: todayISO)
             if let previous = previousDrafts[next.id],
-               previous.withoutChangeTimestamp == next.withoutChangeTimestamp,
-               !explicitChanges.contains(next.id) {
+               previous.withoutChangeTimestamp == next.withoutChangeTimestamp {
                 next.lastChangedAt = previous.lastChangedAt
             }
             return next
         }
 
-        changedExpenseIDs = Set(nextDrafts.compactMap { draft in
-            let previous = previousDrafts[draft.id]
-            if explicitChanges.contains(draft.id) || previous?.withoutChangeTimestamp != draft.withoutChangeTimestamp {
-                return draft.id
-            }
-            return nil
-        }).union(payload.removedExpenseIDs)
+        // Keep existing cards in place even if the model reorders its full workspace.
+        let incomingByID = Dictionary(incomingDrafts.map { ($0.id, $0) }, uniquingKeysWith: { _, last in last })
+        let previousOrder = drafts.map(\.id)
+        var seen = Set(previousOrder)
+        let newIDs = incomingDrafts.compactMap { seen.insert($0.id).inserted ? $0.id : nil }
+        let nextDrafts = (previousOrder + newIDs).compactMap { incomingByID[$0] }
 
         let previousIDs = Set(previousDrafts.keys)
         let nextIDs = Set(nextDrafts.map(\.id))
@@ -223,8 +226,8 @@ final class VoiceModeViewModel {
             return previous.withoutChangeTimestamp != draft.withoutChangeTimestamp ? draft.id : nil
         })
 
+        updatedExpenseIDs = updatedIDs
         drafts = nextDrafts
-        liveAssistantText = ""
 
         if !addedIDs.isEmpty {
             playVoiceHaptic(.success)
@@ -261,17 +264,6 @@ final class VoiceModeViewModel {
         case .rigid:
             UIImpactFeedbackGenerator(style: .rigid).impactOccurred()
         }
-    }
-
-    private func appendLog(_ role: VoiceConversationRole, _ text: String) {
-        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return }
-
-        if conversation.last?.role == role, conversation.last?.text == trimmed {
-            return
-        }
-
-        conversation.append(VoiceConversationEntry(role: role, text: trimmed))
     }
 
     private func applyDefaultWorkspaceFields(to draft: VoiceExpenseDraft, todayISO: String) -> VoiceExpenseDraft {
@@ -327,15 +319,12 @@ extension VoiceModeViewModel: RealtimeVoiceServiceDelegate {
             }
         case .workspaceSync(let payload):
             applyWorkspaceSync(payload)
-        case .assistantText(let text):
-            appendLog(.assistant, text)
-            liveAssistantText = ""
-        case .assistantTextDelta(let text):
-            liveAssistantText += text
+        case .assistantText, .assistantTextDelta:
+            // Incidental model narration must not race the structured draft update.
+            break
         case .error(let message):
             phase = .error
             errorMessage = message
-            appendLog(.system, message)
         }
     }
 }
@@ -349,7 +338,7 @@ private extension VoiceExpenseDraft {
             dateISO: dateISO,
             splitMode: splitMode,
             splitValue: splitValue,
-            confidence: confidence,
+            confidence: 0, // Model confidence alone is not a visible correction.
             missingFields: missingFields,
             lastChangedAt: .distantPast
         )

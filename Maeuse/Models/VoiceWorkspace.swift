@@ -10,26 +10,6 @@ enum VoicePhase: String {
     case error
 }
 
-enum VoiceConversationRole: String {
-    case understanding
-    case assistant
-    case system
-}
-
-struct VoiceConversationEntry: Identifiable, Equatable {
-    let id: String
-    let role: VoiceConversationRole
-    let text: String
-    let createdAt: Date
-
-    init(id: String = UUID().uuidString, role: VoiceConversationRole, text: String, createdAt: Date = Date()) {
-        self.id = id
-        self.role = role
-        self.text = text
-        self.createdAt = createdAt
-    }
-}
-
 enum VoiceExpenseMissingField: String, Codable, CaseIterable, Identifiable {
     case title
     case amount
@@ -134,14 +114,14 @@ struct VoiceExpenseDraft: Identifiable, Equatable {
 
 struct VoiceWorkspaceSyncPayload: Decodable, Equatable {
     let userUnderstanding: String
-    let assistantConfirmation: String
+    let clarificationQuestion: String
     let expenses: [VoiceExpenseDraftPayload]
     let changedExpenseIDs: [String]
     let removedExpenseIDs: [String]
 
     enum CodingKeys: String, CodingKey {
         case userUnderstanding = "user_understanding"
-        case assistantConfirmation = "assistant_confirmation"
+        case clarificationQuestion = "clarification_question"
         case expenses
         case changedExpenseIDs = "changed_expense_ids"
         case removedExpenseIDs = "removed_expense_ids"
