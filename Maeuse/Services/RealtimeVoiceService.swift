@@ -19,8 +19,6 @@ enum RealtimeVoiceServiceEvent {
     case responseStarted
     case responseFinished
     case workspaceSync(VoiceWorkspaceSyncPayload)
-    case userTranscriptDelta(itemID: String, text: String)
-    case userTranscriptDone(itemID: String, text: String)
     case assistantText(String)
     case assistantTextDelta(String)
     case error(String)
@@ -464,10 +462,6 @@ final class RealtimeVoiceService: NSObject, @unchecked Sendable {
             emit(.responseFinished)
         case .functionArgumentsDelta:
             break
-        case .userTranscriptDelta(let itemID, let text):
-            emit(.userTranscriptDelta(itemID: itemID, text: text))
-        case .userTranscriptDone(let itemID, let text):
-            emit(.userTranscriptDone(itemID: itemID, text: text))
         case .assistantTextDelta(let text):
             emit(.assistantTextDelta(text))
         case .assistantTextDone(let text):

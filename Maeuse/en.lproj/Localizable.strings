@@ -77,7 +77,8 @@
 "VoicePrivacyTitle" = "Before You Use Voice Mode";
 "VoicePrivacyIntro" = "Voice Mode is optional. Manual expense tracking remains available without an OpenAI API key or microphone access.";
 "VoicePrivacyDataTitle" = "Data sent to OpenAI";
-"VoicePrivacyDataDesc" = "While a voice session is active, Mäuse sends live microphone audio and expense details to OpenAI to transcribe speech and create expense drafts.";
+"VoicePrivacyDataDesc" = "While a voice session is active, Mäuse sends live microphone audio and expense details to OpenAI to understand expense requests and create drafts. After each request, Mäuse shows what it understood rather than a word-for-word transcript.";
+"VoiceUnderstood" = "Understood";
 "VoicePrivacyRetentionTitle" = "Retention";
 "VoicePrivacyRetentionDesc" = "OpenAI may retain API content in abuse-monitoring logs for up to 30 days by default. API content is not used to train OpenAI models unless the API account owner opts in.";
 "VoicePrivacyBillingTitle" = "Your OpenAI account";

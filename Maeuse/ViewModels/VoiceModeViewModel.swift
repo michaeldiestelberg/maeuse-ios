@@ -11,7 +11,6 @@ final class VoiceModeViewModel {
     var errorMessage: String = ""
     var conversation: [VoiceConversationEntry] = []
     var drafts: [VoiceExpenseDraft] = []
-    var liveUserTranscript: String = ""
     var liveAssistantText: String = ""
     var changedExpenseIDs: Set<String> = []
     var microphoneIsActive: Bool = false
@@ -21,8 +20,6 @@ final class VoiceModeViewModel {
     private let realtime = RealtimeVoiceService()
     private var hasStartedSession = false
     private var didSignalListeningReady = false
-    private var userTranscriptBuffers: [String: String] = [:]
-    private var activeUserTranscriptID: String?
 
     init() {
         realtime.setDelegate(self)
@@ -78,7 +75,7 @@ final class VoiceModeViewModel {
         let german = LanguageManager.shared.activeLanguageCode == "de"
         conversation = [
             VoiceConversationEntry(
-                role: .user,
+                role: .understanding,
                 text: german
                     ? "Blumen für 12 Euro und Kinokarten für 24 Euro, beides halbe-halbe."
                     : "Flowers for 12 euros and cinema tickets for 24 euros, split both in half."
@@ -171,7 +168,6 @@ final class VoiceModeViewModel {
         errorMessage = ""
         conversation = []
         drafts = []
-        liveUserTranscript = ""
         liveAssistantText = ""
         changedExpenseIDs = []
         microphoneIsActive = false
@@ -179,8 +175,6 @@ final class VoiceModeViewModel {
         isSaving = false
         hasStartedSession = false
         didSignalListeningReady = false
-        userTranscriptBuffers = [:]
-        activeUserTranscriptID = nil
     }
 
     static func todayISOString() -> String {
@@ -193,6 +187,7 @@ final class VoiceModeViewModel {
     // MARK: - Workspace Sync
 
     private func applyWorkspaceSync(_ payload: VoiceWorkspaceSyncPayload) {
+        appendLog(.understanding, payload.userUnderstanding)
         appendLog(.assistant, payload.assistantConfirmation)
 
         let todayISO = Self.todayISOString()
@@ -279,37 +274,6 @@ final class VoiceModeViewModel {
         conversation.append(VoiceConversationEntry(role: role, text: trimmed))
     }
 
-    private func applyUserTranscriptDelta(itemID: String, text: String) {
-        let key = transcriptKey(for: itemID)
-        userTranscriptBuffers[key, default: ""] += text
-        activeUserTranscriptID = key
-        liveUserTranscript = userTranscriptBuffers[key] ?? ""
-    }
-
-    private func finishUserTranscript(itemID: String, text: String) {
-        let key = transcriptKey(for: itemID)
-        let fallbackText = userTranscriptBuffers[key] ?? ""
-        let transcript = text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? fallbackText : text
-
-        userTranscriptBuffers[key] = nil
-        if activeUserTranscriptID == key {
-            activeUserTranscriptID = nil
-            liveUserTranscript = nextLiveUserTranscript()
-        }
-
-        appendLog(.user, transcript)
-    }
-
-    private func transcriptKey(for itemID: String) -> String {
-        itemID.isEmpty ? "default" : itemID
-    }
-
-    private func nextLiveUserTranscript() -> String {
-        guard let next = userTranscriptBuffers.first else { return "" }
-        activeUserTranscriptID = next.key
-        return next.value
-    }
-
     private func applyDefaultWorkspaceFields(to draft: VoiceExpenseDraft, todayISO: String) -> VoiceExpenseDraft {
         var draft = draft
         if draft.dateISO == nil {
@@ -363,10 +327,6 @@ extension VoiceModeViewModel: RealtimeVoiceServiceDelegate {
             }
         case .workspaceSync(let payload):
             applyWorkspaceSync(payload)
-        case .userTranscriptDelta(let itemID, let text):
-            applyUserTranscriptDelta(itemID: itemID, text: text)
-        case .userTranscriptDone(let itemID, let text):
-            finishUserTranscript(itemID: itemID, text: text)
         case .assistantText(let text):
             appendLog(.assistant, text)
             liveAssistantText = ""

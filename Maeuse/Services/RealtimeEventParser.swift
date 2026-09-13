@@ -7,8 +7,6 @@ enum RealtimeParsedEvent: Equatable {
     case responseStarted
     case responseFinished
     case functionArgumentsDelta
-    case userTranscriptDelta(itemID: String, text: String)
-    case userTranscriptDone(itemID: String, text: String)
     case assistantTextDelta(String)
     case assistantTextDone(String)
     case workspaceSync(VoiceWorkspaceSyncPayload, callID: String?)
@@ -51,21 +49,6 @@ struct RealtimeServerEventParser {
 
         case "response.function_call_arguments.done":
             return parseFunctionArgumentsDone(object)
-
-        case "conversation.item.input_audio_transcription.delta":
-            let itemID = transcriptItemID(from: object)
-            let delta = object["delta"] as? String ?? ""
-            guard !delta.isEmpty else { return [] }
-            return [.userTranscriptDelta(itemID: itemID, text: delta)]
-
-        case "conversation.item.input_audio_transcription.completed":
-            let itemID = transcriptItemID(from: object)
-            let transcript = object["transcript"] as? String ?? ""
-            guard !transcript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return [] }
-            return [.userTranscriptDone(itemID: itemID, text: transcript)]
-
-        case "conversation.item.input_audio_transcription.failed":
-            return [.error(parseTranscriptionErrorMessage(object))]
 
         case "response.output_text.delta":
             guard let delta = object["delta"] as? String, !delta.isEmpty else { return [] }
@@ -143,10 +126,6 @@ struct RealtimeServerEventParser {
         return "default"
     }
 
-    private func transcriptItemID(from object: [String: Any]) -> String {
-        object["item_id"] as? String ?? "default"
-    }
-
     private func parseErrorMessage(_ object: [String: Any]) -> String {
         if let error = object["error"] as? [String: Any],
            let message = error["message"] as? String {
@@ -160,12 +139,4 @@ struct RealtimeServerEventParser {
         return "Realtime session failed."
     }
 
-    private func parseTranscriptionErrorMessage(_ object: [String: Any]) -> String {
-        if let error = object["error"] as? [String: Any],
-           let message = error["message"] as? String {
-            return "Input transcription failed: \(message)"
-        }
-
-        return "Input transcription failed."
-    }
 }

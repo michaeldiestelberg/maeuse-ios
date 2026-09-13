@@ -13,6 +13,22 @@ When shipping a new marketing version:
 
 ---
 
+## 1.3.1 — TestFlight candidate
+
+### English
+
+- Voice Mode now uses GPT-Realtime-2.1 to understand your spoken expenses and prepare drafts in one session.
+- An “Understood” summary shows how each request was interpreted. It replaces the live transcript.
+- Removed the separate transcription model and its additional transcription charges.
+
+### German
+
+- Der Sprachmodus nutzt jetzt GPT-Realtime-2.1, um gesprochene Ausgaben zu verstehen und in einer Sitzung als Entwürfe vorzubereiten.
+- Eine „Verstanden“-Zusammenfassung zeigt, wie jede Anfrage interpretiert wurde. Sie ersetzt das Live-Transkript.
+- Das separate Transkriptionsmodell und dessen zusätzliche Transkriptionskosten entfallen.
+
+---
+
 ## 1.3.0
 
 ### English (long)

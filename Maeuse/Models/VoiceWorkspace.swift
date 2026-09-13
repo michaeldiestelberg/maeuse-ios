@@ -11,7 +11,7 @@ enum VoicePhase: String {
 }
 
 enum VoiceConversationRole: String {
-    case user
+    case understanding
     case assistant
     case system
 }

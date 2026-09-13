@@ -77,7 +77,8 @@
 "VoicePrivacyTitle" = "Vor der Nutzung des Sprachmodus";
 "VoicePrivacyIntro" = "Der Sprachmodus ist optional. Die manuelle Ausgabenerfassung funktioniert ohne OpenAI-API-Schlüssel und ohne Mikrofonzugriff.";
 "VoicePrivacyDataTitle" = "An OpenAI übermittelte Daten";
-"VoicePrivacyDataDesc" = "Während einer aktiven Sprachsitzung sendet Mäuse Live-Mikrofonaudio und Ausgabendetails an OpenAI, um Sprache zu transkribieren und Ausgabenentwürfe zu erstellen.";
+"VoicePrivacyDataDesc" = "Während einer aktiven Sprachsitzung sendet Mäuse Live-Mikrofonaudio und Ausgabendetails an OpenAI, um Ausgabenwünsche zu verstehen und Entwürfe zu erstellen. Nach jeder Eingabe zeigt Mäuse, was es verstanden hat, statt einer wortgetreuen Abschrift.";
+"VoiceUnderstood" = "Verstanden";
 "VoicePrivacyRetentionTitle" = "Speicherdauer";
 "VoicePrivacyRetentionDesc" = "OpenAI kann API-Inhalte standardmäßig bis zu 30 Tage in Protokollen zur Missbrauchsprävention speichern. API-Inhalte werden nicht zum Trainieren von OpenAI-Modellen verwendet, sofern der Inhaber des API-Kontos dem nicht ausdrücklich zustimmt.";
 "VoicePrivacyBillingTitle" = "Dein OpenAI-Konto";

@@ -13,9 +13,9 @@
 
 | | |
 | --- | --- |
-| Version | 1.3.0 (build 32) |
+| Version | 1.3.1 (build 33) |
 | Platform | iPhone · iOS 17 or later |
-| Status | Available on the App Store |
+| Status | Internal TestFlight candidate; 1.3.0 (32) remains live on the App Store |
 | Languages | English and German |
 
 Latest App Store release (build 32): Lock Screen, Home Screen, and Control Center capture, improved control icons and expense deletion, Voice Mode haptics, and a more stable expense editor with the keyboard open.
@@ -43,6 +43,8 @@ Mäuse has no account system, app backend, advertising, or tracking SDK. Expense
 
 Voice Mode is optional. When a user enables it and starts a session, microphone audio and expense context are sent directly to OpenAI. The user supplies their own compatible OpenAI API key, which Mäuse stores in iOS Keychain. Drafts can be reviewed, corrected, or removed before anything is saved.
 
+Voice Mode uses `gpt-realtime-2.1` to interpret audio and create expense drafts in one session, without a separate transcription model. After each request, an **Understood** summary shows the model's interpretation alongside its confirmation and draft cards. This is not a live or word-for-word transcript.
+
 ## Technology
 
 - SwiftUI for the interface
@@ -61,7 +63,7 @@ Requirements:
 - macOS with Xcode 26 or later recommended
 - iOS 17 or later simulator or device
 - An Apple development team for installation on a physical device
-- Optional: an OpenAI API project with access to `gpt-realtime-2` for Voice Mode
+- Optional: an OpenAI API project with access to `gpt-realtime-2.1` for Voice Mode
 
 Clone the repository, open `Maeuse.xcodeproj`, select the `Maeuse` scheme, and run it on an iPhone simulator or device. Manual expense tracking works without additional configuration.
 
@@ -79,8 +81,8 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
 
 The Xcode project is the source of truth for both version values:
 
-- `MARKETING_VERSION` is the user-facing version (`1.3.0`).
-- `CURRENT_PROJECT_VERSION` is the App Store Connect build number (`32`).
+- `MARKETING_VERSION` is the user-facing version (`1.3.1`).
+- `CURRENT_PROJECT_VERSION` is the App Store Connect build number (`33`).
 
 Use `scripts/bump-version.sh` before creating a new archive. See [RELEASING.md](RELEASING.md) for the full release workflow and [CHANGELOG.md](CHANGELOG.md) for user-facing release notes.
 

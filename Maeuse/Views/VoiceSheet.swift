@@ -117,17 +117,6 @@ struct VoiceSheet: View {
                             .id(entry.id)
                     }
 
-                    if !viewModel.liveUserTranscript.isEmpty {
-                        ConversationBubble(
-                            entry: VoiceConversationEntry(
-                                role: .user,
-                                text: viewModel.liveUserTranscript
-                            ),
-                            isLive: true
-                        )
-                        .id("live-user-transcript")
-                    }
-
                     if !viewModel.liveAssistantText.isEmpty {
                         ConversationBubble(
                             entry: VoiceConversationEntry(
@@ -150,12 +139,6 @@ struct VoiceSheet: View {
                 guard let last = entries.last else { return }
                 withAnimation(.spring(duration: 0.3)) {
                     proxy.scrollTo(last.id, anchor: .bottom)
-                }
-            }
-            .onChange(of: viewModel.liveUserTranscript) { _, transcript in
-                guard !transcript.isEmpty else { return }
-                withAnimation(.spring(duration: 0.3)) {
-                    proxy.scrollTo("live-user-transcript", anchor: .bottom)
                 }
             }
             .onChange(of: viewModel.liveAssistantText) { _, text in
@@ -255,11 +238,17 @@ private struct ConversationBubble: View {
 
     var body: some View {
         HStack {
-            if entry.role == .user { Spacer(minLength: 44) }
+            if entry.role == .understanding { Spacer(minLength: 44) }
 
             VStack(alignment: .leading, spacing: 5) {
+                if entry.role == .understanding {
+                    Text(loc("VoiceUnderstood"))
+                        .font(.system(size: 11, weight: .bold, design: .rounded))
+                        .foregroundStyle(.white.opacity(0.8))
+                }
+
                 Text(entry.text)
-                    .font(.system(size: 14, weight: entry.role == .user ? .semibold : .bold, design: .rounded))
+                    .font(.system(size: 14, weight: entry.role == .understanding ? .semibold : .bold, design: .rounded))
                     .foregroundStyle(textColor)
                     .fixedSize(horizontal: false, vertical: true)
                     .opacity(isLive ? 0.75 : 1)
@@ -270,33 +259,17 @@ private struct ConversationBubble: View {
             .overlay(bubbleShape.stroke(entry.role == .assistant ? Color.maeusCardBorder : .clear, lineWidth: 2))
             .clipShape(bubbleShape)
 
-            if entry.role != .user { Spacer(minLength: 44) }
-        }
-    }
-
-    private var label: String {
-        switch entry.role {
-        case .user: return loc("You")
-        case .assistant: return loc("Maeuse")
-        case .system: return loc("Session")
-        }
-    }
-
-    private var labelColor: Color {
-        switch entry.role {
-        case .user: return Color.maeusInk.opacity(0.7)
-        case .assistant: return Color.maeusPrimary
-        case .system: return Color.maeusTextTertiary
+            if entry.role != .understanding { Spacer(minLength: 44) }
         }
     }
 
     private var textColor: Color {
-        entry.role == .user ? .white : Color.maeusForeground
+        entry.role == .understanding ? .white : Color.maeusForeground
     }
 
     private var backgroundStyle: some ShapeStyle {
         switch entry.role {
-        case .user:
+        case .understanding:
             return AnyShapeStyle(Color.maeusInk)
         case .assistant:
             return AnyShapeStyle(Color.maeusSurface)
@@ -309,8 +282,8 @@ private struct ConversationBubble: View {
         UnevenRoundedRectangle(
             cornerRadii: RectangleCornerRadii(
                 topLeading: 18,
-                bottomLeading: entry.role == .user ? 18 : 4,
-                bottomTrailing: entry.role == .user ? 4 : 18,
+                bottomLeading: entry.role == .understanding ? 18 : 4,
+                bottomTrailing: entry.role == .understanding ? 4 : 18,
                 topTrailing: 18
             ),
             style: .continuous

@@ -2,6 +2,14 @@
 
 TestFlight is strongly recommended before App Store submission, especially for microphone permission, Voice Mode, Keychain persistence, backup import/export, and real-device layout checks. Internal testing does not require Beta App Review; the first external build may.
 
+## 1.3.1 focus — English
+
+Voice Mode now uses GPT-Realtime-2.1 without a separate transcription model. On a real iPhone, dictate several expenses, then correct an amount or remove a draft. Check amounts, dates, partner shares, and the “Understood” summary before saving. The summary is an interpretation, not a word-for-word transcript. Try English and German, and report unclear speech or unusually slow responses.
+
+## Schwerpunkt 1.3.1 — Deutsch
+
+Der Sprachmodus nutzt jetzt GPT-Realtime-2.1 ohne separates Transkriptionsmodell. Diktiere auf einem echten iPhone mehrere Ausgaben, korrigiere anschließend einen Betrag oder entferne einen Entwurf. Prüfe vor dem Speichern Beträge, Daten, Partneranteile und die „Verstanden“-Zusammenfassung. Diese zeigt die Interpretation, kein wortgetreues Transkript. Teste Deutsch und Englisch und melde unklar verstandene Sprache oder ungewöhnlich langsame Antworten.
+
 ## Feedback email
 
 `m.diestelberg@gmail.com`

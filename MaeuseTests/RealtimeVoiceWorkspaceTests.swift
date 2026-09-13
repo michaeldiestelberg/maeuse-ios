@@ -19,12 +19,12 @@ final class RealtimeVoiceWorkspaceTests: XCTestCase {
         try await super.tearDown()
     }
 
-    func testClientSecretSessionConfigUsesRealtime2AndConstrainedWorkspaceTool() throws {
+    func testClientSecretSessionConfigUsesRealtime21WithoutTranscription() throws {
         let data = try RealtimeSessionConfiguration.requestBodyData()
         let object = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
         let session = try XCTUnwrap(object["session"] as? [String: Any])
 
-        XCTAssertEqual(session["model"] as? String, "gpt-realtime-2")
+        XCTAssertEqual(session["model"] as? String, "gpt-realtime-2.1")
         XCTAssertEqual(session["output_modalities"] as? [String], ["text"])
 
         let reasoning = try XCTUnwrap(session["reasoning"] as? [String: Any])
@@ -35,8 +35,7 @@ final class RealtimeVoiceWorkspaceTests: XCTestCase {
         let format = try XCTUnwrap(input["format"] as? [String: Any])
         XCTAssertEqual(format["type"] as? String, "audio/pcm")
         XCTAssertEqual(format["rate"] as? Int, 24000)
-        let transcription = try XCTUnwrap(input["transcription"] as? [String: Any])
-        XCTAssertEqual(transcription["model"] as? String, "gpt-realtime-whisper")
+        XCTAssertNil(input["transcription"])
         let turnDetection = try XCTUnwrap(input["turn_detection"] as? [String: Any])
         XCTAssertEqual(turnDetection["type"] as? String, "semantic_vad")
 
@@ -62,8 +61,7 @@ final class RealtimeVoiceWorkspaceTests: XCTestCase {
         let format = try XCTUnwrap(input["format"] as? [String: Any])
         XCTAssertEqual(format["type"] as? String, "audio/pcm")
         XCTAssertEqual(format["rate"] as? Int, 24000)
-        let transcription = try XCTUnwrap(input["transcription"] as? [String: Any])
-        XCTAssertEqual(transcription["model"] as? String, "gpt-realtime-whisper")
+        XCTAssertNil(input["transcription"])
         let turnDetection = try XCTUnwrap(input["turn_detection"] as? [String: Any])
         XCTAssertEqual(turnDetection["type"] as? String, "semantic_vad")
 
@@ -160,28 +158,6 @@ final class RealtimeVoiceWorkspaceTests: XCTestCase {
         XCTAssertEqual(second.compactMap(\.workspaceSyncPayload).count, 0)
     }
 
-    func testParsesInputAudioTranscriptionDeltaAndCompletedEvents() throws {
-        var parser = RealtimeServerEventParser()
-        let deltaEvent: [String: Any] = [
-            "type": "conversation.item.input_audio_transcription.delta",
-            "item_id": "item-1",
-            "content_index": 0,
-            "delta": "Coffee "
-        ]
-        let completedEvent: [String: Any] = [
-            "type": "conversation.item.input_audio_transcription.completed",
-            "item_id": "item-1",
-            "content_index": 0,
-            "transcript": "Coffee for 5 euros."
-        ]
-
-        let delta = try parser.parse(try JSONSerialization.data(withJSONObject: deltaEvent))
-        let completed = try parser.parse(try JSONSerialization.data(withJSONObject: completedEvent))
-
-        XCTAssertEqual(delta, [.userTranscriptDelta(itemID: "item-1", text: "Coffee ")])
-        XCTAssertEqual(completed, [.userTranscriptDone(itemID: "item-1", text: "Coffee for 5 euros.")])
-    }
-
     func testWorkspaceAppliesDateAndSplitDefaultsWithoutMissingBadges() {
         let viewModel = VoiceModeViewModel()
         let payload = VoiceWorkspaceSyncPayload(
@@ -213,7 +189,7 @@ final class RealtimeVoiceWorkspaceTests: XCTestCase {
         XCTAssertEqual(viewModel.takeawayText, "1 expense · €10.00 total · €5.00 partner")
     }
 
-    func testWorkspaceSyncDoesNotUseModelParaphraseAsUserChat() {
+    func testWorkspaceSyncShowsUnderstandingBeforeConfirmationAndAppliesCorrections() {
         let viewModel = VoiceModeViewModel()
         let payload = VoiceWorkspaceSyncPayload(
             userUnderstanding: "I bought coffee for 5 euros.",
@@ -236,25 +212,67 @@ final class RealtimeVoiceWorkspaceTests: XCTestCase {
 
         viewModel.realtimeVoiceService(RealtimeVoiceService(), didReceive: .workspaceSync(payload))
 
-        XCTAssertEqual(viewModel.conversation.map(\.role), [.assistant])
-        XCTAssertEqual(viewModel.conversation.first?.text, "Added coffee for 5.00 euros.")
+        XCTAssertEqual(viewModel.conversation.map(\.role), [.understanding, .assistant])
+        XCTAssertEqual(viewModel.conversation.first?.text, "I bought coffee for 5 euros.")
+        XCTAssertEqual(viewModel.conversation.last?.text, "Added coffee for 5.00 euros.")
+        XCTAssertEqual(viewModel.drafts.first?.amount, 5)
+
+        let correction = VoiceWorkspaceSyncPayload(
+            userUnderstanding: "The coffee was 6 euros.",
+            assistantConfirmation: "Updated coffee to 6.00 euros.",
+            expenses: [
+                VoiceExpenseDraftPayload(
+                    id: "expense-1", title: "Coffee", amount: 6,
+                    dateISO: "2026-05-14", splitMode: "percent", splitValue: 50,
+                    confidence: 0.92, missingFields: []
+                )
+            ],
+            changedExpenseIDs: ["expense-1"], removedExpenseIDs: []
+        )
+        viewModel.realtimeVoiceService(RealtimeVoiceService(), didReceive: .workspaceSync(correction))
+
+        XCTAssertEqual(viewModel.conversation.map(\.role), [.understanding, .assistant, .understanding, .assistant])
+        XCTAssertEqual(viewModel.conversation[2].text, "The coffee was 6 euros.")
+        XCTAssertEqual(viewModel.drafts.count, 1)
+        XCTAssertEqual(viewModel.drafts.first?.id, "expense-1")
+        XCTAssertEqual(viewModel.drafts.first?.amount, 6)
     }
 
-    func testInputTranscriptionDrivesLiveAndFinalUserChat() {
+    func testUnclearAudioShowsClarificationWithoutInventingUnderstanding() {
         let viewModel = VoiceModeViewModel()
-        let service = RealtimeVoiceService()
+        let payload = VoiceWorkspaceSyncPayload(
+            userUnderstanding: " \n ",
+            assistantConfirmation: "How much was the coffee?",
+            expenses: [], changedExpenseIDs: [], removedExpenseIDs: []
+        )
+        viewModel.realtimeVoiceService(RealtimeVoiceService(), didReceive: .workspaceSync(payload))
 
-        viewModel.realtimeVoiceService(service, didReceive: .userTranscriptDelta(itemID: "item-1", text: "Coffee "))
-        viewModel.realtimeVoiceService(service, didReceive: .userTranscriptDelta(itemID: "item-1", text: "for 5"))
+        XCTAssertEqual(viewModel.conversation.map(\.role), [.assistant])
+        XCTAssertEqual(viewModel.conversation.first?.text, "How much was the coffee?")
+        XCTAssertTrue(viewModel.drafts.isEmpty)
+    }
 
-        XCTAssertEqual(viewModel.liveUserTranscript, "Coffee for 5")
-        XCTAssertEqual(viewModel.conversation, [])
+    func testUnderstandingLabelUsesSelectedAppLanguage() {
+        XCTAssertEqual(loc("VoiceUnderstood"), "Understood")
+        LanguageManager.shared.languagePreference = .german
+        XCTAssertEqual(loc("VoiceUnderstood"), "Verstanden")
+    }
 
-        viewModel.realtimeVoiceService(service, didReceive: .userTranscriptDone(itemID: "item-1", text: "Coffee for 5 euros."))
+    func testResetClearsUnderstandingAndPendingAssistantText() {
+        let viewModel = VoiceModeViewModel()
+        viewModel.realtimeVoiceService(RealtimeVoiceService(), didReceive: .workspaceSync(
+            VoiceWorkspaceSyncPayload(
+                userUnderstanding: "Coffee", assistantConfirmation: "How much was it?",
+                expenses: [], changedExpenseIDs: [], removedExpenseIDs: []
+            )
+        ))
+        viewModel.realtimeVoiceService(RealtimeVoiceService(), didReceive: .assistantTextDelta("How"))
 
-        XCTAssertEqual(viewModel.liveUserTranscript, "")
-        XCTAssertEqual(viewModel.conversation.map(\.role), [.user])
-        XCTAssertEqual(viewModel.conversation.first?.text, "Coffee for 5 euros.")
+        viewModel.resetWorkspace()
+
+        XCTAssertTrue(viewModel.conversation.isEmpty)
+        XCTAssertTrue(viewModel.liveAssistantText.isEmpty)
+        XCTAssertEqual(viewModel.phase, .idle)
     }
 
     func testStatusEventsDoNotAddSessionBubbles() {

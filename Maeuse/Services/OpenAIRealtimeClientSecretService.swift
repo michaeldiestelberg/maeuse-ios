@@ -187,7 +187,7 @@ private struct OpenAIAPIErrorMessage {
 }
 
 enum RealtimeSessionConfiguration {
-    static let model = "gpt-realtime-2"
+    static let model = "gpt-realtime-2.1"
 
     static func requestBodyData(now: Date = Date()) throws -> Data {
         try JSONSerialization.data(withJSONObject: requestBody(now: now))
@@ -204,31 +204,9 @@ enum RealtimeSessionConfiguration {
     }
 
     static func clientSecretSession(now: Date = Date()) -> [String: Any] {
-        [
-            "type": "realtime",
-            "model": model,
-            "output_modalities": ["text"],
-            "reasoning": [
-                "effort": "low"
-            ],
-            "instructions": instructions(currentDateISO: isoDateFormatter.string(from: now)),
-            "tools": [syncExpenseWorkspaceTool],
-            "tool_choice": "auto",
-            "audio": [
-                "input": [
-                    "format": [
-                        "type": "audio/pcm",
-                        "rate": 24000
-                    ],
-                    "transcription": [
-                        "model": "gpt-realtime-whisper"
-                    ],
-                    "turn_detection": [
-                        "type": "semantic_vad"
-                    ]
-                ]
-            ]
-        ]
+        var session = webSocketSession(now: now)
+        session["model"] = model
+        return session
     }
 
     static func webSocketSession(now: Date = Date()) -> [String: Any] {
@@ -243,9 +221,6 @@ enum RealtimeSessionConfiguration {
                     "format": [
                         "type": "audio/pcm",
                         "rate": 24000
-                    ],
-                    "transcription": [
-                        "model": "gpt-realtime-whisper"
                     ],
                     "turn_detection": [
                         "type": "semantic_vad"
@@ -271,7 +246,7 @@ enum RealtimeSessionConfiguration {
         - The user may correct, rename, split, date, or remove expenses by voice.
         - Do not save expenses yourself. The app saves the active workspace only when the user ends the session.
         - Use the sync_expense_workspace tool whenever the understood workspace changes or whenever a concise confirmation helps the user trust what you understood.
-        - The visible "You" chat is built from raw input transcription. Do not use user_understanding to create a conversational rewrite.
+        - The app displays user_understanding as "Understood": your interpretation of the latest request, not a verbatim transcript.
 
         # Expense Fields
         - title: concise merchant, item, or purpose. Use null if not provided.
@@ -289,9 +264,13 @@ enum RealtimeSessionConfiguration {
         - Only leave title or amount null when missing.
 
         # Conversation Log Text
-        - user_understanding is for app state only. Keep it concise and close to the latest relevant user meaning.
+        - user_understanding is a short, user-visible restatement of the latest expense request. Preserve amounts, dates, and split details that you clearly heard. Do not invent missing words or details.
+        - Use the user's language (English or German) for user_understanding and assistant_confirmation.
         - assistant_confirmation should be short and concrete, naming what changed.
-        - If the audio is unclear, ask one short clarification in assistant_confirmation and keep the previous workspace unchanged.
+        - Return these texts through sync_expense_workspace; avoid repeating them in a separate text response.
+        - If the audio is unclear, leave user_understanding empty, ask one short clarification in assistant_confirmation, and keep the previous workspace unchanged.
+        - For app-generated workspace notes, leave user_understanding empty; do not present them as speech from the user.
+        - Ignore silence and background noise. Do not invent expense requests from them.
 
         # Removal and Corrections
         - If the user removes an expense, omit it from the expenses array and include its id in removed_expense_ids.
@@ -311,7 +290,7 @@ enum RealtimeSessionConfiguration {
                 "properties": [
                     "user_understanding": [
                         "type": "string",
-                        "description": "A concise internal restatement of the user's latest relevant meaning. The app displays raw input transcription instead."
+                        "description": "A short user-visible interpretation of the latest spoken expense request, displayed as Understood, not a verbatim transcript. Use the user's language. Empty for unclear audio or app-generated workspace notes."
                     ],
                     "assistant_confirmation": [
                         "type": "string",
