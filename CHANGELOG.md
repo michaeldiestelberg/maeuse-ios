@@ -4,7 +4,9 @@ This file records user-facing changes to Mäuse. App Store and GitHub release no
 
 ## 1.3.1 — 2026-09-13
 
-Internal TestFlight candidate (build 38; follows build 37).
+Internal TestFlight candidate (build 39; follows build 38).
+
+- The listening mouse now has a gentle wave even in silence, with stronger movement from microphone input. Idle motion stops when the app is inactive and is disabled with Reduce Motion.
 
 - Voice Mode opens with orbiting cheese crumbs that transform into the mouse when microphone capture starts; the mouse's audio bars respond to speech.
 - Removed the visible connection/listening labels and repeated dictation hint. VoiceOver keeps the status labels, and Reduce Motion uses a short crossfade.

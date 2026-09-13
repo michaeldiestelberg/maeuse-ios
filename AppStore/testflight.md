@@ -2,6 +2,11 @@
 
 TestFlight is strongly recommended before App Store submission, especially for microphone permission, Voice Mode, Keychain persistence, backup import/export, and real-device layout checks. Internal testing does not require Beta App Review; the first external build may.
 
+## Build 39 focus
+
+- After the mouse appears, stay silent: its audio bars should continue a slow, subtle wave to show that the microphone is active. Speaking should produce stronger movement.
+- Enable Reduce Motion and stay silent: the idle wave should stop. Dictating, correcting, and saving expenses should work as before.
+
 ## Build 38 focus
 
 - Open Voice Mode and watch the cheese crumbs orbit while connecting, then transform into the mouse when microphone capture starts. Begin speaking after the mouse appears and the readiness haptic fires.

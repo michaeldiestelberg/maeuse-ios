@@ -213,6 +213,7 @@ private struct VoiceConnectionEmblem: View {
     let hasError: Bool
     let level: Double
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.scenePhase) private var scenePhase
     @State private var progress = 0.0
     @State private var orbitStart = Date.now
     @State private var settledAngle = 0.0
@@ -232,10 +233,12 @@ private struct VoiceConnectionEmblem: View {
                 }
                 .animation(.easeInOut(duration: 0.15), value: isReady)
             } else {
-                TimelineView(.animation(minimumInterval: 1.0 / 30, paused: isReady || hasError)) { timeline in
+                TimelineView(.animation(minimumInterval: 1.0 / 30, paused: hasError || scenePhase != .active)) { timeline in
                     VoiceEmblemDrawing(progress: progress, level: level,
                         orbitAngle: isReady || hasError ? settledAngle : orbitAngle(at: timeline.date),
-                        hasError: hasError)
+                        hasError: hasError,
+                        listeningPhase: isReady && !hasError && scenePhase == .active
+                            ? timeline.date.timeIntervalSince(orbitStart) * .pi * 2 / 2.8 : nil)
                         .animation(.easeOut(duration: 0.12), value: level)
                 }
             }
@@ -265,6 +268,7 @@ private struct VoiceEmblemDrawing: View, Animatable {
     var level: Double
     let orbitAngle: Double
     let hasError: Bool
+    var listeningPhase: Double? = nil
 
     nonisolated var animatableData: AnimatablePair<Double, Double> {
         get { AnimatablePair(progress, level) }
@@ -336,7 +340,11 @@ private struct VoiceEmblemDrawing: View, Animatable {
                 for index in holes.indices {
                     let (holeX, holeY, diameter) = holes[index]
                     let width = mix(diameter, 4.5)
-                    let height = mix(diameter, heights[index] * (0.65 + strength * 0.65))
+                    // A quiet wave signals an open microphone even in silence. Actual
+                    // input takes over as it gets louder; Reduce Motion omits the wave.
+                    let idleWave = listeningPhase.map { sin($0 - Double(index) * 0.7) * 2 } ?? 0
+                    let barHeight = heights[index] * (0.65 + strength * 0.65) + idleWave * (1 - strength)
+                    let height = mix(diameter, barHeight)
                     let x = mix(holeX, 36 + Double(index) * 7)
                     let y = mix(holeY, 54)
                     let hole = Path(roundedRect: CGRect(x: x - width / 2, y: y - height / 2,

@@ -75,7 +75,7 @@ final class VoiceModeViewModel {
         hasStartedSession = true
         phase = .listening
         microphoneIsActive = true
-        microphoneLevel = 0.3
+        microphoneLevel = ProcessInfo.processInfo.arguments.contains("--voice-silent") ? 0 : 0.3
         isPresented = true
 
         let german = LanguageManager.shared.activeLanguageCode == "de"
@@ -112,7 +112,7 @@ final class VoiceModeViewModel {
                     try? await Task.sleep(for: .seconds(6))
                     guard let self, self.isPresented, self.phase == .connecting else { return }
                     self.realtimeVoiceService(self.realtime, didReceive: .microphoneStarted)
-                    self.microphoneLevel = 0.45
+                    self.microphoneLevel = ProcessInfo.processInfo.arguments.contains("--voice-silent") ? 0 : 0.45
                 }
             }
         }
