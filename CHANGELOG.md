@@ -4,7 +4,7 @@ This file records user-facing changes to Mäuse. App Store and GitHub release no
 
 ## 1.3.1 — 2026-09-13
 
-Internal TestFlight candidate (build 33).
+Internal TestFlight candidate (build 36).
 
 - Voice Mode now uses GPT-Realtime-2.1 for audio understanding and expense capture, without a separately billed transcription model.
 - After each spoken request, an “Understood” / “Verstanden” summary shows the model's interpretation alongside the expense drafts, replacing the live transcript.
