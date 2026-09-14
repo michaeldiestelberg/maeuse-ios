@@ -2,6 +2,15 @@
 
 TestFlight is strongly recommended before App Store submission, especially for microphone permission, Voice Mode, Keychain persistence, backup import/export, and real-device layout checks. Internal testing does not require Beta App Review; the first external build may.
 
+## Build 40 focus
+
+- Speak quietly, then at normal volume: the mouse's bars should move noticeably more than the gentle idle wave and settle back during pauses.
+- Check on a physical iPhone, including your usual microphone or headset. Dictation accuracy and saving expenses should remain unchanged.
+
+### Build 40 — Deutsch
+
+Sprich leise und anschließend mit normaler Lautstärke: Die Balken in der Maus sollen deutlich stärker ausschlagen als die sanfte Welle in Sprechpausen. Prüfe dies auf einem echten iPhone, auch mit deinem üblichen Mikrofon oder Headset. Das Verstehen und Speichern von Ausgaben soll unverändert funktionieren.
+
 ## Build 39 focus
 
 - After the mouse appears, stay silent: its audio bars should continue a slow, subtle wave to show that the microphone is active. Speaking should produce stronger movement.

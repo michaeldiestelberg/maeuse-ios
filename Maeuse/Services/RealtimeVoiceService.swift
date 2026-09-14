@@ -252,33 +252,22 @@ final class RealtimeVoiceService: NSObject, @unchecked Sendable {
     }
 
     private func handleAudioBuffer(_ buffer: AVAudioPCMBuffer) {
-        emitAudioLevel(from: buffer)
-
         guard let pcmData = convertToPCM16(buffer), !pcmData.isEmpty else {
             return
         }
+        // Meter the same mono samples we upload, regardless of the input route's format.
+        emitAudioLevel(fromPCM16: pcmData)
 
         audioSendQueue.async { [weak self] in
             self?.sendAudioChunk(pcmData)
         }
     }
 
-    private func emitAudioLevel(from buffer: AVAudioPCMBuffer) {
-        guard let channel = buffer.floatChannelData?[0], buffer.frameLength > 0 else { return }
-
-        let frameCount = Int(buffer.frameLength)
-        var sum: Float = 0
-        for index in 0..<frameCount {
-            let sample = channel[index]
-            sum += sample * sample
-        }
-
-        let rms = sqrt(sum / Float(frameCount))
-        let normalized = min(1, Double(rms) * 8)
+    private func emitAudioLevel(fromPCM16 data: Data) {
         let now = Date()
-
-        guard now.timeIntervalSince(lastLevelEmit) >= 0.1 else { return }
+        guard now.timeIntervalSince(lastLevelEmit) >= 0.05 else { return }
         lastLevelEmit = now
+        let normalized = VoiceInputMeter.level(pcm16: data)
 
         if normalized > 0.04, !didReportLocalAudio {
             didReportLocalAudio = true
@@ -487,6 +476,29 @@ final class RealtimeVoiceService: NSObject, @unchecked Sendable {
             guard let self else { return }
             self.delegate?.realtimeVoiceService(self, didReceive: event)
         }
+    }
+}
+
+enum VoiceInputMeter {
+    /// Display-only gain: do not amplify or otherwise change the audio sent to the model.
+    static func level(pcm16 data: Data) -> Double {
+        guard !data.isEmpty, data.count.isMultiple(of: MemoryLayout<Int16>.size) else { return 0 }
+        let sampleCount = data.count / MemoryLayout<Int16>.size
+        let sum = data.withUnsafeBytes { bytes -> Double in
+            var sum = 0.0
+            for index in 0..<sampleCount {
+                let pcm = Int16(littleEndian: bytes.loadUnaligned(fromByteOffset: index * 2, as: Int16.self))
+                let sample = Double(pcm) / 32_768
+                sum += sample * sample
+            }
+            return sum
+        }
+        let rms = sqrt(sum / Double(sampleCount))
+        guard rms > 0 else { return 0 }
+        // Quiet rooms fall below the floor; speech gets a useful visual range
+        // without requiring near-clipping input to fully extend the bars.
+        let decibels = 20 * log10(rms)
+        return min(1, max(0, (decibels + 55) / 40))
     }
 }
 

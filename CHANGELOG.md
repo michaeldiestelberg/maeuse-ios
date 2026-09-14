@@ -2,10 +2,11 @@
 
 This file records user-facing changes to Mäuse. App Store and GitHub release notes should be based on the matching version section.
 
-## 1.3.1 — 2026-09-13
+## 1.3.1 — 2026-09-14
 
-Internal TestFlight candidate (build 39; follows build 38).
+Internal TestFlight candidate (build 40; follows build 39).
 
+- Microphone animation now uses a decibel-based display range, making quiet and normal speech visibly stronger than the idle wave. Metering uses the same converted mono audio sent for expense capture.
 - The listening mouse now has a gentle wave even in silence, with stronger movement from microphone input. Idle motion stops when the app is inactive and is disabled with Reduce Motion.
 
 - Voice Mode opens with orbiting cheese crumbs that transform into the mouse when microphone capture starts; the mouse's audio bars respond to speech.

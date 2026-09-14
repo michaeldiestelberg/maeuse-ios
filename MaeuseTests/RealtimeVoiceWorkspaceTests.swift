@@ -328,6 +328,40 @@ final class RealtimeVoiceWorkspaceTests: XCTestCase {
         XCTAssertEqual(viewModel.stateLabel, "Listening...")
     }
 
+    func testMicrophoneMeterMakesQuietAndNormalSpeechVisible() {
+        // Alternating positive/negative PCM samples have exactly the specified RMS.
+        func audio(decibels: Double) -> Data {
+            let amplitude = Int16((pow(10, decibels / 20) * 32_767).rounded())
+            return (0..<1_024).reduce(into: Data()) { data, index in
+                var sample = (index.isMultiple(of: 2) ? amplitude : -amplitude).littleEndian
+                withUnsafeBytes(of: &sample) { data.append(contentsOf: $0) }
+            }
+        }
+        let quiet = audio(decibels: -45)
+        let normal = audio(decibels: -30)
+        XCTAssertEqual(VoiceInputMeter.level(pcm16: audio(decibels: -65)), 0)
+        XCTAssertEqual(VoiceInputMeter.level(pcm16: quiet), 0.25, accuracy: 0.01)
+        XCTAssertEqual(VoiceInputMeter.level(pcm16: normal), 0.625, accuracy: 0.01)
+        XCTAssertEqual(VoiceInputMeter.level(pcm16: audio(decibels: -10)), 1)
+
+        let viewModel = VoiceModeViewModel()
+        let service = RealtimeVoiceService()
+        viewModel.realtimeVoiceService(service, didReceive: .microphoneStarted)
+        for data in [quiet, normal, Data(repeating: 0, count: 2_048)] {
+            viewModel.realtimeVoiceService(service, didReceive: .microphoneLevel(VoiceInputMeter.level(pcm16: data)))
+            XCTAssertEqual(viewModel.microphoneLevel, VoiceInputMeter.level(pcm16: data))
+            XCTAssertTrue(viewModel.microphoneIsReady)
+        }
+        XCTAssertEqual(viewModel.microphoneLevel, 0, "Pauses must return to the idle wave")
+    }
+
+    func testMicrophoneMeterHandlesSilenceInvalidDataAndSignedClipping() {
+        XCTAssertEqual(VoiceInputMeter.level(pcm16: Data()), 0)
+        XCTAssertEqual(VoiceInputMeter.level(pcm16: Data([0xFF])), 0)
+        XCTAssertEqual(VoiceInputMeter.level(pcm16: Data(repeating: 0, count: 100)), 0)
+        XCTAssertEqual(VoiceInputMeter.level(pcm16: Data([0x00, 0x80, 0xFF, 0x7F])), 1)
+    }
+
     func testThreeDraftsStayInPlaceWhenCorrectionPayloadReordersThem() {
         let viewModel = VoiceModeViewModel()
         let service = RealtimeVoiceService()

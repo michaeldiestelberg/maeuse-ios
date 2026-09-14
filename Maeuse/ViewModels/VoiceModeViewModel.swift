@@ -1,6 +1,9 @@
 import Foundation
 import Observation
 import UIKit
+#if targetEnvironment(simulator)
+import AVFoundation
+#endif
 
 /// Manages a fresh Realtime voice workspace for one expense-capture session.
 @MainActor
@@ -95,6 +98,32 @@ final class VoiceModeViewModel {
                               splitValue: 50, confidence: 1, missingFields: [])
         }
         // Simulator-only fixtures exercise the production event handler and layout.
+        if ProcessInfo.processInfo.arguments.contains("--voice-meter-audio") {
+            drafts = []
+            latestUnderstanding = ""
+            microphoneLevel = 0
+            Task { @MainActor [weak self] in
+                do {
+                    let url = URL.documentsDirectory.appending(path: "voice-meter-test.wav")
+                    let audio = try AVAudioFile(forReading: url, commonFormat: .pcmFormatInt16, interleaved: true)
+                    guard let buffer = AVAudioPCMBuffer(pcmFormat: audio.processingFormat, frameCapacity: 1_200) else { return }
+                    while audio.framePosition < audio.length {
+                        guard let self, self.isPresented else { return }
+                        try audio.read(into: buffer, frameCount: 1_200)
+                        let samples = buffer.audioBufferList.pointee.mBuffers
+                        if let bytes = samples.mData {
+                            let pcm = Data(bytes: bytes, count: Int(samples.mDataByteSize))
+                            self.realtimeVoiceService(self.realtime, didReceive: .microphoneLevel(VoiceInputMeter.level(pcm16: pcm)))
+                        }
+                        try await Task.sleep(for: .seconds(Double(buffer.frameLength) / audio.processingFormat.sampleRate))
+                    }
+                    self?.microphoneLevel = 0
+                } catch {
+                    self?.phase = .error
+                    self?.errorMessage = "Audio meter preview unavailable: \(error.localizedDescription)"
+                }
+            }
+        }
         if ProcessInfo.processInfo.arguments.contains("--voice-connection-error") {
             drafts = []
             latestUnderstanding = ""

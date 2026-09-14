@@ -239,7 +239,7 @@ private struct VoiceConnectionEmblem: View {
                         hasError: hasError,
                         listeningPhase: isReady && !hasError && scenePhase == .active
                             ? timeline.date.timeIntervalSince(orbitStart) * .pi * 2 / 2.8 : nil)
-                        .animation(.easeOut(duration: 0.12), value: level)
+                        .animation(.easeOut(duration: 0.08), value: level)
                 }
             }
         }
@@ -343,7 +343,7 @@ private struct VoiceEmblemDrawing: View, Animatable {
                     // A quiet wave signals an open microphone even in silence. Actual
                     // input takes over as it gets louder; Reduce Motion omits the wave.
                     let idleWave = listeningPhase.map { sin($0 - Double(index) * 0.7) * 2 } ?? 0
-                    let barHeight = heights[index] * (0.65 + strength * 0.65) + idleWave * (1 - strength)
+                    let barHeight = heights[index] * (0.65 + strength) + idleWave * (1 - strength)
                     let height = mix(diameter, barHeight)
                     let x = mix(holeX, 36 + Double(index) * 7)
                     let y = mix(holeY, 54)
