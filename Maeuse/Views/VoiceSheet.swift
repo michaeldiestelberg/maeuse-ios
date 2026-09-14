@@ -82,7 +82,7 @@ struct VoiceSheet: View {
             }
             Spacer(minLength: 0)
             Button { endAndSave() } label: {
-                Text(viewModel.drafts.isEmpty ? loc("Save") : loc("VoiceSaveCount", viewModel.drafts.count))
+                Text(loc("Save"))
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
                     .font(.system(.subheadline, design: .rounded, weight: .heavy))
@@ -141,41 +141,36 @@ struct VoiceSheet: View {
 
     private var understandingDetail: some View {
         DisclosureGroup(isExpanded: $showsUnderstanding) {
-            VStack(alignment: .leading, spacing: 14) {
-                Text(loc("VoiceRequestsAsUnderstood"))
-                    .font(.caption)
-                    .foregroundStyle(Color.maeusTextSecondary)
-                VStack(alignment: .leading, spacing: 0) {
-                    ForEach(viewModel.understandingHistory) { entry in
-                        HStack(alignment: .top, spacing: 12) {
-                            Text(entry.text)
-                                .font(.callout)
-                                .fixedSize(horizontal: false, vertical: true)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(.leading, 22)
-                                .padding(.bottom, entry.id == viewModel.understandingHistory.last?.id ? 0 : 18)
-                                .overlay(alignment: .topLeading) {
-                                    GeometryReader { geometry in
-                                        Path { path in
-                                            path.move(to: CGPoint(x: 4, y: 10))
-                                            path.addLine(to: CGPoint(x: 4, y: geometry.size.height + 10))
-                                        }
-                                        .stroke(Color.maeusTextSecondary.opacity(0.25), lineWidth: 1)
-                                        .opacity(entry.id == viewModel.understandingHistory.last?.id ? 0 : 1)
-                                        Circle()
-                                            .fill(Color.maeusCheese)
-                                            .overlay(Circle().stroke(Color.maeusCardBorder.opacity(0.5), lineWidth: 1))
-                                            .frame(width: 8, height: 8)
-                                            .offset(y: 6)
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(viewModel.understandingHistory) { entry in
+                    HStack(alignment: .top, spacing: 12) {
+                        Text(entry.text)
+                            .font(.callout)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.leading, 22)
+                            .padding(.bottom, entry.id == viewModel.understandingHistory.last?.id ? 0 : 18)
+                            .overlay(alignment: .topLeading) {
+                                GeometryReader { geometry in
+                                    Path { path in
+                                        path.move(to: CGPoint(x: 4, y: 10))
+                                        path.addLine(to: CGPoint(x: 4, y: geometry.size.height + 10))
                                     }
-                                    .accessibilityHidden(true)
+                                    .stroke(Color.maeusTextSecondary.opacity(0.25), lineWidth: 1)
+                                    .opacity(entry.id == viewModel.understandingHistory.last?.id ? 0 : 1)
+                                    Circle()
+                                        .fill(Color.maeusCheese)
+                                        .overlay(Circle().stroke(Color.maeusCardBorder.opacity(0.5), lineWidth: 1))
+                                        .frame(width: 8, height: 8)
+                                        .offset(y: 6)
                                 }
-                        }
-                        .transition(.opacity)
+                                .accessibilityHidden(true)
+                            }
                     }
+                    .transition(.opacity)
                 }
-                .animation(reduceMotion ? nil : .easeIn(duration: 0.2), value: viewModel.understandingHistory.map(\.id))
             }
+            .animation(reduceMotion ? nil : .easeIn(duration: 0.2), value: viewModel.understandingHistory.map(\.id))
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.top, 8)
         } label: {
@@ -191,31 +186,12 @@ struct VoiceSheet: View {
     }
 
     private var footer: some View {
-        ViewThatFits(in: .horizontal) {
-            HStack {
-                footerCount
-                Spacer(minLength: 12)
-                footerTotal
-            }
-            VStack(alignment: .leading, spacing: 6) {
-                footerCount
-                footerTotal
-            }.frame(maxWidth: .infinity, alignment: .leading)
-        }
-        .padding(.horizontal, 22)
-        .padding(.vertical, 16)
-    }
-
-    private var footerCount: some View {
-        Text(loc(viewModel.drafts.count == 1 ? "VoiceOneDraftUnsaved" : "VoiceDraftsUnsaved", viewModel.drafts.count))
-            .font(.system(.caption, design: .rounded, weight: .bold))
-            .foregroundStyle(Color.maeusTextSecondary)
-    }
-
-    private var footerTotal: some View {
         Text(loc("TotalAmount", viewModel.totalAmount.euroFormatted))
             .font(.system(.subheadline, design: .rounded, weight: .heavy).monospacedDigit())
             .foregroundStyle(Color.maeusForeground)
+            .frame(maxWidth: .infinity, alignment: .trailing)
+            .padding(.horizontal, 22)
+            .padding(.vertical, 16)
     }
 
     private func endAndSave() {

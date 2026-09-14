@@ -2,6 +2,16 @@
 
 TestFlight is strongly recommended before App Store submission, especially for microphone permission, Voice Mode, Keychain persistence, backup import/export, and real-device layout checks. Internal testing does not require Beta App Review; the first external build may.
 
+## Build 42 focus
+
+- Save should always read “Save” / “Speichern,” without a draft count.
+- Expand the request history: entries should appear directly below the title, without a subtitle.
+- The footer should show only the total. Adding, correcting, removing, and saving drafts should work as before.
+
+### Build 42 — Deutsch
+
+Der Sprachmodus ist aufgeräumter: „Speichern“ ohne Anzahl, der Anfrageverlauf ohne Unterüberschrift und unten nur noch die Gesamtsumme. Bitte Ausgaben hinzufügen, korrigieren, entfernen und speichern; der Verlauf soll erhalten bleiben und die Summe korrekt sein.
+
 ## Build 41 focus
 
 - Expand “What I understood” after dictating multiple requests, then correct an amount or remove a draft. Earlier requests should remain in order, and new spoken requests should appear once.

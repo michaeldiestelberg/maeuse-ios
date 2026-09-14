@@ -4,8 +4,9 @@ This file records user-facing changes to Mäuse. App Store and GitHub release no
 
 ## 1.3.1 — 2026-09-14
 
-Internal TestFlight candidate (build 41; follows build 40).
+Internal TestFlight candidate (build 42; follows build 41).
 
+- Simplified Voice Mode: Save uses a static label, the request history opens directly into its entries, and the footer shows only the total.
 - “What I understood” now keeps a chronological session history of requests and corrections with more natural phrasing. The expanded section uses a subtle timeline; the collapsed section remains title-only. Removing or correcting a draft no longer erases earlier requests.
 - Microphone animation now uses a decibel-based display range, making quiet and normal speech visibly stronger than the idle wave. Metering uses the same converted mono audio sent for expense capture.
 - The listening mouse now has a gentle wave even in silence, with stronger movement from microphone input. Idle motion stops when the app is inactive and is disabled with Reduce Motion.
@@ -13,7 +14,7 @@ Internal TestFlight candidate (build 41; follows build 40).
 - Voice Mode opens with orbiting cheese crumbs that transform into the mouse when microphone capture starts; the mouse's audio bars respond to speech.
 - Removed the visible connection/listening labels and repeated dictation hint. VoiceOver keeps the status labels, and Reduce Motion uses a short crossfade.
 - Voice Mode now uses GPT-Realtime-2.1 for audio understanding and expense capture, without a separately billed transcription model.
-- Voice drafts now stay in a compact vertical list, with a smaller listening header, a save count, and an explicit unsaved total.
+- Voice drafts now stay in a compact vertical list, with a smaller listening header, a static Save button, and a total.
 - One expandable “What I understood” / “So habe ich dich verstanden” section replaces the repetitive chat bubbles.
 - Voice corrections update and briefly highlight the same card without reordering the list; clarification questions appear separately when information is missing.
 
