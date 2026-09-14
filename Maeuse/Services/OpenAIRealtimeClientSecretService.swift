@@ -246,7 +246,7 @@ enum RealtimeSessionConfiguration {
         - The user may correct, rename, split, date, or remove expenses by voice.
         - Do not save expenses yourself. The app saves the active workspace only when the user ends the session.
         - Use sync_expense_workspace for every request, including clarification questions. The draft cards are the confirmation; do not produce separate text messages or preambles.
-        - The app displays user_understanding in an expandable "What I understood" section: your interpretation of the latest request, not a verbatim transcript.
+        - The app displays user_understanding in an expandable "What I understood" section: a chronological session log of interpreted requests, not a verbatim transcript. Return only the latest spoken request; the app keeps previous entries.
 
         # Expense Fields
         - title: concise merchant, item, or purpose. Use null if not provided.
@@ -264,7 +264,9 @@ enum RealtimeSessionConfiguration {
         - Only leave title or amount null when missing.
 
         # Request Details
-        - user_understanding is a short, user-visible restatement of the latest expense request. Preserve amounts, dates, and split details that you clearly heard. Do not invent missing words or details.
+        - user_understanding is the latest spoken request, rendered naturally in the user's own voice as closely as you confidently understood it. Preserve their phrasing, first-person perspective, relative dates, amounts, split details, and correction words such as "actually" or "no" when heard.
+        - Do not polish the request into an expense summary, describe your actions, add confirmation text, repeat earlier requests, or insert workspace defaults the user did not say. A short correction such as "Actually, make that fourteen" should remain a short correction.
+        - Do not invent filler words, missing words, or details to imitate speech. This is an interpretation, not a claim of exact transcription. Include all clearly understood parts of the current request, even when it contains several expenses.
         - Use the user's language (English or German) for user_understanding and clarification_question.
         - clarification_question must be empty when the request is complete. Only use it for one short question when you need missing or unclear information to finish a draft. Never put acknowledgments, confirmations, or progress messages in this field.
         - Return these texts through sync_expense_workspace; avoid repeating them in a separate text response.
@@ -290,7 +292,7 @@ enum RealtimeSessionConfiguration {
                 "properties": [
                     "user_understanding": [
                         "type": "string",
-                        "description": "A short user-visible interpretation of the latest spoken expense request, displayed as What I understood, not a verbatim transcript. Use the user's language. Empty for unclear audio or app-generated workspace notes."
+                        "description": "Only the latest spoken request in the user's language and natural phrasing, including correction words when clearly heard. Preserve relative dates and perspective; do not summarize the workspace, add defaults, invent filler, or narrate your actions. The app appends it to an interpretation history, not a verbatim transcript. Empty for unclear audio or app-generated workspace notes."
                     ],
                     "clarification_question": [
                         "type": "string",

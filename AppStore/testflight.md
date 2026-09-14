@@ -2,6 +2,16 @@
 
 TestFlight is strongly recommended before App Store submission, especially for microphone permission, Voice Mode, Keychain persistence, backup import/export, and real-device layout checks. Internal testing does not require Beta App Review; the first external build may.
 
+## Build 41 focus
+
+- Expand “What I understood” after dictating multiple requests, then correct an amount or remove a draft. Earlier requests should remain in order, and new spoken requests should appear once.
+- Collapse the section: only its title should remain, without a count or preview. Check English/German, larger text, and dark appearance.
+- Entries should sound closer to your phrasing, including short corrections, while remaining interpretations rather than exact transcripts. Finish or cancel and reopen Voice Mode: the history should start empty.
+
+### Build 41 — Deutsch
+
+„So habe ich dich verstanden“ zeigt jetzt den Verlauf deiner Anfragen und Korrekturen. Diktiere mehrere Ausgaben, korrigiere einen Betrag und entferne einen Entwurf: Frühere Anfragen sollen erhalten bleiben. Zugeklappt bleibt nur die Überschrift sichtbar. Prüfe natürliche Formulierungen, größere Schrift und den Dunkelmodus. Der Verlauf zeigt sinngemäß Verstandenes, kein wortgetreues Transkript, und beginnt in jeder neuen Sitzung leer.
+
 ## Build 40 focus
 
 - Speak quietly, then at normal volume: the mouse's bars should move noticeably more than the gentle idle wave and settle back during pauses.

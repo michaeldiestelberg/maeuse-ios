@@ -16,6 +16,7 @@ enum RealtimeParsedEvent: Equatable {
 struct RealtimeServerEventParser {
     private var functionArgumentBuffers: [String: String] = [:]
     private var emittedFunctionCallIDs: Set<String> = []
+    private var appGeneratedResponseIDs: Set<String> = []
 
     mutating func parse(_ data: Data) throws -> [RealtimeParsedEvent] {
         guard let object = try JSONSerialization.jsonObject(with: data) as? [String: Any],
@@ -34,9 +35,11 @@ struct RealtimeServerEventParser {
             return [.listeningStopped]
 
         case "response.created":
+            recordResponseSource(object)
             return [.responseStarted]
 
         case "response.done":
+            recordResponseSource(object)
             var events = parseResponseDone(object)
             events.append(.responseFinished)
             return events
@@ -85,10 +88,9 @@ struct RealtimeServerEventParser {
             if let callID, emittedFunctionCallIDs.contains(callID) {
                 return nil
             }
-            if let callID {
-                emittedFunctionCallIDs.insert(callID)
-            }
-            return decodeWorkspaceSync(arguments, callID: callID)
+            guard let event = decodeWorkspaceSync(arguments, callID: callID, responseID: response["id"] as? String) else { return nil }
+            if let callID { emittedFunctionCallIDs.insert(callID) }
+            return event
         }
     }
 
@@ -102,21 +104,30 @@ struct RealtimeServerEventParser {
         }
 
         let callID = object["call_id"] as? String
-        if let callID {
-            emittedFunctionCallIDs.insert(callID)
-        }
-        if let event = decodeWorkspaceSync(arguments, callID: callID) {
+        if let callID, emittedFunctionCallIDs.contains(callID) { return [] }
+        if let event = decodeWorkspaceSync(arguments, callID: callID, responseID: object["response_id"] as? String) {
+            if let callID { emittedFunctionCallIDs.insert(callID) }
             return [event]
         }
         return []
     }
 
-    private func decodeWorkspaceSync(_ arguments: String, callID: String?) -> RealtimeParsedEvent? {
+    private func decodeWorkspaceSync(_ arguments: String, callID: String?, responseID: String?) -> RealtimeParsedEvent? {
         guard let data = arguments.data(using: .utf8),
-              let payload = try? JSONDecoder().decode(VoiceWorkspaceSyncPayload.self, from: data) else {
+              var payload = try? JSONDecoder().decode(VoiceWorkspaceSyncPayload.self, from: data) else {
             return nil
         }
+        payload.responseID = responseID ?? callID
+        payload.isAppGenerated = responseID.map { appGeneratedResponseIDs.contains($0) } ?? false
         return .workspaceSync(payload, callID: callID)
+    }
+
+    private mutating func recordResponseSource(_ object: [String: Any]) {
+        guard let response = object["response"] as? [String: Any],
+              let id = response["id"] as? String,
+              let metadata = response["metadata"] as? [String: String],
+              metadata["maeuse_source"] == "workspace_note" else { return }
+        appGeneratedResponseIDs.insert(id)
     }
 
     private func functionCallBufferKey(from object: [String: Any]) -> String {

@@ -1,17 +1,18 @@
 # Mäuse 1.3.1 TestFlight Checklist
 
-- [x] Marketing version remains `1.3.1`; repository build number bumped to `40`.
+- [x] Marketing version remains `1.3.1`; repository build number bumped to `41`.
 - [x] GPT-Realtime-2.1 migration and removal of the separate transcription path are included.
-- [x] Unit tests pass: 37 tests, September 13, 2026, including quiet/normal speech, silence, and clipping meter coverage.
+- [x] Unit tests pass: 40 tests, September 14, 2026, including chronological history, duplicate event handling, app-generated responses, unchanged earlier entries, and session reset.
 - [x] Simulator build and UI checks cover draft review/removal/save, expense editing, persistence, and cancelling manual entry.
 - [x] Live API checks accept the new session configuration and process recorded English and German speech, including German corrections/removal.
 - [x] English and German release notes and TestFlight focus are prepared.
 - [x] Compact cards, stable correction order, expandable request details, and explicit clarification handling are covered by simulator and regression checks.
 - [x] Live API verification of the revised tool contract covers three drafts, stable-ID correction, a missing amount, and its answer.
-- [ ] Confirm Xcode Cloud assigns build `40`, matching the repository.
+- [ ] Confirm Xcode Cloud assigns build `41`, matching the repository.
 - [x] Cheese-to-mouse animation, Reduce Motion, error display, largest text size, dark appearance, and saving three drafts verified in the simulator.
 - [x] Silent-microphone idle animation verified by simulator recording; Reduce Motion keeps the icon unchanged. Simulator build passes without warnings.
 - [x] Quiet and normal synthesized speech replay visibly increases bar movement, returning to the gentle idle wave during pauses (September 13, 2026).
+- [x] Collapsed/expanded history, corrections, manual removal, and saving verified in the simulator; English/German and dark appearance checked (September 14, 2026).
 - [ ] Push the release commit to `main` and confirm **Maeuse | Default** succeeds.
 - [ ] Confirm version `1.3.1` is processed and distributed to the internal Family group.
 - [ ] Complete a physical-iPhone microphone test; this Mac has no microphone input. Recorded German speech passed the build 37 contract for creation, correction, and removal.

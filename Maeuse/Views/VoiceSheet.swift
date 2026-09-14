@@ -1,7 +1,7 @@
 import SwiftUI
 import SwiftData
 
-/// One stable list of drafts, with details for the latest spoken request.
+/// One stable list of drafts, with a session history of interpreted spoken requests.
 struct VoiceSheet: View {
     @Bindable var viewModel: VoiceModeViewModel
     @State private var showsUnderstanding = false
@@ -37,7 +37,7 @@ struct VoiceSheet: View {
                             .background(Color.maeusInputBackground, in: RoundedRectangle(cornerRadius: 16))
                             .accessibilityIdentifier("voice-clarification")
                     }
-                    if !viewModel.latestUnderstanding.isEmpty {
+                    if !viewModel.understandingHistory.isEmpty {
                         understandingDetail
                     }
                     if viewModel.phase == .error {
@@ -141,13 +141,40 @@ struct VoiceSheet: View {
 
     private var understandingDetail: some View {
         DisclosureGroup(isExpanded: $showsUnderstanding) {
-            VStack(alignment: .leading, spacing: 8) {
-                Text(loc("VoiceLatestRequest"))
+            VStack(alignment: .leading, spacing: 14) {
+                Text(loc("VoiceRequestsAsUnderstood"))
                     .font(.caption)
                     .foregroundStyle(Color.maeusTextSecondary)
-                Text(viewModel.latestUnderstanding)
-                    .font(.callout)
-                    .fixedSize(horizontal: false, vertical: true)
+                VStack(alignment: .leading, spacing: 0) {
+                    ForEach(viewModel.understandingHistory) { entry in
+                        HStack(alignment: .top, spacing: 12) {
+                            Text(entry.text)
+                                .font(.callout)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.leading, 22)
+                                .padding(.bottom, entry.id == viewModel.understandingHistory.last?.id ? 0 : 18)
+                                .overlay(alignment: .topLeading) {
+                                    GeometryReader { geometry in
+                                        Path { path in
+                                            path.move(to: CGPoint(x: 4, y: 10))
+                                            path.addLine(to: CGPoint(x: 4, y: geometry.size.height + 10))
+                                        }
+                                        .stroke(Color.maeusTextSecondary.opacity(0.25), lineWidth: 1)
+                                        .opacity(entry.id == viewModel.understandingHistory.last?.id ? 0 : 1)
+                                        Circle()
+                                            .fill(Color.maeusCheese)
+                                            .overlay(Circle().stroke(Color.maeusCardBorder.opacity(0.5), lineWidth: 1))
+                                            .frame(width: 8, height: 8)
+                                            .offset(y: 6)
+                                    }
+                                    .accessibilityHidden(true)
+                                }
+                        }
+                        .transition(.opacity)
+                    }
+                }
+                .animation(reduceMotion ? nil : .easeIn(duration: 0.2), value: viewModel.understandingHistory.map(\.id))
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.top, 8)

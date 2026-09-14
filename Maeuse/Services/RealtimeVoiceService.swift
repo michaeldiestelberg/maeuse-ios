@@ -161,7 +161,8 @@ final class RealtimeVoiceService: NSObject, @unchecked Sendable {
         send([
             "type": "response.create",
             "response": [
-                "output_modalities": ["text"]
+                "output_modalities": ["text"],
+                "metadata": ["maeuse_source": "workspace_note"]
             ]
         ])
     }

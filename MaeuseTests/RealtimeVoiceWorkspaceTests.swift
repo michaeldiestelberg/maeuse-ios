@@ -153,6 +153,8 @@ final class RealtimeVoiceWorkspaceTests: XCTestCase {
 
         var parser = RealtimeServerEventParser()
         let first = try parser.parse(try JSONSerialization.data(withJSONObject: doneEvent))
+        let duplicate = try parser.parse(try JSONSerialization.data(withJSONObject: doneEvent))
+        XCTAssertTrue(duplicate.isEmpty)
         let second = try parser.parse(try JSONSerialization.data(withJSONObject: responseDoneEvent))
 
         XCTAssertEqual(first.compactMap(\.workspaceSyncPayload).count, 1)
@@ -213,7 +215,7 @@ final class RealtimeVoiceWorkspaceTests: XCTestCase {
 
         viewModel.realtimeVoiceService(RealtimeVoiceService(), didReceive: .workspaceSync(payload))
 
-        XCTAssertEqual(viewModel.latestUnderstanding, "I bought coffee for 5 euros.")
+        XCTAssertEqual(viewModel.understandingHistory.last?.text, "I bought coffee for 5 euros.")
         XCTAssertTrue(viewModel.clarificationQuestion.isEmpty)
         XCTAssertEqual(viewModel.drafts.first?.amount, 5)
 
@@ -231,7 +233,7 @@ final class RealtimeVoiceWorkspaceTests: XCTestCase {
         )
         viewModel.realtimeVoiceService(RealtimeVoiceService(), didReceive: .workspaceSync(correction))
 
-        XCTAssertEqual(viewModel.latestUnderstanding, "The coffee was 6 euros.")
+        XCTAssertEqual(viewModel.understandingHistory.map(\.text), ["I bought coffee for 5 euros.", "The coffee was 6 euros."])
         XCTAssertEqual(viewModel.drafts.count, 1)
         XCTAssertEqual(viewModel.drafts.first?.id, "expense-1")
         XCTAssertEqual(viewModel.drafts.first?.amount, 6)
@@ -246,7 +248,7 @@ final class RealtimeVoiceWorkspaceTests: XCTestCase {
         )
         viewModel.realtimeVoiceService(RealtimeVoiceService(), didReceive: .workspaceSync(payload))
 
-        XCTAssertTrue(viewModel.latestUnderstanding.isEmpty)
+        XCTAssertTrue(viewModel.understandingHistory.isEmpty)
         XCTAssertEqual(viewModel.clarificationQuestion, "How much was the coffee?")
         XCTAssertTrue(viewModel.drafts.isEmpty)
     }
@@ -269,7 +271,7 @@ final class RealtimeVoiceWorkspaceTests: XCTestCase {
 
         viewModel.resetWorkspace()
 
-        XCTAssertTrue(viewModel.latestUnderstanding.isEmpty)
+        XCTAssertTrue(viewModel.understandingHistory.isEmpty)
         XCTAssertTrue(viewModel.clarificationQuestion.isEmpty)
         XCTAssertEqual(viewModel.phase, .idle)
     }
@@ -321,7 +323,7 @@ final class RealtimeVoiceWorkspaceTests: XCTestCase {
         viewModel.realtimeVoiceService(service, didReceive: .microphoneLevel(0.4))
         viewModel.realtimeVoiceService(service, didReceive: .listeningStarted)
 
-        XCTAssertTrue(viewModel.latestUnderstanding.isEmpty)
+        XCTAssertTrue(viewModel.understandingHistory.isEmpty)
         XCTAssertTrue(viewModel.microphoneIsActive)
         XCTAssertEqual(viewModel.microphoneLevel, 0.4)
         XCTAssertEqual(viewModel.phase, .listening)
@@ -382,20 +384,20 @@ final class RealtimeVoiceWorkspaceTests: XCTestCase {
         // Reproduce narration arriving before and after the structured update.
         viewModel.realtimeVoiceService(service, didReceive: .assistantTextDelta("I'll update that"))
         viewModel.realtimeVoiceService(service, didReceive: .assistantText("I'll update that"))
-        XCTAssertEqual(viewModel.latestUnderstanding, "Three expenses")
+        XCTAssertEqual(viewModel.understandingHistory.last?.text, "Three expenses")
         sync([draft("film", 3.99), draft("flowers", 13.5), draft("coffee", 4.5, confidence: 0.8)], understanding: "Flowers were 13.50")
         viewModel.realtimeVoiceService(service, didReceive: .assistantText("Updated the flowers"))
         XCTAssertEqual(viewModel.drafts.map(\.id), ["flowers", "coffee", "film"])
         XCTAssertEqual(viewModel.updatedExpenseIDs, ["flowers"])
         XCTAssertEqual(viewModel.drafts[1].lastChangedAt, coffeeTimestamp)
-        XCTAssertEqual(viewModel.latestUnderstanding, "Flowers were 13.50")
+        XCTAssertEqual(viewModel.understandingHistory.last?.text, "Flowers were 13.50")
         XCTAssertTrue(viewModel.clarificationQuestion.isEmpty)
         XCTAssertEqual(viewModel.totalAmount, 21.99)
         XCTAssertEqual(viewModel.expensesForSaving().count, 3)
         viewModel.removeDraft(viewModel.drafts[1])
         XCTAssertEqual(viewModel.drafts.map(\.id), ["flowers", "film"])
         XCTAssertEqual(viewModel.totalAmount, 17.49)
-        XCTAssertTrue(viewModel.latestUnderstanding.isEmpty)
+        XCTAssertEqual(viewModel.understandingHistory.map(\.text), ["Three expenses", "Flowers were 13.50"])
     }
 
     func testClarificationClearsAfterAnswerAndSavingWaitsForResponse() {
@@ -415,7 +417,85 @@ final class RealtimeVoiceWorkspaceTests: XCTestCase {
                 changedExpenseIDs: ["coffee"], removedExpenseIDs: [])))
         XCTAssertTrue(viewModel.clarificationQuestion.isEmpty)
         XCTAssertTrue(viewModel.canSaveDrafts)
-        XCTAssertEqual(viewModel.latestUnderstanding, "Coffee for 4.50")
+        XCTAssertEqual(viewModel.understandingHistory.last?.text, "Coffee for 4.50")
+    }
+
+    func testHistoryDeduplicatesResponseButKeepsRepeatedSpeechAndIgnoresEmptyNotes() {
+        let viewModel = VoiceModeViewModel()
+        let service = RealtimeVoiceService()
+        func sync(_ id: String, _ text: String, question: String = "") {
+            var payload = VoiceWorkspaceSyncPayload(userUnderstanding: text, clarificationQuestion: question,
+                expenses: [], changedExpenseIDs: [], removedExpenseIDs: [])
+            payload.responseID = id
+            viewModel.realtimeVoiceService(service, didReceive: .workspaceSync(payload))
+        }
+        sync("request-1", "  Coffee for four euros.  ")
+        sync("request-1", "Coffee, four euros, split equally.")
+        sync("request-2", "Coffee for four euros.")
+        sync("request-3", "Actually, make that five.")
+        sync("app-note", "")
+        sync("unclear", " \n ", question: "Which expense?")
+        XCTAssertEqual(viewModel.understandingHistory.map(\.text), [
+            "Coffee for four euros.", "Coffee for four euros.", "Actually, make that five."
+        ])
+        XCTAssertEqual(viewModel.understandingHistory.map(\.id), ["request-1", "request-2", "request-3"])
+        XCTAssertEqual(viewModel.clarificationQuestion, "Which expense?")
+        viewModel.cancelSession()
+        XCTAssertTrue(viewModel.understandingHistory.isEmpty)
+        viewModel.open()
+        sync("request-1", "A fresh session.")
+        XCTAssertEqual(viewModel.understandingHistory.map(\.text), ["A fresh session."])
+        viewModel.finishAfterSave()
+        XCTAssertTrue(viewModel.understandingHistory.isEmpty)
+    }
+
+    func testHistoryUsesResponseIdentityAcrossToolCallsAndCompletionFallback() throws {
+        var parser = RealtimeServerEventParser()
+        let viewModel = VoiceModeViewModel()
+        let service = RealtimeVoiceService()
+        let arguments = #"{"user_understanding":"Actually, fourteen.","clarification_question":"","expenses":[],"changed_expense_ids":[],"removed_expense_ids":[]}"#
+        func deliver(_ event: [String: Any]) throws {
+            for parsed in try parser.parse(JSONSerialization.data(withJSONObject: event)) {
+                if case let .workspaceSync(payload, _) = parsed {
+                    viewModel.realtimeVoiceService(service, didReceive: .workspaceSync(payload))
+                }
+            }
+        }
+        try deliver(["type": "response.function_call_arguments.done", "response_id": "response-1",
+            "call_id": "call-1", "name": "sync_expense_workspace", "arguments": arguments])
+        try deliver(["type": "response.function_call_arguments.done", "response_id": "response-1",
+            "call_id": "call-2", "name": "sync_expense_workspace", "arguments": arguments])
+        try deliver(["type": "response.done", "response": ["id": "response-1", "output": [
+            ["type": "function_call", "name": "sync_expense_workspace", "call_id": "call-2", "arguments": arguments]]]])
+        XCTAssertEqual(viewModel.understandingHistory.count, 1)
+        try deliver(["type": "response.done", "response": ["id": "response-2", "output": [
+            ["type": "function_call", "name": "sync_expense_workspace", "call_id": "call-3", "arguments": arguments]]]])
+        XCTAssertEqual(viewModel.understandingHistory.map(\.id), ["response-1", "response-2"])
+    }
+
+    func testAppGeneratedResponsesNeverAppearAsSpokenHistory() throws {
+        let arguments = #"{"user_understanding":"I removed coffee.","clarification_question":"","expenses":[],"changed_expense_ids":[],"removed_expense_ids":["coffee"]}"#
+        for useCompletionFallback in [false, true] {
+            var parser = RealtimeServerEventParser()
+            let response: [String: Any] = ["id": "note-response", "metadata": ["maeuse_source": "workspace_note"],
+                "output": [["type": "function_call", "name": "sync_expense_workspace", "call_id": "note-call", "arguments": arguments]]]
+            let events: [RealtimeParsedEvent]
+            if useCompletionFallback {
+                events = try parser.parse(JSONSerialization.data(withJSONObject: ["type": "response.done", "response": response]))
+            } else {
+                _ = try parser.parse(JSONSerialization.data(withJSONObject: ["type": "response.created", "response": response]))
+                events = try parser.parse(JSONSerialization.data(withJSONObject: ["type": "response.function_call_arguments.done",
+                    "response_id": "note-response", "call_id": "note-call", "name": "sync_expense_workspace", "arguments": arguments]))
+            }
+            let payload = try XCTUnwrap(events.compactMap(\.workspaceSyncPayload).first)
+            XCTAssertTrue(payload.isAppGenerated)
+            let viewModel = VoiceModeViewModel()
+            viewModel.drafts = [VoiceExpenseDraft(id: "coffee", title: "Coffee", amount: 4,
+                dateISO: nil, splitMode: .percent, splitValue: 50, confidence: 1, missingFields: [])]
+            viewModel.realtimeVoiceService(RealtimeVoiceService(), didReceive: .workspaceSync(payload))
+            XCTAssertTrue(viewModel.understandingHistory.isEmpty)
+            XCTAssertTrue(viewModel.drafts.isEmpty, "App notes must still synchronize the workspace")
+        }
     }
 
     func testRejectsIncompleteDraftsForSaving() {

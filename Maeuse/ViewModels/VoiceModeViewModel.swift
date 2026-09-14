@@ -12,7 +12,7 @@ final class VoiceModeViewModel {
     var phase: VoicePhase = .idle
     var isPresented: Bool = false
     var errorMessage: String = ""
-    var latestUnderstanding: String = ""
+    private(set) var understandingHistory: [VoiceUnderstandingEntry] = []
     var clarificationQuestion: String = ""
     var drafts: [VoiceExpenseDraft] = []
     var updatedExpenseIDs: Set<String> = []
@@ -82,9 +82,12 @@ final class VoiceModeViewModel {
         isPresented = true
 
         let german = LanguageManager.shared.activeLanguageCode == "de"
-        latestUnderstanding = german
-            ? "Blumen für 12 Euro, Kaffee für 4,50 Euro und ein Film auf Apple TV für 3,99 Euro. Alles gestern, jeweils halbe-halbe."
-            : "Flowers for 12 euros, coffee for 4.50 euros and an Apple TV film for 3.99 euros. All yesterday, split equally."
+        let requests = german
+            ? ["Blumen für zwölf Euro gestern.", "Und Kaffee, vier fünfzig.", "Noch ein Film auf Apple TV für drei Euro neunundneunzig, auch gestern."]
+            : ["Flowers for twelve euros yesterday.", "And coffee, four fifty.", "An Apple TV film for three euros ninety-nine too, also yesterday."]
+        understandingHistory = requests.enumerated().map {
+            VoiceUnderstandingEntry(id: "preview-\($0.offset)", text: $0.element)
+        }
         let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: Date()) ?? Date()
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
@@ -100,7 +103,7 @@ final class VoiceModeViewModel {
         // Simulator-only fixtures exercise the production event handler and layout.
         if ProcessInfo.processInfo.arguments.contains("--voice-meter-audio") {
             drafts = []
-            latestUnderstanding = ""
+            understandingHistory = []
             microphoneLevel = 0
             Task { @MainActor [weak self] in
                 do {
@@ -126,13 +129,13 @@ final class VoiceModeViewModel {
         }
         if ProcessInfo.processInfo.arguments.contains("--voice-connection-error") {
             drafts = []
-            latestUnderstanding = ""
+            understandingHistory = []
             realtimeVoiceService(realtime, didReceive: .error(loc("SessionDisconnectedMsg")))
         }
         if ProcessInfo.processInfo.arguments.contains("--voice-connecting") ||
            ProcessInfo.processInfo.arguments.contains("--voice-connect-transition") {
             drafts = []
-            latestUnderstanding = ""
+            understandingHistory = []
             microphoneIsActive = false
             microphoneLevel = 0
             phase = .connecting
@@ -147,7 +150,7 @@ final class VoiceModeViewModel {
         }
         if ProcessInfo.processInfo.arguments.contains("--voice-processing") {
             drafts = []
-            latestUnderstanding = ""
+            understandingHistory = []
             phase = .thinking
         }
         if ProcessInfo.processInfo.arguments.contains("--voice-clarification") {
@@ -157,7 +160,7 @@ final class VoiceModeViewModel {
         }
         if ProcessInfo.processInfo.arguments.contains("--voice-correction") {
             Task { @MainActor [weak self] in
-                try? await Task.sleep(for: .seconds(3))
+                try? await Task.sleep(for: .seconds(ProcessInfo.processInfo.arguments.contains("--voice-history-delay") ? 25 : 3))
                 guard let self, self.isPresented, self.drafts.count == 3 else { return }
                 let corrected = self.drafts.map { draft in
                     VoiceExpenseDraftPayload(id: draft.id, title: draft.title,
@@ -205,7 +208,6 @@ final class VoiceModeViewModel {
     func removeDraft(_ draft: VoiceExpenseDraft) {
         drafts.removeAll { $0.id == draft.id }
         updatedExpenseIDs.remove(draft.id)
-        latestUnderstanding = ""
         clarificationQuestion = ""
         realtime.sendWorkspaceNote("The user removed expense \(draft.id) named \(draft.normalizedTitle) from the temporary workspace. Keep it removed unless the user asks to add it again.")
     }
@@ -228,7 +230,7 @@ final class VoiceModeViewModel {
     func resetWorkspace() {
         phase = .idle
         errorMessage = ""
-        latestUnderstanding = ""
+        understandingHistory = []
         clarificationQuestion = ""
         drafts = []
         updatedExpenseIDs = []
@@ -249,7 +251,13 @@ final class VoiceModeViewModel {
     // MARK: - Workspace Sync
 
     private func applyWorkspaceSync(_ payload: VoiceWorkspaceSyncPayload) {
-        latestUnderstanding = payload.userUnderstanding.trimmingCharacters(in: .whitespacesAndNewlines)
+        let understanding = payload.userUnderstanding.trimmingCharacters(in: .whitespacesAndNewlines)
+        let entryID = payload.responseID ?? UUID().uuidString
+        // Keep completed requests immutable, even if a response includes multiple tool calls.
+        // Identical words in a different response still represent another spoken request.
+        if !payload.isAppGenerated, !understanding.isEmpty, !understandingHistory.contains(where: { $0.id == entryID }) {
+            understandingHistory.append(VoiceUnderstandingEntry(id: entryID, text: understanding))
+        }
         clarificationQuestion = payload.clarificationQuestion.trimmingCharacters(in: .whitespacesAndNewlines)
 
         let todayISO = Self.todayISOString()

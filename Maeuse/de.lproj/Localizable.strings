@@ -162,7 +162,7 @@
 "VoiceSaveCount" = "%d speichern";
 "VoiceUnderstandingRequest" = "Deine Anfrage wird verarbeitet …";
 "VoiceEmptyWorkspace" = "Deine Ausgaben erscheinen hier";
-"VoiceLatestRequest" = "Letzte Anfrage";
+"VoiceRequestsAsUnderstood" = "Deine Anfragen, sinngemäß";
 "VoiceWhatUnderstood" = "So habe ich dich verstanden";
 "VoiceOneDraftUnsaved" = "1 Entwurf · Noch nicht gespeichert";
 "VoiceDraftsUnsaved" = "%d Entwürfe · Noch nicht gespeichert";

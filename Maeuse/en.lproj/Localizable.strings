@@ -162,7 +162,7 @@
 "VoiceSaveCount" = "Save %d";
 "VoiceUnderstandingRequest" = "Understanding your request…";
 "VoiceEmptyWorkspace" = "Your expenses will appear here";
-"VoiceLatestRequest" = "Latest request";
+"VoiceRequestsAsUnderstood" = "Your requests, as understood";
 "VoiceWhatUnderstood" = "What I understood";
 "VoiceOneDraftUnsaved" = "1 draft · Not saved yet";
 "VoiceDraftsUnsaved" = "%d drafts · Not saved yet";
