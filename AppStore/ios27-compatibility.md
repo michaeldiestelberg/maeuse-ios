@@ -1,6 +1,6 @@
 # iOS 27 compatibility verification
 
-Date: September 15, 2026. Release candidate: 1.3.1 (43), verification in progress.
+Date: September 15, 2026. Release candidate: 1.3.1 (44), verification in progress.
 
 ## Scope
 
@@ -10,6 +10,7 @@ Includes the existing Voice Mode processing/history/layout work requested by the
 - A scrollable calendar and dashboard summary for short or resizable windows.
 - JSON backup export using CoreTransferable and SwiftUI's `fileExporter(item:)` (iOS 17+).
 - Restore staged in one ModelContext save with rollback on failure.
+- Audio-session activation/deactivation serialized off the main thread; pending connection tasks cancelled when closing Voice Mode.
 - Reliable consent test fixtures independent of simulator preferences.
 - Editable amounts without thousands separators, preserving values above €1,000 in English and German.
 
@@ -29,7 +30,7 @@ Apple explicitly recommends WritableDocument **or Transferable** when replacing 
 | iOS 27 regression suite | Runtime 27.0 (24A434) installed; initial test launches stalled during simulator startup; retry pending |
 | iOS 27 interactive journeys | Pending |
 | Live Voice Mode | Passed with production session configuration and authorized existing test key: German creation/correction/removal, stable IDs, English €4.50 with 30% partner split, request history, speech/response lifecycle, no transcription events |
-| Xcode Cloud/TestFlight | Workflow pinned to Xcode 27 RC (27A266a), matching local release build; next build 43 and Family internal post-action verified; release pending tests |
+| Xcode Cloud/TestFlight | Workflow pinned to Xcode 27 RC (27A266a), matching local release build; Family internal post-action verified; Cloud verification will consume build 43, with TestFlight planned for build 44 |
 
 ## Remaining interactive checks
 

@@ -34,6 +34,9 @@ final class RealtimeVoiceService: NSObject, @unchecked Sendable {
     private let clientSecretService = OpenAIRealtimeClientSecretService()
     private let eventQueue = DispatchQueue(label: "maeuse.realtime.events")
     private let audioSendQueue = DispatchQueue(label: "maeuse.realtime.audio-send")
+    // AVAudioSession is process-wide. Serialize activation/deactivation across
+    // service instances without blocking the UI when a voice sheet is closed.
+    private static let audioSessionQueue = DispatchQueue(label: "maeuse.realtime.audio-session", qos: .userInitiated)
     private let targetAudioFormat = AVAudioFormat(
         commonFormat: .pcmFormatInt16,
         sampleRate: 24_000,
@@ -58,15 +61,20 @@ final class RealtimeVoiceService: NSObject, @unchecked Sendable {
     }
 
     func connect() async throws {
+        try Task.checkCancellation()
         logger.info("Starting Realtime voice connection.")
         disconnect()
         isDisconnecting = false
 
         do {
             let credential = try await createSessionCredential()
+            try Task.checkCancellation()
             try await connectWebSocket(credential: credential)
+            try Task.checkCancellation()
             try await sendSessionUpdate()
+            try Task.checkCancellation()
             try await prepareAudioSession()
+            try Task.checkCancellation()
             try startAudioCapture()
         } catch {
             disconnect()
@@ -184,11 +192,21 @@ final class RealtimeVoiceService: NSObject, @unchecked Sendable {
             throw RealtimeVoiceError.microphoneDenied
         }
 
-        let session = AVAudioSession.sharedInstance()
+        try Task.checkCancellation()
         do {
-            try session.setCategory(.playAndRecord, mode: .voiceChat, options: [.defaultToSpeaker, .allowBluetoothHFP])
-            try session.setPreferredIOBufferDuration(0.02)
-            try session.setActive(true)
+            try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+                Self.audioSessionQueue.async {
+                    do {
+                        let session = AVAudioSession.sharedInstance()
+                        try session.setCategory(.playAndRecord, mode: .voiceChat, options: [.defaultToSpeaker, .allowBluetoothHFP])
+                        try session.setPreferredIOBufferDuration(0.02)
+                        try session.setActive(true)
+                        continuation.resume()
+                    } catch {
+                        continuation.resume(throwing: error)
+                    }
+                }
+            }
             logger.info("AVAudioSession active for Realtime voice capture.")
             emit(.microphoneReady)
         } catch {
@@ -198,10 +216,12 @@ final class RealtimeVoiceService: NSObject, @unchecked Sendable {
     }
 
     private func deactivateAudioSession() {
-        do {
-            try AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
-        } catch {
-            logger.warning("Could not deactivate AVAudioSession: \(error.localizedDescription, privacy: .public)")
+        Self.audioSessionQueue.async { [logger] in
+            do {
+                try AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+            } catch {
+                logger.warning("Could not deactivate AVAudioSession: \(error.localizedDescription, privacy: .public)")
+            }
         }
     }
 

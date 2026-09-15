@@ -383,6 +383,20 @@ final class RealtimeVoiceWorkspaceTests: XCTestCase {
         XCTAssertEqual(viewModel.phase, .finalizing)
     }
 
+    func testClosingWhileConnectionStartsKeepsTheSessionClosed() async throws {
+        let viewModel = VoiceModeViewModel()
+        viewModel.open()
+        viewModel.startSession()
+        viewModel.cancelSession()
+        // Let the cancelled connection task run; it must neither connect nor
+        // publish a delayed connection error into the cleared workspace.
+        try await Task.sleep(for: .milliseconds(50))
+        XCTAssertFalse(viewModel.isPresented)
+        XCTAssertFalse(viewModel.microphoneIsReady)
+        XCTAssertEqual(viewModel.phase, .idle)
+        XCTAssertTrue(viewModel.errorMessage.isEmpty)
+    }
+
     func testStatusEventsDoNotAddSessionBubbles() {
         let viewModel = VoiceModeViewModel()
         let service = RealtimeVoiceService()

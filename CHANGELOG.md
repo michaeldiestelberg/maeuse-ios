@@ -4,10 +4,11 @@ This file records user-facing changes to Mäuse. App Store and GitHub release no
 
 ## 1.3.1 — 2026-09-15
 
-Internal TestFlight candidate (build 43; follows build 42).
+Internal TestFlight candidate (build 44; follows build 42).
 
 - The expense editor, calendar, and monthly overview adapt to shorter windows. Save and Cancel stay visible while the editor content scrolls.
 - JSON backup export uses the current system sharing API, with the same portable backup format and iOS 17 support. Restoring a backup saves the replacement together and rolls back if saving fails.
+- Voice Mode closes without blocking the interface on audio-session shutdown, and closing during connection setup cancels the pending connection.
 - Fixed editing amounts above €1,000 in English and German, preserving the amount and partner share.
 
 - Every spoken request now has a processing animation: three cheese crumbs orbit inside the mouse until its result appears, moving to the rim when you speak again while work is pending.

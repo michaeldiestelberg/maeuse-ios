@@ -29,6 +29,7 @@ final class VoiceModeViewModel {
     var isSaving: Bool = false
 
     private let realtime = RealtimeVoiceService()
+    private var connectionTask: Task<Void, Never>?
     private var hasStartedSession = false
     private var didSignalListeningReady = false
 
@@ -241,10 +242,15 @@ final class VoiceModeViewModel {
         hasStartedSession = true
         phase = .connecting
 
-        Task { @MainActor in
+        let previousConnection = connectionTask
+        connectionTask = Task { @MainActor in
+            // Finish cleanup from a cancelled connection before reusing the service.
+            await previousConnection?.value
+            guard !Task.isCancelled else { return }
             do {
                 try await realtime.connect()
             } catch {
+                guard !Task.isCancelled else { return }
                 phase = .error
                 errorMessage = error.localizedDescription
             }
@@ -287,6 +293,7 @@ final class VoiceModeViewModel {
     }
 
     func resetWorkspace() {
+        connectionTask?.cancel()
         phase = .idle
         errorMessage = ""
         understandingHistory = []

@@ -13,7 +13,7 @@
 
 | | |
 | --- | --- |
-| Version | 1.3.1 (build 43) |
+| Version | 1.3.1 (build 44) |
 | Platform | iPhone · iOS 17 or later |
 | Status | Internal TestFlight candidate; 1.3.0 (32) remains live on the App Store |
 | Languages | English and German |
@@ -84,7 +84,7 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
 The Xcode project is the source of truth for both version values:
 
 - `MARKETING_VERSION` is the user-facing version (`1.3.1`).
-- `CURRENT_PROJECT_VERSION` is the App Store Connect build number (`43`).
+- `CURRENT_PROJECT_VERSION` is the App Store Connect build number (`44`).
 
 Use `scripts/bump-version.sh` before creating a new archive. See [RELEASING.md](RELEASING.md) for the full release workflow and [CHANGELOG.md](CHANGELOG.md) for user-facing release notes.
 
