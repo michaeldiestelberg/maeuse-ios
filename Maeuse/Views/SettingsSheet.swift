@@ -93,6 +93,9 @@ struct SettingsSheet: View {
         } message: {
             Text(viewModel.voiceErrorMessage)
         }
+        .task(id: languageManager.activeLanguageCode) {
+            await viewModel.refreshAppleAvailability()
+        }
         .sheet(isPresented: $showVoiceConsent) {
             VoicePrivacyConsentSheet {
                 viewModel.acceptVoiceConsent()
@@ -211,47 +214,58 @@ struct SettingsSheet: View {
         VStack(alignment: .leading, spacing: 14) {
             themeLabel(loc("VoiceMode"))
 
-            if viewModel.hasSavedVoiceAPIKey {
-                savedVoiceKeyRow
+            Toggle(loc("UseAppleIntelligence"), isOn: Binding(
+                get: { viewModel.useAppleIntelligence },
+                set: { viewModel.useAppleIntelligence = $0 }
+            ))
+            .tint(Color.maeusPrimary)
+
+            if viewModel.useAppleIntelligence {
+                appleVoiceSettings
             } else {
-                voiceKeyEntryField
+                if viewModel.hasSavedVoiceAPIKey {
+                    savedVoiceKeyRow
+                } else {
+                    voiceKeyEntryField
 
-                Link(destination: URL(string: "https://xn--muse-loa.app/openai-api-key.html")!) {
-                    HStack(spacing: 4) {
-                        Image(systemName: "questionmark.circle")
-                        Text(loc("HowToGetApiKey"))
-                        Image(systemName: "arrow.up.right")
-                            .font(.caption2.weight(.heavy))
-                    }
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(Color.maeusPrimaryHover)
-                }
-            }
-
-            if !viewModel.hasSavedVoiceAPIKey || !viewModel.voiceSettings.isVerified {
-                Button {
-                    viewModel.verifyVoiceAPIKey()
-                } label: {
-                    if viewModel.isVerifying {
-                        ProgressView().tint(.white)
-                    } else {
-                        Label(loc("VerifySaveKey"), systemImage: "key")
+                    Link(destination: URL(string: "https://xn--muse-loa.app/openai-api-key.html")!) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "questionmark.circle")
+                            Text(loc("HowToGetApiKey"))
+                            Image(systemName: "arrow.up.right")
+                                .font(.caption2.weight(.heavy))
+                        }
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Color.maeusPrimaryHover)
                     }
                 }
-                .buttonStyle(GlassSecondaryButtonStyle())
-                .disabled(
-                    viewModel.isVerifying
-                    || (!viewModel.hasSavedVoiceAPIKey && viewModel.voiceAPIKeyText.isEmpty)
-                )
-            }
 
-            if viewModel.hasSavedVoiceAPIKey {
-                Button(role: .destructive) {
-                    viewModel.removeVoiceAPIKey()
-                } label: {
-                    Label(loc("RemoveSavedKey"), systemImage: "trash")
+                if !viewModel.hasSavedVoiceAPIKey || !viewModel.voiceSettings.isVerified {
+                    Button {
+                        viewModel.verifyVoiceAPIKey()
+                    } label: {
+                        if viewModel.isVerifying {
+                            ProgressView().tint(.white)
+                        } else {
+                            Label(loc("VerifySaveKey"), systemImage: "key")
+                        }
+                    }
+                    .buttonStyle(GlassSecondaryButtonStyle())
+                    .disabled(
+                        viewModel.isVerifying
+                        || (!viewModel.hasSavedVoiceAPIKey && viewModel.voiceAPIKeyText.isEmpty)
+                    )
                 }
-                .buttonStyle(GlassSecondaryButtonStyle())
+
+                if viewModel.hasSavedVoiceAPIKey {
+                    Button(role: .destructive) {
+                        viewModel.removeVoiceAPIKey()
+                    } label: {
+                        Label(loc("RemoveSavedKey"), systemImage: "trash")
+                    }
+                    .buttonStyle(GlassSecondaryButtonStyle())
+                }
+
             }
 
             Divider()
@@ -260,7 +274,7 @@ struct SettingsSheet: View {
             Toggle(isOn: Binding(
                 get: { viewModel.voiceEnabled },
                 set: { enabled in
-                    if enabled && !viewModel.hasVoiceConsent {
+                    if enabled && !viewModel.useAppleIntelligence && !viewModel.hasVoiceConsent {
                         showVoiceConsent = true
                     } else {
                         viewModel.voiceEnabled = enabled
@@ -276,7 +290,9 @@ struct SettingsSheet: View {
                 }
             }
             .tint(Color.maeusPrimary)
-            .disabled(!viewModel.voiceSettings.isVerified || !viewModel.hasSavedVoiceAPIKey)
+            .disabled(viewModel.useAppleIntelligence
+                ? (!viewModel.appleAvailability.canStart && !viewModel.voiceEnabled)
+                : (!viewModel.voiceSettings.isVerified || !viewModel.hasSavedVoiceAPIKey))
 
             Toggle(isOn: Binding(
                 get: { viewModel.voiceSettings.hapticsEnabled },
@@ -297,6 +313,31 @@ struct SettingsSheet: View {
         }
         .padding(18)
         .glassSurface()
+    }
+
+    private var appleVoiceSettings: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(loc(viewModel.voiceSettings.allowPrivateCloudCompute ? "AppleVoicePrivacyWithPCC" : "AppleVoicePrivacy"))
+                .font(.caption).foregroundStyle(Color.maeusTextSecondary)
+            Label(loc(viewModel.appleAvailability.messageKey),
+                  systemImage: viewModel.appleAvailability.canStart ? "checkmark.circle" : "info.circle")
+                .font(.caption.weight(.medium))
+                .foregroundStyle(Color.maeusTextSecondary)
+            Text(loc("AppleVoiceExperimental"))
+                .font(.caption).foregroundStyle(Color.maeusTextTertiary)
+            // A managed entitlement must be granted and enabled before this becomes usable.
+            Toggle(loc("UsePrivateCloudCompute"), isOn: Binding(
+                get: { viewModel.voiceSettings.allowPrivateCloudCompute },
+                set: {
+                    viewModel.voiceSettings.allowPrivateCloudCompute = $0
+                    viewModel.saveVoiceSettings()
+                }
+            ))
+            .disabled(!AppleVoiceAvailability.privateCloudComputeEnabledInBuild)
+            .tint(Color.maeusPrimary)
+            Text(loc(AppleVoiceAvailability.privateCloudComputeEnabledInBuild ? "PCCPrivacy" : "PCCAccessPending"))
+                .font(.caption).foregroundStyle(Color.maeusTextTertiary)
+        }
     }
 
     // MARK: - Legal & Support Section

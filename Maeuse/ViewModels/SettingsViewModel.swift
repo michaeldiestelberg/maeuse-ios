@@ -19,6 +19,24 @@ final class SettingsViewModel {
     var showVoiceError: Bool = false
     var hasSavedVoiceAPIKey: Bool = false
 
+    var appleAvailability = AppleVoiceAvailability.checking
+
+    var useAppleIntelligence: Bool {
+        get { voiceSettings.provider == .apple }
+        set {
+            voiceSettings.provider = newValue ? .apple : .openAI
+            saveVoiceSettings()
+        }
+    }
+
+    var canUseVoice: Bool {
+        voiceSettings.isReady && (!useAppleIntelligence || appleAvailability.canStart)
+    }
+
+    func refreshAppleAvailability() async {
+        appleAvailability = await AppleVoiceAvailability.check(locale: LanguageManager.shared.activeLocale)
+    }
+
     private let apiKeyStore = OpenAIAPIKeyStore.shared
     private let clientSecretService = OpenAIRealtimeClientSecretService()
 
@@ -43,8 +61,13 @@ final class SettingsViewModel {
     /// accepted first, and turning it off revokes consent again, so re-enabling always
     /// re-presents the disclosure. There is no separate withdrawal action.
     var voiceEnabled: Bool {
-        get { voiceSettings.enabled }
+        get { useAppleIntelligence ? voiceSettings.appleEnabled : voiceSettings.enabled }
         set {
+            if useAppleIntelligence {
+                voiceSettings.appleEnabled = newValue && appleAvailability.canStart
+                saveVoiceSettings()
+                return
+            }
             if newValue {
                 voiceSettings.enabled = voiceSettings.isVerified
                     && hasSavedVoiceAPIKey
@@ -128,7 +151,11 @@ final class SettingsViewModel {
             try apiKeyStore.deleteAPIKey()
             voiceAPIKeyText = ""
             hasSavedVoiceAPIKey = false
-            voiceSettings = .default
+            voiceSettings.apiKeySuffix = nil
+            voiceSettings.verifiedAt = nil
+            voiceSettings.enabled = false
+            voiceSettings.consentVersion = nil
+            voiceSettings.consentedAt = nil
             saveVoiceSettings()
             showStatusMessage(loc("RemovedApiKeyMsg"))
         } catch {

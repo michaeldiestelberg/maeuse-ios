@@ -57,7 +57,7 @@
 	<key>LSSupportsOpeningDocumentsInPlace</key>
 	<true/>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Mäuse uses your microphone to stream voice expenses directly to OpenAI Realtime.</string>
+	<string>Mäuse uses your microphone to capture spoken expenses with the voice provider you choose in Settings.</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UILaunchScreen</key>

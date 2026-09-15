@@ -47,6 +47,14 @@ Voice Mode uses `gpt-realtime-2.1` to interpret audio and create expense drafts 
 
 The voice connection indicator starts as a cheese wheel with orbiting crumbs, then transforms into the mouse when microphone capture is ready. Its bars gently wave in silence and react more strongly to microphone input, using a decibel-based display range so normal speech is clearly visible. After each spoken request, three cheese crumbs orbit inside the mouse until the result is applied. Speaking while a result is pending restores the live bars and moves the crumbs to the rim. New drafts slide in without empty placeholders, and corrections briefly highlight the changed fields. Reduce Motion disables the idle wave, shows stationary processing crumbs, and replaces the connection orbit and transformation with a short crossfade; connection errors still appear as readable text.
 
+## Apple Voice Mode prototype (unreleased)
+
+This branch adds **Use Apple Intelligence** in Settings, off by default. It keeps OpenAI settings intact and offers on-device speech recognition and structured expense capture on supported iOS 26+ devices with Apple Intelligence enabled. No OpenAI key is required for Apple mode. Speech assets download at first use; sessions support up to 12 drafts. Review every amount, date, and share before saving.
+
+**Use Private Cloud Compute** is separately gated and unavailable until Apple grants the developer entitlement and signing is configured. The prepared PCC path sends only recognized requests and current drafts to Apple, never the historical ledger or microphone audio. Apple-selected sessions never fall back to OpenAI automatically.
+
+This is an experimental implementation awaiting real-device model and microphone validation, not part of TestFlight build 44. See [implementation and access status](Docs/apple-voice-implementation.md) and the [API feasibility review](Docs/apple-voice-feasibility.md).
+
 ## Technology
 
 - SwiftUI for the interface
