@@ -23,23 +23,30 @@ struct ExpenseEditorSheet: View {
         VStack(spacing: 0) {
             Capsule().fill(Color.maeusTextTertiary.opacity(0.45)).frame(width: 40, height: 5).padding(.top, 10)
             topBar.padding(.horizontal, 22).padding(.top, 8)
-            hero.padding(.top, 14)
-            noteField.padding(.horizontal, 22).padding(.top, 16)
-            datePicker.padding(.horizontal, 22).padding(.top, 12)
-            details.padding(.horizontal, 22).padding(.top, 12)
-            if viewModel.isEditing {
-                deleteAction.padding(.horizontal, 22).padding(.top, 12)
-            }
-            Spacer(minLength: 10)
-            // The keypad is the only row we can afford to drop when the system keyboard takes
-            // over the bottom half of the sheet. Keeping it would leave the fixed-height rows
-            // taller than the remaining space, and the overflow pushes the top bar off screen.
-            // It is unusable behind the keyboard anyway, so trade it for the note field.
-            if !noteFocused {
-                keypad.padding(.horizontal, 22).padding(.bottom, 24)
-                    .transition(.opacity)
+            GeometryReader { geometry in
+                ScrollView {
+                    VStack(spacing: 0) {
+                        hero.padding(.top, 14)
+                        noteField.padding(.horizontal, 22).padding(.top, 16)
+                        datePicker.padding(.horizontal, 22).padding(.top, 12)
+                        details.padding(.horizontal, 22).padding(.top, 12)
+                        if viewModel.isEditing {
+                            deleteAction.padding(.horizontal, 22).padding(.top, 12)
+                        }
+                        Spacer(minLength: 16)
+                        if !noteFocused {
+                            keypad.padding(.horizontal, 22).padding(.bottom, 24)
+                                .transition(.opacity)
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                    .frame(minHeight: geometry.size.height, alignment: .top)
+                }
+                .scrollBounceBehavior(.basedOnSize)
             }
         }
+        .frame(maxWidth: 560)
+        .frame(maxWidth: .infinity)
         .animation(.easeInOut(duration: 0.2), value: noteFocused)
         .fontDesign(.rounded).background(Color.maeusBackground.ignoresSafeArea())
         .presentationDetents([.large]).presentationDragIndicator(.hidden)
@@ -55,7 +62,7 @@ struct ExpenseEditorSheet: View {
         }
         .sheet(isPresented: $showDatePicker) {
             themedCalendar
-                .presentationDetents([.height(440)])
+                .presentationDetents([.large])
                 .presentationDragIndicator(.hidden)
                 .presentationCornerRadius(30)
         }
@@ -76,6 +83,8 @@ struct ExpenseEditorSheet: View {
         }
             .buttonStyle(StampedButtonStyle(fill: fill, foreground: fill == .maeusCheese ? .maeusInk : .maeusForeground,
                                             cornerRadius: 19, borderColor: fill == .maeusCheese ? .maeusInk : .maeusCardBorder, shadow: fill == .maeusCheese ? 2.5 : 0))
+            .accessibilityLabel(loc(isCheck ? "Save" : "Cancel"))
+            .accessibilityIdentifier(isCheck ? "expense-save" : "expense-cancel")
     }
 
     private var hero: some View {
@@ -229,12 +238,17 @@ struct ExpenseEditorSheet: View {
                                                     cornerRadius: 18, borderColor: .maeusInk, shadow: 2.5))
             }
             .padding(.horizontal, 22).padding(.top, 8)
-            DatePicker("", selection: $viewModel.date, displayedComponents: .date)
-                .labelsHidden()
-                .datePickerStyle(.graphical)
-                .tint(Color.maeusPrimary)
-                .padding(.horizontal, 14).padding(.top, 4)
+            ScrollView {
+                DatePicker("", selection: $viewModel.date, displayedComponents: .date)
+                    .labelsHidden()
+                    .datePickerStyle(.graphical)
+                    .tint(Color.maeusPrimary)
+                    .padding(.horizontal, 14).padding(.top, 4)
+            }
+            .scrollBounceBehavior(.basedOnSize)
         }
+        .frame(maxWidth: 560)
+        .frame(maxWidth: .infinity)
         .fontDesign(.rounded)
         .background(Color.maeusBackground.ignoresSafeArea())
     }

@@ -52,6 +52,15 @@ struct VoiceExpenseDraft: Identifiable, Equatable {
         self.lastChangedAt = lastChangedAt
     }
 
+    func changedFields(comparedTo previous: VoiceExpenseDraft) -> Set<VoiceExpenseMissingField> {
+        var fields: Set<VoiceExpenseMissingField> = []
+        if title != previous.title { fields.insert(.title) }
+        if amount != previous.amount { fields.insert(.amount) }
+        if dateISO != previous.dateISO { fields.insert(.date) }
+        if splitMode != previous.splitMode || splitValue != previous.splitValue { fields.insert(.split) }
+        return fields
+    }
+
     var normalizedTitle: String {
         let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmed.isEmpty ? loc("UntitledExpense") : trimmed

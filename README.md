@@ -13,7 +13,7 @@
 
 | | |
 | --- | --- |
-| Version | 1.3.1 (build 42) |
+| Version | 1.3.1 (build 43) |
 | Platform | iPhone · iOS 17 or later |
 | Status | Internal TestFlight candidate; 1.3.0 (32) remains live on the App Store |
 | Languages | English and German |
@@ -45,7 +45,7 @@ Voice Mode is optional. When a user enables it and starts a session, microphone 
 
 Voice Mode uses `gpt-realtime-2.1` to interpret audio and create expense drafts in one session, without a separate transcription model. Drafts appear in a compact vertical list and stay in place when corrected. Expand **What I understood** to review the session’s requests and corrections in chronological order. The collapsed section shows only its title; expanding it opens directly into the entries. Save uses a static label, and the footer shows only the total. Entries preserve natural phrasing where understood, remain unchanged as drafts evolve, and clear when the session ends. This is an interpretation history, not a word-for-word transcript; clarification questions appear separately when needed.
 
-The voice connection indicator starts as a cheese wheel with orbiting crumbs, then transforms into the mouse when microphone capture is ready. Its bars gently wave in silence and react more strongly to microphone input, using a decibel-based display range so normal speech is clearly visible. Reduce Motion disables the idle wave and replaces the orbit and transformation with a short crossfade; connection errors still appear as readable text.
+The voice connection indicator starts as a cheese wheel with orbiting crumbs, then transforms into the mouse when microphone capture is ready. Its bars gently wave in silence and react more strongly to microphone input, using a decibel-based display range so normal speech is clearly visible. After each spoken request, three cheese crumbs orbit inside the mouse until the result is applied. Speaking while a result is pending restores the live bars and moves the crumbs to the rim. New drafts slide in without empty placeholders, and corrections briefly highlight the changed fields. Reduce Motion disables the idle wave, shows stationary processing crumbs, and replaces the connection orbit and transformation with a short crossfade; connection errors still appear as readable text.
 
 ## Technology
 
@@ -62,7 +62,7 @@ The Xcode project is intentionally dependency-light and does not require a packa
 
 Requirements:
 
-- macOS with Xcode 26 or later recommended
+- macOS with Xcode 27 recommended
 - iOS 17 or later simulator or device
 - An Apple development team for installation on a physical device
 - Optional: an OpenAI API project with access to `gpt-realtime-2.1` for Voice Mode
@@ -84,7 +84,7 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
 The Xcode project is the source of truth for both version values:
 
 - `MARKETING_VERSION` is the user-facing version (`1.3.1`).
-- `CURRENT_PROJECT_VERSION` is the App Store Connect build number (`37`).
+- `CURRENT_PROJECT_VERSION` is the App Store Connect build number (`43`).
 
 Use `scripts/bump-version.sh` before creating a new archive. See [RELEASING.md](RELEASING.md) for the full release workflow and [CHANGELOG.md](CHANGELOG.md) for user-facing release notes.
 

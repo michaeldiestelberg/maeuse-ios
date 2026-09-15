@@ -21,13 +21,13 @@ struct VoiceSheet: View {
                     Text(loc("VoiceYourDrafts"))
                         .font(.system(.headline, design: .rounded, weight: .heavy))
 
-                    if viewModel.drafts.isEmpty {
-                        emptyCard
-                    }
                     ForEach(viewModel.drafts) { draft in
                         VoiceExpenseDraftCard(draft: draft,
-                            wasUpdated: viewModel.updatedExpenseIDs.contains(draft.id),
+                            changedFields: viewModel.changedFieldsByExpenseID[draft.id] ?? [],
                             onRemove: { viewModel.removeDraft(draft) })
+                            .transition(reduceMotion ? .opacity : .asymmetric(
+                                insertion: .move(edge: .bottom).combined(with: .opacity),
+                                removal: .opacity))
                     }
                     if !viewModel.clarificationQuestion.isEmpty {
                         Label(viewModel.clarificationQuestion, systemImage: "questionmark.bubble")
@@ -49,12 +49,13 @@ struct VoiceSheet: View {
                             .background(Color.maeusDestructive.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
                     }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
                 .foregroundStyle(Color.maeusForeground)
                 .padding(.horizontal, 20)
                 .padding(.top, 12)
                 .padding(.bottom, 20)
             }
-            .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: viewModel.drafts.map(\.id))
+            .animation(reduceMotion ? nil : .smooth(duration: 0.35), value: viewModel.drafts.map(\.id))
             footer
                 .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
         }
@@ -99,11 +100,12 @@ struct VoiceSheet: View {
     }
 
     private var canSave: Bool { viewModel.canSaveDrafts && viewModel.canEndSession }
-    private var isProcessing: Bool { viewModel.phase == .thinking && viewModel.microphoneIsReady }
 
     private var connectionEmblem: some View {
         VoiceConnectionEmblem(isReady: viewModel.microphoneIsReady,
             hasError: viewModel.phase == .error,
+            isProcessing: viewModel.isProcessingRequest,
+            isSpeaking: viewModel.isUserSpeaking || viewModel.microphoneLevel > 0.12,
             level: viewModel.microphoneLevel)
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(viewModel.stateLabel)
@@ -115,28 +117,6 @@ struct VoiceSheet: View {
             .frame(width: 128, height: 128)
             .frame(maxWidth: .infinity)
             .padding(.bottom, 4)
-    }
-
-    private var emptyCard: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            if isProcessing {
-                Text(loc("VoiceUnderstandingRequest"))
-                    .font(.system(.headline, design: .rounded, weight: .bold))
-                VStack(alignment: .leading, spacing: 10) {
-                    Capsule().frame(height: 12)
-                    Capsule().frame(width: 140, height: 12)
-                }
-                .foregroundStyle(Color.maeusInputBackground)
-                .accessibilityHidden(true)
-            }
-            Text(loc("VoiceEmptyWorkspace"))
-                .font(.callout)
-                .foregroundStyle(Color.maeusTextSecondary)
-        }
-        .frame(maxWidth: .infinity, minHeight: isProcessing ? 120 : 64, alignment: .leading)
-        .padding(16)
-        .background(Color.maeusSurface, in: RoundedRectangle(cornerRadius: 18))
-        .overlay(RoundedRectangle(cornerRadius: 18).stroke(Color.maeusCardBorder, lineWidth: 2))
     }
 
     private var understandingDetail: some View {
@@ -214,6 +194,8 @@ struct VoiceSheet: View {
 private struct VoiceConnectionEmblem: View {
     let isReady: Bool
     let hasError: Bool
+    let isProcessing: Bool
+    let isSpeaking: Bool
     let level: Double
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.scenePhase) private var scenePhase
@@ -231,7 +213,9 @@ private struct VoiceConnectionEmblem: View {
                 ZStack {
                     VoiceEmblemDrawing(progress: 0, level: 0, orbitAngle: -.pi * 0.7, hasError: hasError)
                         .opacity(isReady ? 0 : 1)
-                    VoiceEmblemDrawing(progress: 1, level: level, orbitAngle: 0, hasError: hasError)
+                    VoiceEmblemDrawing(progress: 1, level: level, orbitAngle: 0, hasError: hasError,
+                        processingVisibility: isProcessing ? 1 : 0,
+                        processingExpansion: isSpeaking ? 1 : 0)
                         .opacity(isReady ? 1 : 0)
                 }
                 .animation(.easeInOut(duration: 0.15), value: isReady)
@@ -240,9 +224,14 @@ private struct VoiceConnectionEmblem: View {
                     VoiceEmblemDrawing(progress: progress, level: level,
                         orbitAngle: isReady || hasError ? settledAngle : orbitAngle(at: timeline.date),
                         hasError: hasError,
+                        processingVisibility: isProcessing ? 1 : 0,
+                        processingExpansion: isSpeaking ? 1 : 0,
+                        processingAngle: timeline.date.timeIntervalSince(orbitStart) * .pi * 2 / 1.8,
                         listeningPhase: isReady && !hasError && scenePhase == .active
                             ? timeline.date.timeIntervalSince(orbitStart) * .pi * 2 / 2.8 : nil)
                         .animation(.easeOut(duration: 0.08), value: level)
+                        .animation(.easeInOut(duration: 0.22), value: isProcessing)
+                        .animation(.easeInOut(duration: 0.18), value: isSpeaking)
                 }
             }
         }
@@ -271,11 +260,19 @@ private struct VoiceEmblemDrawing: View, Animatable {
     var level: Double
     let orbitAngle: Double
     let hasError: Bool
+    var processingVisibility: Double = 0
+    var processingExpansion: Double = 0
+    var processingAngle: Double = -.pi / 2
     var listeningPhase: Double? = nil
 
-    nonisolated var animatableData: AnimatablePair<Double, Double> {
-        get { AnimatablePair(progress, level) }
-        set { progress = newValue.first; level = newValue.second }
+    nonisolated var animatableData: AnimatablePair<AnimatablePair<Double, Double>, AnimatablePair<Double, Double>> {
+        get { AnimatablePair(AnimatablePair(progress, level), AnimatablePair(processingVisibility, processingExpansion)) }
+        set {
+            progress = newValue.first.first
+            level = newValue.first.second
+            processingVisibility = newValue.second.first
+            processingExpansion = newValue.second.second
+        }
     }
 
     var body: some View {
@@ -352,7 +349,26 @@ private struct VoiceEmblemDrawing: View, Animatable {
                     let y = mix(holeY, 54)
                     let hole = Path(roundedRect: CGRect(x: x - width / 2, y: y - height / 2,
                         width: width, height: height), cornerRadius: width / 2)
-                    context.fill(hole, with: .color(Color.maeusInk.opacity(mix(0.4, 1))))
+                    let waveformOpacity = 1 - processingVisibility * (1 - processingExpansion)
+                    context.fill(hole, with: .color(Color.maeusInk.opacity(mix(0.4, 1) * waveformOpacity)))
+                }
+                if processingVisibility > 0 && p > 0 {
+                    // Keep processing visible while speech takes back the face. The
+                    // crumbs move to the rim, independently of the live microphone bars.
+                    var crumbs = context
+                    crumbs.opacity = processingVisibility * p
+                    let orbitRadius = 12 + 25 * processingExpansion
+                    for index in 0..<3 {
+                        let angle = processingAngle + Double(index) * .pi * 2 / 3
+                        let x = center.x + cos(angle) * orbitRadius
+                        let y = center.y + sin(angle) * orbitRadius
+                        let radius = 3.5 - Double(index) * 0.35
+                        let crumb = Path(roundedRect: CGRect(x: x - radius, y: y - radius,
+                            width: radius * 2, height: radius * 2), cornerRadius: 1.4)
+                        crumbs.fill(crumb.offsetBy(dx: 0.8, dy: 1), with: .color(.maeusInk))
+                        crumbs.fill(crumb, with: .color(.maeusCheese))
+                        crumbs.stroke(crumb, with: .color(.maeusInk), lineWidth: 1.2)
+                    }
                 }
             }
         }
@@ -361,7 +377,7 @@ private struct VoiceEmblemDrawing: View, Animatable {
 
 private struct VoiceExpenseDraftCard: View {
     let draft: VoiceExpenseDraft
-    let wasUpdated: Bool
+    let changedFields: Set<VoiceExpenseMissingField>
     let onRemove: () -> Void
     @State private var highlightsUpdate = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -372,6 +388,7 @@ private struct VoiceExpenseDraftCard: View {
                 Text(draft.normalizedTitle)
                     .font(.system(.headline, design: .rounded, weight: .heavy))
                     .fixedSize(horizontal: false, vertical: true)
+                    .background(fieldHighlight(.title))
                     .padding(.top, 8)
                 Spacer(minLength: 0)
                 Button(action: onRemove) {
@@ -410,36 +427,32 @@ private struct VoiceExpenseDraftCard: View {
             let shape = RoundedRectangle(cornerRadius: 18, style: .continuous)
             ZStack {
                 shape.fill(Color.maeusInk).offset(x: 3, y: 4)
-                shape.fill(highlightsUpdate ? Color.maeusInputBackground : Color.maeusSurface)
-                shape.stroke(highlightsUpdate ? Color.maeusPrimary : Color.maeusCardBorder, lineWidth: 2)
-            }
-        }
-        .overlay(alignment: .topTrailing) {
-            if highlightsUpdate {
-                Text(loc("VoiceUpdated"))
-                    .font(.system(.caption2, design: .rounded, weight: .bold))
-                    .padding(.horizontal, 8).padding(.vertical, 4)
-                    .background(Color.maeusCheese, in: Capsule())
-                    .foregroundStyle(Color.maeusInk)
-                    .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
-                    .padding(.trailing, 48)
-                    .offset(y: -9)
+                shape.fill(Color.maeusSurface)
+                shape.stroke(Color.maeusCardBorder, lineWidth: 2)
             }
         }
         .task(id: draft.lastChangedAt) {
-            highlightsUpdate = wasUpdated
-            guard wasUpdated else { return }
-            do { try await Task.sleep(for: .seconds(2.5)) } catch { return }
+            highlightsUpdate = !changedFields.isEmpty
+            guard highlightsUpdate else { return }
+            do { try await Task.sleep(for: .seconds(1.8)) } catch { return }
             withAnimation(reduceMotion ? nil : .easeOut(duration: 0.25)) { highlightsUpdate = false }
         }
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("voice-draft-\(draft.id)")
     }
 
+    private func fieldHighlight(_ field: VoiceExpenseMissingField) -> some View {
+        RoundedRectangle(cornerRadius: 7)
+            .fill(Color.maeusCheese.opacity(highlightsUpdate && changedFields.contains(field) ? 0.45 : 0))
+            .padding(.horizontal, -4)
+            .padding(.vertical, -2)
+    }
+
     private var amount: some View {
         Text(draft.amount == nil ? "—" : draft.normalizedAmount.euroFormatted)
             .font(.system(.title3, design: .rounded, weight: .heavy).monospacedDigit())
             .fixedSize()
+            .background(fieldHighlight(.amount))
             .accessibilityLabel(draft.amount == nil ? loc("VoiceAmountMissing") : draft.normalizedAmount.euroFormatted)
     }
 
@@ -449,15 +462,15 @@ private struct VoiceExpenseDraftCard: View {
             VStack(alignment: .leading, spacing: 6) { dateChip; splitChip }
         }
     }
-    private var dateChip: some View { chip(formatDate(draft.dateISO)) }
-    private var splitChip: some View { chip(loc("VoicePartnerShare", splitText)) }
-    private func chip(_ title: String) -> some View {
+    private var dateChip: some View { chip(formatDate(draft.dateISO), field: .date) }
+    private var splitChip: some View { chip(loc("VoicePartnerShare", splitText), field: .split) }
+    private func chip(_ title: String, field: VoiceExpenseMissingField) -> some View {
         Text(title)
             .font(.system(.caption2, design: .rounded, weight: .semibold))
             .fixedSize()
             .padding(.horizontal, 8)
             .padding(.vertical, 5)
-            .background(Color.maeusInputBackground, in: Capsule())
+            .background(highlightsUpdate && changedFields.contains(field) ? Color.maeusCheese : Color.maeusInputBackground, in: Capsule())
     }
     private var splitText: String {
         switch draft.normalizedSplitMode {

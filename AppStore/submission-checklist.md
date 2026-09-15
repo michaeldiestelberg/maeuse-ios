@@ -1,5 +1,23 @@
 # Mäuse 1.3.1 TestFlight Checklist
 
+## Build 43 — iOS 27 compatibility
+
+- [x] Marketing version remains `1.3.1`; repository build number is `43`.
+- [x] Existing Voice Mode processing, history, and draft layout changes included as requested.
+- [x] FileDocument replaced with Transferable JSON export while retaining iOS 17 support.
+- [x] Editor/calendar/dashboard adapted for shorter windows; editable amounts above €1,000 corrected.
+- [x] Baseline iOS 26.5 regression run passed 47 tests, including backup replacement and on-disk persistence.
+- [x] Final iOS 26.5 regression run with Xcode 27 passed 49 tests, including large-amount and resizing coverage.
+- [x] Xcode 27 Release build and static analysis pass with zero warnings (27A266a).
+- [ ] iOS 27 regression and interactive checks pass; evidence recorded in `ios27-compatibility.md`.
+- [x] Live Voice Mode regression with recorded English/German expenses passed using the production session configuration and authorized test key.
+- [ ] Xcode Cloud workflow uses Xcode 27 and assigns build `43`.
+- [ ] Release commit pushed to `main`; **Maeuse | Default** succeeds.
+- [ ] Build `1.3.1 (43)` is processed and distributed to the internal Family group.
+- [ ] Physical iPhone microphone, interruptions, Bluetooth, and widget/control launches checked. No physical device is currently connected; these remain explicit TestFlight follow-up items.
+
+## Earlier builds 37–42 verification record
+
 - [x] Marketing version remains `1.3.1`; repository build number bumped to `42`.
 - [x] GPT-Realtime-2.1 migration and removal of the separate transcription path are included.
 - [x] Unit tests passed for the history implementation: 40 tests, September 14, 2026, including chronological history, duplicate event handling, app-generated responses, unchanged earlier entries, and session reset.

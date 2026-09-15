@@ -4,8 +4,8 @@ enum RealtimeParsedEvent: Equatable {
     case sessionReady
     case listeningStarted
     case listeningStopped
-    case responseStarted
-    case responseFinished
+    case responseStarted(id: String, isAppGenerated: Bool)
+    case responseFinished(id: String)
     case functionArgumentsDelta
     case assistantTextDelta(String)
     case assistantTextDone(String)
@@ -36,12 +36,13 @@ struct RealtimeServerEventParser {
 
         case "response.created":
             recordResponseSource(object)
-            return [.responseStarted]
+            let id = responseID(in: object)
+            return [.responseStarted(id: id, isAppGenerated: appGeneratedResponseIDs.contains(id))]
 
         case "response.done":
             recordResponseSource(object)
             var events = parseResponseDone(object)
-            events.append(.responseFinished)
+            events.append(.responseFinished(id: responseID(in: object)))
             return events
 
         case "response.function_call_arguments.delta":
@@ -120,6 +121,10 @@ struct RealtimeServerEventParser {
         payload.responseID = responseID ?? callID
         payload.isAppGenerated = responseID.map { appGeneratedResponseIDs.contains($0) } ?? false
         return .workspaceSync(payload, callID: callID)
+    }
+
+    private func responseID(in object: [String: Any]) -> String {
+        (object["response"] as? [String: Any])?["id"] as? String ?? "unidentified-response"
     }
 
     private mutating func recordResponseSource(_ object: [String: Any]) {

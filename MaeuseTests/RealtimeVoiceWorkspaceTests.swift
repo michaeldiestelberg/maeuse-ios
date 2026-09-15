@@ -276,6 +276,75 @@ final class RealtimeVoiceWorkspaceTests: XCTestCase {
         XCTAssertEqual(viewModel.phase, .idle)
     }
 
+    func testProcessingPersistsDuringSpeechAndUntilEachPendingResultArrives() {
+        let viewModel = VoiceModeViewModel()
+        let service = RealtimeVoiceService()
+        func send(_ event: RealtimeVoiceServiceEvent) { viewModel.realtimeVoiceService(service, didReceive: event) }
+        func sync(_ responseID: String, amount: Double) {
+            send(.workspaceSync(VoiceWorkspaceSyncPayload(responseID: responseID,
+                userUnderstanding: "Flowers", clarificationQuestion: "",
+                expenses: [VoiceExpenseDraftPayload(id: "flowers", title: "Flowers", amount: amount,
+                    dateISO: nil, splitMode: nil, splitValue: nil, confidence: 1, missingFields: [])],
+                changedExpenseIDs: ["flowers"], removedExpenseIDs: [])))
+        }
+        send(.microphoneStarted)
+        send(.listeningStarted)
+        XCTAssertFalse(viewModel.isProcessingRequest)
+        XCTAssertTrue(viewModel.isUserSpeaking)
+        send(.listeningStopped)
+        XCTAssertTrue(viewModel.isProcessingRequest, "Show processing before response.created arrives")
+        XCTAssertTrue(viewModel.drafts.isEmpty, "Never invent a placeholder expense")
+        send(.responseStarted(id: "first", isAppGenerated: false))
+        send(.listeningStarted)
+        send(.microphoneLevel(0.7))
+        XCTAssertTrue(viewModel.isProcessingRequest, "Speaking must not hide pending work")
+        XCTAssertTrue(viewModel.isUserSpeaking)
+        XCTAssertEqual(viewModel.microphoneLevel, 0.7)
+        send(.listeningStopped)
+        sync("first", amount: 12)
+        send(.responseFinished(id: "first"))
+        XCTAssertTrue(viewModel.isProcessingRequest, "Earlier completion must not clear a later spoken request")
+        XCTAssertFalse(viewModel.canEndSession)
+        send(.responseStarted(id: "second", isAppGenerated: false))
+        sync("second", amount: 13.5)
+        XCTAssertFalse(viewModel.isProcessingRequest, "Stop as soon as the structured result is visible")
+        XCTAssertEqual(viewModel.changedFieldsByExpenseID["flowers"], [.amount])
+        send(.responseFinished(id: "second"))
+        XCTAssertTrue(viewModel.canEndSession)
+        XCTAssertTrue(viewModel.microphoneIsReady)
+    }
+
+    func testProcessingClearsOnNoOpCompletionErrorAndReset() {
+        let viewModel = VoiceModeViewModel()
+        let service = RealtimeVoiceService()
+        func send(_ event: RealtimeVoiceServiceEvent) { viewModel.realtimeVoiceService(service, didReceive: event) }
+        send(.microphoneStarted)
+        send(.listeningStopped)
+        send(.responseStarted(id: "clarification", isAppGenerated: false))
+        send(.responseFinished(id: "clarification"))
+        XCTAssertFalse(viewModel.isProcessingRequest)
+        send(.listeningStopped)
+        send(.responseStarted(id: "note", isAppGenerated: true))
+        send(.responseFinished(id: "note"))
+        XCTAssertTrue(viewModel.isProcessingRequest, "An app note cannot consume pending speech")
+        send(.error("Disconnected"))
+        XCTAssertFalse(viewModel.isProcessingRequest)
+        XCTAssertFalse(viewModel.isUserSpeaking)
+        viewModel.resetWorkspace()
+        XCTAssertFalse(viewModel.isProcessingRequest)
+        XCTAssertTrue(viewModel.changedFieldsByExpenseID.isEmpty)
+    }
+
+    func testResponseLifecycleIncludesIdentityAndSource() throws {
+        var parser = RealtimeServerEventParser()
+        let created: [String: Any] = ["type": "response.created", "response": [
+            "id": "note", "metadata": ["maeuse_source": "workspace_note"]]]
+        XCTAssertEqual(try parser.parse(JSONSerialization.data(withJSONObject: created)),
+            [.responseStarted(id: "note", isAppGenerated: true)])
+        let done: [String: Any] = ["type": "response.done", "response": ["id": "note", "output": []]]
+        XCTAssertEqual(try parser.parse(JSONSerialization.data(withJSONObject: done)), [.responseFinished(id: "note")])
+    }
+
     func testMouseReadinessWaitsForCaptureRatherThanConnectionOrPermission() {
         let viewModel = VoiceModeViewModel()
         let service = RealtimeVoiceService()
@@ -290,7 +359,7 @@ final class RealtimeVoiceWorkspaceTests: XCTestCase {
         XCTAssertTrue(viewModel.microphoneIsReady)
         XCTAssertEqual(viewModel.phase, .listening)
 
-        viewModel.realtimeVoiceService(service, didReceive: .responseStarted)
+        viewModel.realtimeVoiceService(service, didReceive: .responseStarted(id: "unidentified-response", isAppGenerated: false))
         XCTAssertTrue(viewModel.microphoneIsReady, "Processing does not restart the connection animation")
         viewModel.realtimeVoiceService(service, didReceive: .microphoneStopped)
         XCTAssertFalse(viewModel.microphoneIsReady)
@@ -408,7 +477,7 @@ final class RealtimeVoiceWorkspaceTests: XCTestCase {
                 expenses: [], changedExpenseIDs: [], removedExpenseIDs: [])))
         viewModel.realtimeVoiceService(service, didReceive: .assistantText("Sure, I'll add it"))
         XCTAssertEqual(viewModel.clarificationQuestion, "How much?")
-        viewModel.realtimeVoiceService(service, didReceive: .responseStarted)
+        viewModel.realtimeVoiceService(service, didReceive: .responseStarted(id: "unidentified-response", isAppGenerated: false))
         XCTAssertFalse(viewModel.canEndSession)
         viewModel.realtimeVoiceService(service, didReceive: .workspaceSync(
             VoiceWorkspaceSyncPayload(userUnderstanding: "Coffee for 4.50", clarificationQuestion: "",
@@ -711,6 +780,9 @@ final class RealtimeVoiceWorkspaceTests: XCTestCase {
     private func makeVoiceReadyViewModel() -> (SettingsViewModel, Data?) {
         let previous = UserDefaults.standard.data(forKey: VoiceSettings.storageKey)
         let viewModel = SettingsViewModel()
+        // Simulator clones can inherit consent from manual QA. Each test must
+        // establish its own consent state rather than trust persisted settings.
+        viewModel.voiceSettings = .default
         viewModel.hasSavedVoiceAPIKey = true
         viewModel.voiceSettings.apiKeySuffix = "7mQ2"
         viewModel.voiceSettings.verifiedAt = Date()

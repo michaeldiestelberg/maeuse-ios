@@ -73,8 +73,8 @@ struct SettingsSheet: View {
             }
         }
         .fileExporter(isPresented: $showFileExporter,
-                      document: exportDocument,
-                      contentType: .json,
+                      item: exportDocument,
+                      contentTypes: [.json],
                       defaultFilename: BackupService.exportFileName()) {
             viewModel.exportCompleted($0)
         }

@@ -189,7 +189,7 @@ final class SettingsViewModel {
             try BackupService.replaceAllExpenses(in: context, with: backups)
             showStatusMessage(loc("ImportedExpensesMsg", backups.count))
         } catch {
-            showStatusMessage(loc("ImportFailedMsg", error.localizedDescription))
+            showErrorStatus(loc("ImportFailedMsg", error.localizedDescription))
         }
 
         pendingImportData = nil

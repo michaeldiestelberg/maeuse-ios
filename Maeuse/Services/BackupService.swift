@@ -2,24 +2,21 @@ import Foundation
 import SwiftData
 import SwiftUI
 import UniformTypeIdentifiers
+import CoreTransferable
 
-struct BackupDocument: FileDocument {
-    static var readableContentTypes: [UTType] { [.json] }
-    var data: Data
+/// An immutable JSON export. Transferable supports the system exporter on iOS 17+
+/// without the deprecated FileDocument lifecycle or a separate legacy path.
+struct BackupDocument: Transferable, Sendable {
+    let data: Data
 
     init(data: Data = Data()) {
         self.data = data
     }
 
-    init(configuration: ReadConfiguration) throws {
-        guard let data = configuration.file.regularFileContents else {
-            throw CocoaError(.fileReadCorruptFile)
+    static var transferRepresentation: some TransferRepresentation {
+        DataRepresentation(exportedContentType: .json) { document in
+            document.data
         }
-        self.data = data
-    }
-
-    func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper {
-        FileWrapper(regularFileWithContents: data)
     }
 }
 
@@ -77,14 +74,19 @@ struct BackupService {
             return expense
         }
 
-        // Delete all existing
-        try context.delete(model: Expense.self)
-
-        // Insert new
-        for expense in expenses {
-            context.insert(expense)
+        do {
+            // Stage replacement in one context save so failure can restore the
+            // original ledger, including when imported IDs match existing rows.
+            for expense in try context.fetch(FetchDescriptor<Expense>()) {
+                context.delete(expense)
+            }
+            for expense in expenses {
+                context.insert(expense)
+            }
+            try context.save()
+        } catch {
+            context.rollback()
+            throw error
         }
-
-        try context.save()
     }
 }

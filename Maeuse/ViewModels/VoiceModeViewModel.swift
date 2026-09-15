@@ -16,6 +16,14 @@ final class VoiceModeViewModel {
     var clarificationQuestion: String = ""
     var drafts: [VoiceExpenseDraft] = []
     var updatedExpenseIDs: Set<String> = []
+    private(set) var changedFieldsByExpenseID: [String: Set<VoiceExpenseMissingField>] = [:]
+    private(set) var isUserSpeaking = false
+    private var awaitingSpokenResponse = false
+    private var processingResponseIDs: Set<String> = []
+
+    var isProcessingRequest: Bool {
+        awaitingSpokenResponse || !processingResponseIDs.isEmpty
+    }
     var microphoneIsActive: Bool = false
     var microphoneLevel: Double = 0
     var isSaving: Bool = false
@@ -37,14 +45,14 @@ final class VoiceModeViewModel {
         case .idle: return loc("StateReady")
         case .connecting: return loc("StateConnecting")
         case .listening: return loc(microphoneIsReady ? "StateListening" : "StateConnecting")
-        case .thinking: return loc("StateThinking")
+        case .thinking: return loc(isUserSpeaking ? "StateListeningAndThinking" : "StateThinking")
         case .finalizing: return loc("StateSaving")
         case .error: return loc("StateIssue")
         }
     }
 
     var canEndSession: Bool {
-        phase != .connecting && phase != .thinking && phase != .finalizing
+        !isUserSpeaking && !isProcessingRequest && phase != .connecting && phase != .thinking && phase != .finalizing
     }
 
     var canSaveDrafts: Bool {
@@ -151,7 +159,57 @@ final class VoiceModeViewModel {
         if ProcessInfo.processInfo.arguments.contains("--voice-processing") {
             drafts = []
             understandingHistory = []
-            phase = .thinking
+            microphoneLevel = 0
+            realtimeVoiceService(realtime, didReceive: .listeningStopped)
+        }
+        if ProcessInfo.processInfo.arguments.contains("--voice-processing-existing") {
+            microphoneLevel = 0
+            realtimeVoiceService(realtime, didReceive: .listeningStopped)
+            realtimeVoiceService(realtime, didReceive: .responseStarted(id: "preview-pending", isAppGenerated: false))
+            if ProcessInfo.processInfo.arguments.contains("--voice-processing-speaking") {
+                realtimeVoiceService(realtime, didReceive: .listeningStarted)
+                microphoneLevel = 0.5
+            }
+        }
+        if ProcessInfo.processInfo.arguments.contains("--voice-processing-demo") {
+            drafts = []
+            understandingHistory = []
+            microphoneLevel = 0
+            Task { @MainActor [weak self] in
+                func pause(_ seconds: Double) async throws {
+                    try await Task.sleep(for: .seconds(seconds))
+                }
+                do {
+                    for turn in 0..<3 {
+                        try await pause(2)
+                        guard let self, self.isPresented else { return }
+                        self.realtimeVoiceService(self.realtime, didReceive: .listeningStarted)
+                        self.microphoneLevel = 0.6
+                        try await pause(2)
+                        guard self.isPresented else { return }
+                        self.microphoneLevel = 0
+                        self.realtimeVoiceService(self.realtime, didReceive: .listeningStopped)
+                        let id = "demo-\(turn)"
+                        self.realtimeVoiceService(self.realtime, didReceive: .responseStarted(id: id, isAppGenerated: false))
+                        try await pause(4)
+                        guard self.isPresented else { return }
+                        var entries = [VoiceExpenseDraftPayload(id: "flowers", title: german ? "Blumen" : "Flowers",
+                            amount: turn == 0 ? 12 : 13.5, dateISO: nil,
+                            splitMode: nil, splitValue: nil, confidence: 1, missingFields: [])]
+                        if turn == 2 {
+                            entries.append(VoiceExpenseDraftPayload(id: "coffee", title: german ? "Kaffee" : "Coffee",
+                                amount: 4.5, dateISO: nil, splitMode: nil, splitValue: nil, confidence: 1, missingFields: []))
+                        }
+                        self.realtimeVoiceService(self.realtime, didReceive: .workspaceSync(VoiceWorkspaceSyncPayload(
+                            responseID: id, userUnderstanding: turn == 1
+                                ? (german ? "Die Blumen waren dreizehn fünfzig." : "The flowers were thirteen fifty.")
+                                : requests[turn == 0 ? 0 : 1],
+                            clarificationQuestion: "", expenses: entries,
+                            changedExpenseIDs: [turn == 2 ? "coffee" : "flowers"], removedExpenseIDs: [])))
+                        self.realtimeVoiceService(self.realtime, didReceive: .responseFinished(id: id))
+                    }
+                } catch { return }
+            }
         }
         if ProcessInfo.processInfo.arguments.contains("--voice-clarification") {
             clarificationQuestion = german ? "Wie viel hat der Kaffee gekostet?" : "How much was the coffee?"
@@ -208,6 +266,7 @@ final class VoiceModeViewModel {
     func removeDraft(_ draft: VoiceExpenseDraft) {
         drafts.removeAll { $0.id == draft.id }
         updatedExpenseIDs.remove(draft.id)
+        changedFieldsByExpenseID[draft.id] = nil
         clarificationQuestion = ""
         realtime.sendWorkspaceNote("The user removed expense \(draft.id) named \(draft.normalizedTitle) from the temporary workspace. Keep it removed unless the user asks to add it again.")
     }
@@ -234,6 +293,8 @@ final class VoiceModeViewModel {
         clarificationQuestion = ""
         drafts = []
         updatedExpenseIDs = []
+        changedFieldsByExpenseID = [:]
+        clearProcessingState()
         microphoneIsActive = false
         microphoneLevel = 0
         isSaving = false
@@ -290,6 +351,10 @@ final class VoiceModeViewModel {
             return previous.withoutChangeTimestamp != draft.withoutChangeTimestamp ? draft.id : nil
         })
 
+        changedFieldsByExpenseID = Dictionary(uniqueKeysWithValues: nextDrafts.compactMap { draft in
+            guard let previous = previousDrafts[draft.id] else { return nil }
+            return (draft.id, draft.changedFields(comparedTo: previous))
+        })
         updatedExpenseIDs = updatedIDs
         drafts = nextDrafts
 
@@ -299,9 +364,20 @@ final class VoiceModeViewModel {
             playVoiceHaptic(.soft)
         }
 
-        if phase != .error {
-            phase = .listening
-        }
+        // A completed result must not hide another request that is still pending.
+        processingResponseIDs.remove(payload.responseID ?? "unidentified-response")
+        refreshActivityPhase()
+    }
+
+    private func refreshActivityPhase() {
+        guard phase != .error && phase != .finalizing else { return }
+        phase = isProcessingRequest ? .thinking : .listening
+    }
+
+    private func clearProcessingState() {
+        awaitingSpokenResponse = false
+        processingResponseIDs = []
+        isUserSpeaking = false
     }
 
     private var areVoiceHapticsEnabled: Bool {
@@ -352,6 +428,7 @@ extension VoiceModeViewModel: RealtimeVoiceServiceDelegate {
         case .connected:
             phase = microphoneIsActive ? .listening : .connecting
         case .disconnected:
+            clearProcessingState()
             microphoneIsActive = false
             microphoneLevel = 0
             if phase != .finalizing && phase != .idle {
@@ -368,26 +445,32 @@ extension VoiceModeViewModel: RealtimeVoiceServiceDelegate {
                 playVoiceHaptic(.rigid)
             }
         case .microphoneStopped:
+            isUserSpeaking = false
             microphoneIsActive = false
             microphoneLevel = 0
         case .microphoneLevel(let level):
             microphoneLevel = level
         case .listeningStarted:
-            phase = .listening
+            isUserSpeaking = true
+            refreshActivityPhase()
         case .listeningStopped:
-            phase = .thinking
-        case .responseStarted:
-            phase = .thinking
-        case .responseFinished:
-            if phase != .error {
-                phase = .listening
-            }
+            isUserSpeaking = false
+            awaitingSpokenResponse = true
+            refreshActivityPhase()
+        case .responseStarted(let id, let isAppGenerated):
+            if !isAppGenerated { awaitingSpokenResponse = false }
+            processingResponseIDs.insert(id)
+            refreshActivityPhase()
+        case .responseFinished(let id):
+            processingResponseIDs.remove(id)
+            refreshActivityPhase()
         case .workspaceSync(let payload):
             applyWorkspaceSync(payload)
         case .assistantText, .assistantTextDelta:
             // Incidental model narration must not race the structured draft update.
             break
         case .error(let message):
+            clearProcessingState()
             phase = .error
             errorMessage = message
         }

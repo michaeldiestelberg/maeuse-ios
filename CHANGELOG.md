@@ -2,9 +2,17 @@
 
 This file records user-facing changes to Mäuse. App Store and GitHub release notes should be based on the matching version section.
 
-## 1.3.1 — 2026-09-14
+## 1.3.1 — 2026-09-15
 
-Internal TestFlight candidate (build 42; follows build 41).
+Internal TestFlight candidate (build 43; follows build 42).
+
+- The expense editor, calendar, and monthly overview adapt to shorter windows. Save and Cancel stay visible while the editor content scrolls.
+- JSON backup export uses the current system sharing API, with the same portable backup format and iOS 17 support. Restoring a backup saves the replacement together and rolls back if saving fails.
+- Fixed editing amounts above €1,000 in English and German, preserving the amount and partner share.
+
+- Every spoken request now has a processing animation: three cheese crumbs orbit inside the mouse until its result appears, moving to the rim when you speak again while work is pending.
+- Removed the empty first-expense placeholder. New drafts slide into place; corrections briefly highlight only the changed fields.
+- Processing feedback preserves pending requests across overlapping speech and response completion. Reduce Motion shows stationary crumbs, and VoiceOver retains activity labels.
 
 - Simplified Voice Mode: Save uses a static label, the request history opens directly into its entries, and the footer shows only the total.
 - “What I understood” now keeps a chronological session history of requests and corrections with more natural phrasing. The expanded section uses a subtle timeline; the collapsed section remains title-only. Removing or correcting a draft no longer erases earlier requests.

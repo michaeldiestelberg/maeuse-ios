@@ -2,6 +2,18 @@
 
 TestFlight is strongly recommended before App Store submission, especially for microphone permission, Voice Mode, Keychain persistence, backup import/export, and real-device layout checks. Internal testing does not require Beta App Review; the first external build may.
 
+## Build 43 focus
+
+- On iOS 27, resize the app where supported and check short and wide windows. Add/edit an expense, open the calendar, and type a note: Save and Cancel should remain visible and the remaining controls should scroll into view.
+- Edit an expense of €1,234.56 in English and German. Its amount and partner share should remain correct after saving.
+- Export a JSON backup to Files, cancel a second export, and restore the backup after adding an expense. Check the replacement warning, cancellation, and the restored values.
+- Dictate overlapping requests: processing crumbs should remain visible until each result arrives. Corrections should highlight only changed fields, and the request history should remain intact.
+- Check physical microphone capture, interruptions, Bluetooth headsets, and widget/control launches on an iPhone. Local simulator checks cannot certify these hardware flows.
+
+### Build 43 — Deutsch
+
+Bitte prüfe unter iOS 27 kurze und breite Fenster, soweit Größenänderungen unterstützt werden: Ausgabe bearbeiten, Kalender öffnen und eine Notiz eingeben. „Speichern“ und „Abbrechen“ sollen sichtbar bleiben, weitere Bedienelemente durch Scrollen erreichbar sein. Bearbeite 1.234,56 € auf Deutsch und Englisch und prüfe Betrag und Partneranteil. Exportiere ein JSON-Backup in Dateien, brich einen weiteren Export ab und teste Wiederherstellung und Abbruch. Im Sprachmodus sollen die Käsekrümel laufende Anfragen anzeigen, Korrekturen nur geänderte Felder hervorheben und frühere Anfragen erhalten bleiben. Mikrofon, Unterbrechungen, Bluetooth und Widget-/Control-Starts bitte auf einem echten iPhone prüfen.
+
 ## Build 42 focus
 
 - Save should always read “Save” / “Speichern,” without a draft count.

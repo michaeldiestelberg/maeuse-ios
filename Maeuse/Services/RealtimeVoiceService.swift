@@ -16,8 +16,8 @@ enum RealtimeVoiceServiceEvent {
     case microphoneLevel(Double)
     case listeningStarted
     case listeningStopped
-    case responseStarted
-    case responseFinished
+    case responseStarted(id: String, isAppGenerated: Bool)
+    case responseFinished(id: String)
     case workspaceSync(VoiceWorkspaceSyncPayload)
     case assistantText(String)
     case assistantTextDelta(String)
@@ -444,12 +444,12 @@ final class RealtimeVoiceService: NSObject, @unchecked Sendable {
         case .listeningStopped:
             logger.info("OpenAI Realtime reported speech stopped.")
             emit(.listeningStopped)
-        case .responseStarted:
+        case .responseStarted(let id, let isAppGenerated):
             logger.info("OpenAI Realtime response started.")
-            emit(.responseStarted)
-        case .responseFinished:
+            emit(.responseStarted(id: id, isAppGenerated: isAppGenerated))
+        case .responseFinished(let id):
             logger.info("OpenAI Realtime response finished.")
-            emit(.responseFinished)
+            emit(.responseFinished(id: id))
         case .functionArgumentsDelta:
             break
         case .assistantTextDelta(let text):

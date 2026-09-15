@@ -65,9 +65,9 @@ struct MainExpenseView: View {
     }
 
     private var monthContent: some View {
-        VStack(spacing: 0) {
-            summaryCard.padding(.horizontal, 22).padding(.top, 20)
-            ScrollView {
+        ScrollView {
+            VStack(spacing: 0) {
+                summaryCard.padding(.horizontal, 22).padding(.top, 20)
                 LazyVStack(spacing: 12) {
                     if filtered.isEmpty { emptyState.padding(.top, 44) }
                     else {

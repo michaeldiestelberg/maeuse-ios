@@ -159,12 +159,11 @@
 
 // Voice draft workspace
 "VoiceYourDrafts" = "Deine Entwürfe";
-"VoiceUnderstandingRequest" = "Deine Anfrage wird verarbeitet …";
-"VoiceEmptyWorkspace" = "Deine Ausgaben erscheinen hier";
 "VoiceWhatUnderstood" = "So habe ich dich verstanden";
-"VoiceUpdated" = "Aktualisiert";
 "VoiceRemoveNamed" = "%@ entfernen";
 "VoiceNeedsDetails" = "Zum Speichern fehlen noch Angaben";
 "VoiceAmountMissing" = "Betrag fehlt";
 "VoicePartnerShare" = "Partner %@";
 "Close" = "Schließen";
+
+"StateListeningAndThinking" = "Zuhören und verarbeiten …";

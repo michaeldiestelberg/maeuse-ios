@@ -19,14 +19,18 @@ When shipping a new marketing version:
 
 - Voice Mode now uses GPT-Realtime-2.1 to understand your spoken expenses and prepare drafts in one session.
 - Review several voice drafts in a compact list. Corrections update the same card with a brief highlight.
-- Expand “What I understood” to check the latest request, without repetitive chat messages.
+- Expand “What I understood” to review your requests and corrections in order. Animated cheese crumbs show when a request is being processed.
+- The expense editor and calendar adapt to shorter windows, and editing amounts above €1,000 now preserves the correct value.
+- Updated JSON backup export and improved reliability when restoring expenses.
 - Removed the separate transcription model and its additional transcription charges.
 
 ### German
 
 - Der Sprachmodus nutzt jetzt GPT-Realtime-2.1, um gesprochene Ausgaben zu verstehen und in einer Sitzung als Entwürfe vorzubereiten.
 - Prüfe mehrere Sprachentwürfe in einer kompakten Liste. Korrekturen aktualisieren dieselbe Karte und werden kurz hervorgehoben.
-- Klappe „So habe ich dich verstanden“ auf, um die letzte Anfrage ohne wiederholte Chat-Nachrichten zu prüfen.
+- Klappe „So habe ich dich verstanden“ auf, um deine Anfragen und Korrekturen der Reihe nach zu prüfen. Animierte Käsekrümel zeigen, wenn eine Anfrage verarbeitet wird.
+- Ausgabeneditor und Kalender passen sich kürzeren Fenstern an. Beträge über 1.000 € bleiben beim Bearbeiten korrekt erhalten.
+- Aktualisierter JSON-Backup-Export und zuverlässigere Wiederherstellung von Ausgaben.
 - Das separate Transkriptionsmodell und dessen zusätzliche Transkriptionskosten entfallen.
 
 ---

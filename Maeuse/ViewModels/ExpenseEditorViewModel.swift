@@ -179,6 +179,9 @@ final class ExpenseEditorViewModel {
         formatter.numberStyle = .decimal
         formatter.minimumFractionDigits = 2
         formatter.maximumFractionDigits = 2
+        // This is editable keypad input, so thousands separators would make
+        // parsedAmount reject values such as "1,234.56" / "1.234,56".
+        formatter.usesGroupingSeparator = false
         formatter.locale = LanguageManager.shared.activeLocale
         return formatter.string(from: NSNumber(value: amount)) ?? String(format: "%.2f", amount)
     }
