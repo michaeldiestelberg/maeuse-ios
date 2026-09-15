@@ -167,3 +167,35 @@
 "Close" = "Close";
 
 "StateListeningAndThinking" = "Listening and processing…";
+
+/* Optional Apple Voice Mode */
+"UseAppleIntelligence" = "Use Apple Intelligence";
+"AppleVoicePrivacy" = "Speech recognition and expense processing run on this device. No OpenAI key is needed. Audio and recognized text stay in this session; only expenses you save are kept.";
+"AppleVoiceExperimental" = "Experimental. Check amounts, dates and shares before saving. Pause between requests. Apple mode never switches to OpenAI automatically.";
+"UsePrivateCloudCompute" = "Use Private Cloud Compute";
+"PCCPrivacy" = "When enabled, Apple’s private servers process recognized text and the current drafts. Audio recognition stays on this device. Internet access and daily usage limits apply.";
+"PCCAccessPending" = "Not available in this build. Developer access from Apple is still required. On-device mode is independent of this approval.";
+"AppleChecking" = "Checking Apple Intelligence…";
+"AppleRequiresOS" = "Apple mode requires iOS 26 or later.";
+"AppleEnableIntelligence" = "Enable Apple Intelligence in the device’s Settings first.";
+"AppleDeviceUnsupported" = "This device does not support Apple Intelligence.";
+"AppleModelNotReady" = "Apple’s model is still downloading or preparing. Try again when it is ready.";
+"AppleUnavailable" = "Apple Intelligence is unavailable. Check the device’s Apple Intelligence settings.";
+"AppleLanguageUnsupported" = "Apple voice processing is unavailable for this device or app language.";
+"AppleReady" = "Ready for on-device voice input.";
+"AppleAssetsRequired" = "Speech files will download when you first start Apple Voice Mode. This requires internet access and free storage.";
+"AppleDownloadingAssets" = "Downloading speech files…";
+"AppleInvalidResult" = "Apple’s response could not be safely applied. Your existing drafts are unchanged. Close and retry, or enter the expense manually.";
+"AppleWorkspaceFull" = "Please save or discard this session before adding more. Apple mode supports up to 12 drafts and short spoken requests.";
+"PCCRequiresOS" = "Private Cloud Compute requires iOS 27 or later.";
+"PCCUnavailable" = "Private Cloud Compute is unavailable. Check your connection and Apple Intelligence settings, or choose on-device processing.";
+"PCCQuotaReached" = "Your daily Private Cloud Compute limit has been reached. Choose on-device processing or try again after the limit resets.";
+"AppleMicrophoneDenied" = "Allow microphone access for Mäuse in Settings to use voice input.";
+"AppleAudioUnavailable" = "Audio could not be processed reliably. Close this session and try again. Existing drafts are kept for review.";
+"AppleTooManyRequests" = "Please wait for Apple to finish processing before speaking again. Review the drafts already captured.";
+"AppleProcessingFailed" = "Apple could not finish this request. Review existing drafts, then close and retry or use manual input. No request was sent to OpenAI.";
+"AppleAudioInterrupted" = "Voice input stopped because the audio connection changed or was interrupted. Review the drafts, then start a new session.";
+"AppleVoiceProviderLabel" = "Apple · On device";
+"PCCVoiceProviderLabel" = "Apple · Private Cloud Compute";
+"AppleVoicePrivacyWithPCC" = "Speech recognition runs on this device. Apple’s private servers process recognized text and the current drafts. No OpenAI key is needed. Only expenses you save are kept by Mäuse.";
+"AppleSimulatorUnavailable" = "Apple voice input needs a supported physical device; this simulator cannot run Apple’s model.";

@@ -167,3 +167,35 @@
 "Close" = "Schließen";
 
 "StateListeningAndThinking" = "Zuhören und verarbeiten …";
+
+/* Optional Apple Voice Mode */
+"UseAppleIntelligence" = "Apple Intelligence verwenden";
+"AppleVoicePrivacy" = "Spracherkennung und Ausgabenverarbeitung laufen auf diesem Gerät. Ein OpenAI-Schlüssel ist nicht nötig. Audio und erkannter Text bleiben in dieser Sitzung; nur gespeicherte Ausgaben werden behalten.";
+"AppleVoiceExperimental" = "Experimentell. Prüfe Beträge, Daten und Anteile vor dem Speichern. Mache zwischen Anfragen eine Pause. Der Apple-Modus wechselt nie automatisch zu OpenAI.";
+"UsePrivateCloudCompute" = "Private Cloud Compute verwenden";
+"PCCPrivacy" = "Wenn aktiviert, verarbeiten Apples private Server den erkannten Text und die aktuellen Entwürfe. Die Spracherkennung bleibt auf diesem Gerät. Internetzugang ist nötig; tägliche Nutzungslimits gelten.";
+"PCCAccessPending" = "In diesem Build nicht verfügbar. Apples Freigabe für den Entwickler steht noch aus. Der Modus auf dem Gerät ist unabhängig von dieser Freigabe.";
+"AppleChecking" = "Apple Intelligence wird geprüft …";
+"AppleRequiresOS" = "Der Apple-Modus erfordert iOS 26 oder neuer.";
+"AppleEnableIntelligence" = "Aktiviere zuerst Apple Intelligence in den Geräteeinstellungen.";
+"AppleDeviceUnsupported" = "Dieses Gerät unterstützt Apple Intelligence nicht.";
+"AppleModelNotReady" = "Apples Modell wird noch geladen oder vorbereitet. Versuche es erneut, sobald es bereit ist.";
+"AppleUnavailable" = "Apple Intelligence ist nicht verfügbar. Prüfe die Apple-Intelligence-Geräteeinstellungen.";
+"AppleLanguageUnsupported" = "Apples Sprachverarbeitung ist für dieses Gerät oder diese App-Sprache nicht verfügbar.";
+"AppleReady" = "Bereit für Spracheingabe auf dem Gerät.";
+"AppleAssetsRequired" = "Sprachdateien werden beim ersten Start des Apple-Sprachmodus geladen. Dafür sind Internetzugang und freier Speicher nötig.";
+"AppleDownloadingAssets" = "Sprachdateien werden geladen …";
+"AppleInvalidResult" = "Apples Antwort konnte nicht sicher übernommen werden. Deine bisherigen Entwürfe bleiben unverändert. Schließe die Sitzung und versuche es erneut oder gib die Ausgabe manuell ein.";
+"AppleWorkspaceFull" = "Speichere oder verwirf diese Sitzung, bevor du mehr hinzufügst. Der Apple-Modus unterstützt bis zu 12 Entwürfe und kurze Sprachanfragen.";
+"PCCRequiresOS" = "Private Cloud Compute erfordert iOS 27 oder neuer.";
+"PCCUnavailable" = "Private Cloud Compute ist nicht verfügbar. Prüfe Verbindung und Apple-Intelligence-Einstellungen oder wähle die Verarbeitung auf dem Gerät.";
+"PCCQuotaReached" = "Dein tägliches Private-Cloud-Compute-Limit ist erreicht. Wähle die Verarbeitung auf dem Gerät oder versuche es nach dem Zurücksetzen des Limits erneut.";
+"AppleMicrophoneDenied" = "Erlaube Mäuse in den Einstellungen den Mikrofonzugriff, um Spracheingabe zu verwenden.";
+"AppleAudioUnavailable" = "Audio konnte nicht zuverlässig verarbeitet werden. Schließe die Sitzung und versuche es erneut. Bisherige Entwürfe bleiben zur Prüfung erhalten.";
+"AppleTooManyRequests" = "Bitte warte, bis Apple die Verarbeitung abgeschlossen hat, bevor du weitersprichst. Prüfe die bereits erfassten Entwürfe.";
+"AppleProcessingFailed" = "Apple konnte diese Anfrage nicht abschließen. Prüfe die bisherigen Entwürfe, schließe die Sitzung und versuche es erneut oder verwende die manuelle Eingabe. Es wurde keine Anfrage an OpenAI gesendet.";
+"AppleAudioInterrupted" = "Die Spracheingabe wurde durch eine geänderte oder unterbrochene Audioverbindung gestoppt. Prüfe die Entwürfe und starte eine neue Sitzung.";
+"AppleVoiceProviderLabel" = "Apple · Auf dem Gerät";
+"PCCVoiceProviderLabel" = "Apple · Private Cloud Compute";
+"AppleVoicePrivacyWithPCC" = "Die Spracherkennung läuft auf diesem Gerät. Apples private Server verarbeiten den erkannten Text und die aktuellen Entwürfe. Ein OpenAI-Schlüssel ist nicht nötig. Mäuse behält nur gespeicherte Ausgaben.";
+"AppleSimulatorUnavailable" = "Apples Spracheingabe benötigt ein unterstütztes physisches Gerät; dieser Simulator kann Apples Modell nicht ausführen.";

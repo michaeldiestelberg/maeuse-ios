@@ -1,1 +1,1 @@
-"NSMicrophoneUsageDescription" = "Mäuse verwendet dein Mikrofon, um gesprochene Ausgabendetails an OpenAI Realtime zu senden.";
+"NSMicrophoneUsageDescription" = "Mäuse verwendet dein Mikrofon, um gesprochene Ausgaben mit dem in den Einstellungen gewählten Anbieter zu erfassen.";

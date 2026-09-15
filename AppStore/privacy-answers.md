@@ -58,3 +58,9 @@ The iPhone app contains no advertising or analytics SDK. Vercel Web Analytics ru
 ## Review before submission
 
 Reconfirm OpenAI's current `/v1/realtime` retention policy immediately before submission. If the implementation or OpenAI account configuration changes—for example, an approved Zero Data Retention project is used—update these answers only after verifying the production behavior.
+
+## Unreleased Apple Voice Mode prototype
+
+The Apple provider performs speech recognition and expense interpretation on-device by default. It does not use the OpenAI API key, send audio/text to OpenAI, or persist recognized requests. The existing OpenAI provider remains available with its current disclosure and consent, so adding the local option does not remove those data flows from the app's privacy answers.
+
+Private Cloud Compute is not enabled in the prototype. Before enabling it, review the approved entitlement's current privacy requirements and describe the separately selected transfer of recognized text and temporary drafts to Apple. Update the published privacy policy for the Apple option before releasing it; do not describe the entire app's Voice Mode as on-device while OpenAI remains selectable.

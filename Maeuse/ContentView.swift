@@ -59,9 +59,18 @@ struct ContentView: View {
                 consumeCaptureLaunchIfNeeded()
             }
         }
+        .task {
+            await settingsVM.refreshAppleAvailability()
+            consumeCaptureLaunchIfNeeded()
+        }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
-                consumeCaptureLaunchIfNeeded()
+                Task {
+                    await settingsVM.refreshAppleAvailability()
+                    consumeCaptureLaunchIfNeeded()
+                }
+            } else if phase == .background {
+                voiceVM.suspendAppleSession()
             }
         }
         .onOpenURL { url in
@@ -89,6 +98,7 @@ struct ContentView: View {
 
     private func consumeCaptureLaunchIfNeeded() {
         guard !showOnboarding else { return }
+        guard !settingsVM.useAppleIntelligence || settingsVM.appleAvailability != .checking else { return }
         guard let destination = CaptureLaunchRouter.consumePending() else { return }
         applyCaptureLaunch(destination)
     }
@@ -118,7 +128,7 @@ struct ContentView: View {
             editorVM.prepareForNew()
 
         case .dictateExpense:
-            if settingsVM.voiceSettings.isReady {
+            if settingsVM.canUseVoice {
                 guard !voiceVM.isPresented else { return }
                 if editorVM.isPresented || settingsVM.isPresented {
                     deferredCaptureLaunch = destination
@@ -126,7 +136,7 @@ struct ContentView: View {
                     settingsVM.isPresented = false
                     return
                 }
-                voiceVM.open()
+                voiceVM.open(settings: settingsVM.voiceSettings)
             } else {
                 if voiceVM.isPresented {
                     deferredCaptureLaunch = destination

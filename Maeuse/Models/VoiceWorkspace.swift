@@ -181,8 +181,16 @@ struct VoiceExpenseDraftPayload: Decodable, Equatable {
     }
 }
 
+enum VoiceProvider: String, Codable {
+    case openAI
+    case apple
+}
+
 /// Voice settings persisted in UserDefaults
 struct VoiceSettings: Codable {
+    var provider: VoiceProvider = .openAI
+    var appleEnabled = false
+    var allowPrivateCloudCompute = false
     var apiKeySuffix: String?
     var verifiedAt: Date?
     var enabled: Bool
@@ -221,6 +229,7 @@ struct VoiceSettings: Codable {
     }
 
     enum CodingKeys: String, CodingKey {
+        case provider, appleEnabled, allowPrivateCloudCompute
         case apiKeySuffix
         case verifiedAt
         case enabled
@@ -231,6 +240,9 @@ struct VoiceSettings: Codable {
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
+        provider = try container.decodeIfPresent(VoiceProvider.self, forKey: .provider) ?? .openAI
+        appleEnabled = try container.decodeIfPresent(Bool.self, forKey: .appleEnabled) ?? false
+        allowPrivateCloudCompute = try container.decodeIfPresent(Bool.self, forKey: .allowPrivateCloudCompute) ?? false
         apiKeySuffix = try container.decodeIfPresent(String.self, forKey: .apiKeySuffix)
         verifiedAt = try container.decodeIfPresent(Date.self, forKey: .verifiedAt)
         enabled = try container.decodeIfPresent(Bool.self, forKey: .enabled) ?? false
@@ -241,6 +253,9 @@ struct VoiceSettings: Codable {
 
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(provider, forKey: .provider)
+        try container.encode(appleEnabled, forKey: .appleEnabled)
+        try container.encode(allowPrivateCloudCompute, forKey: .allowPrivateCloudCompute)
         try container.encodeIfPresent(apiKeySuffix, forKey: .apiKeySuffix)
         try container.encodeIfPresent(verifiedAt, forKey: .verifiedAt)
         try container.encode(enabled, forKey: .enabled)
@@ -254,7 +269,10 @@ struct VoiceSettings: Codable {
     }
 
     var isReady: Bool {
-        enabled && isVerified && hasCurrentConsent
+        switch provider {
+        case .openAI: return enabled && isVerified && hasCurrentConsent
+        case .apple: return appleEnabled
+        }
     }
 
     var hasCurrentConsent: Bool {

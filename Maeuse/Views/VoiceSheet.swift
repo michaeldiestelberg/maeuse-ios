@@ -18,6 +18,15 @@ struct VoiceSheet: View {
             if !dynamicTypeSize.isAccessibilitySize { listeningHero }
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
+                    if viewModel.provider == .apple {
+                        Label(viewModel.appleProviderLabel, systemImage: "sparkles")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(Color.maeusTextSecondary)
+                        if viewModel.phase == .connecting {
+                            Text(viewModel.stateLabel).font(.caption)
+                                .foregroundStyle(Color.maeusTextSecondary)
+                        }
+                    }
                     Text(loc("VoiceYourDrafts"))
                         .font(.system(.headline, design: .rounded, weight: .heavy))
 

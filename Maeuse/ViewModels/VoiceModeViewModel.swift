@@ -10,6 +10,12 @@ import AVFoundation
 @Observable
 final class VoiceModeViewModel {
     var phase: VoicePhase = .idle
+    private(set) var provider: VoiceProvider = .openAI
+    private var sessionID = UUID()
+    private var sessionSettings = VoiceSettings.default
+    private var appleRecognitionPending = false
+    private var connectionStatus = ""
+    private var activeService: (any VoiceCaptureService)?
     var isPresented: Bool = false
     var errorMessage: String = ""
     private(set) var understandingHistory: [VoiceUnderstandingEntry] = []
@@ -22,7 +28,7 @@ final class VoiceModeViewModel {
     private var processingResponseIDs: Set<String> = []
 
     var isProcessingRequest: Bool {
-        awaitingSpokenResponse || !processingResponseIDs.isEmpty
+        appleRecognitionPending || awaitingSpokenResponse || !processingResponseIDs.isEmpty
     }
     var microphoneIsActive: Bool = false
     var microphoneLevel: Double = 0
@@ -37,6 +43,10 @@ final class VoiceModeViewModel {
         realtime.setDelegate(self)
     }
 
+    var appleProviderLabel: String {
+        loc(sessionSettings.allowPrivateCloudCompute ? "PCCVoiceProviderLabel" : "AppleVoiceProviderLabel")
+    }
+
     var microphoneIsReady: Bool {
         microphoneIsActive && (phase == .listening || phase == .thinking)
     }
@@ -44,7 +54,7 @@ final class VoiceModeViewModel {
     var stateLabel: String {
         switch phase {
         case .idle: return loc("StateReady")
-        case .connecting: return loc("StateConnecting")
+        case .connecting: return connectionStatus.isEmpty ? loc("StateConnecting") : connectionStatus
         case .listening: return loc(microphoneIsReady ? "StateListening" : "StateConnecting")
         case .thinking: return loc(isUserSpeaking ? "StateListeningAndThinking" : "StateThinking")
         case .finalizing: return loc("StateSaving")
@@ -76,8 +86,10 @@ final class VoiceModeViewModel {
 
     // MARK: - Actions
 
-    func open() {
+    func open(settings: VoiceSettings = .default) {
         resetWorkspace()
+        sessionSettings = settings
+        provider = settings.provider
         isPresented = true
     }
 
@@ -242,13 +254,25 @@ final class VoiceModeViewModel {
         hasStartedSession = true
         phase = .connecting
 
+        let expectedSessionID = sessionID
         let previousConnection = connectionTask
-        connectionTask = Task { @MainActor in
+        connectionTask = Task { @MainActor [weak self] in
+            guard let self else { return }
             // Finish cleanup from a cancelled connection before reusing the service.
             await previousConnection?.value
             guard !Task.isCancelled else { return }
             do {
-                try await realtime.connect()
+                if sessionSettings.provider == .apple {
+                    guard #available(iOS 26, *) else { throw AppleVoiceError.message("AppleRequiresOS") }
+                    activeService = AppleVoiceService(locale: LanguageManager.shared.activeLocale,
+                        usePrivateCloudCompute: sessionSettings.allowPrivateCloudCompute) { [weak self] event in
+                            guard let self, self.isPresented, self.sessionID == expectedSessionID else { return }
+                            self.handleVoiceEvent(event)
+                        }
+                } else {
+                    activeService = realtime
+                }
+                try await activeService?.connect()
             } catch {
                 guard !Task.isCancelled else { return }
                 phase = .error
@@ -258,13 +282,22 @@ final class VoiceModeViewModel {
     }
 
     func cancelSession() {
-        realtime.disconnect()
+        activeService?.disconnect()
+        activeService = nil
         resetWorkspace()
         isPresented = false
     }
 
+    func suspendAppleSession() {
+        guard provider == .apple, isPresented else { return }
+        connectionTask?.cancel()
+        activeService?.disconnect()
+        handleVoiceEvent(.error(loc("AppleAudioInterrupted")))
+    }
+
     func finishAfterSave() {
-        realtime.disconnect()
+        activeService?.disconnect()
+        activeService = nil
         resetWorkspace()
         isPresented = false
     }
@@ -274,7 +307,8 @@ final class VoiceModeViewModel {
         updatedExpenseIDs.remove(draft.id)
         changedFieldsByExpenseID[draft.id] = nil
         clarificationQuestion = ""
-        realtime.sendWorkspaceNote("The user removed expense \(draft.id) named \(draft.normalizedTitle) from the temporary workspace. Keep it removed unless the user asks to add it again.")
+        activeService?.updateDrafts(drafts)
+        activeService?.sendWorkspaceNote("The user removed expense \(draft.id) named \(draft.normalizedTitle) from the temporary workspace. Keep it removed unless the user asks to add it again.")
     }
 
     func expensesForSaving() -> [Expense] {
@@ -293,9 +327,11 @@ final class VoiceModeViewModel {
     }
 
     func resetWorkspace() {
+        sessionID = UUID()
         connectionTask?.cancel()
         phase = .idle
         errorMessage = ""
+        connectionStatus = ""
         understandingHistory = []
         clarificationQuestion = ""
         drafts = []
@@ -383,6 +419,7 @@ final class VoiceModeViewModel {
 
     private func clearProcessingState() {
         awaitingSpokenResponse = false
+        appleRecognitionPending = false
         processingResponseIDs = []
         isUserSpeaking = false
     }
@@ -431,7 +468,20 @@ final class VoiceModeViewModel {
 
 extension VoiceModeViewModel: RealtimeVoiceServiceDelegate {
     func realtimeVoiceService(_ service: RealtimeVoiceService, didReceive event: RealtimeVoiceServiceEvent) {
+        guard provider == .openAI else { return }
+        handleVoiceEvent(event)
+    }
+
+    func handleVoiceEvent(_ event: RealtimeVoiceServiceEvent) {
         switch event {
+        case .connectionStatus(let status):
+            connectionStatus = status
+        case .recognitionPending(let pending):
+            appleRecognitionPending = pending
+            refreshActivityPhase()
+        case .speechActivity(let speaking):
+            isUserSpeaking = speaking
+            refreshActivityPhase()
         case .connected:
             phase = microphoneIsActive ? .listening : .connecting
         case .disconnected:

@@ -8,6 +8,9 @@ protocol RealtimeVoiceServiceDelegate: AnyObject {
 }
 
 enum RealtimeVoiceServiceEvent {
+    case connectionStatus(String)
+    case recognitionPending(Bool)
+    case speechActivity(Bool)
     case connected
     case disconnected
     case microphoneReady
@@ -36,7 +39,7 @@ final class RealtimeVoiceService: NSObject, @unchecked Sendable {
     private let audioSendQueue = DispatchQueue(label: "maeuse.realtime.audio-send")
     // AVAudioSession is process-wide. Serialize activation/deactivation across
     // service instances without blocking the UI when a voice sheet is closed.
-    private static let audioSessionQueue = DispatchQueue(label: "maeuse.realtime.audio-session", qos: .userInitiated)
+    static let audioSessionQueue = DispatchQueue(label: "maeuse.realtime.audio-session", qos: .userInitiated)
     private let targetAudioFormat = AVAudioFormat(
         commonFormat: .pcmFormatInt16,
         sampleRate: 24_000,

@@ -2,6 +2,15 @@
 
 This file records user-facing changes to Mäuse. App Store and GitHub release notes should be based on the matching version section.
 
+## Unreleased — Apple Voice Mode prototype
+
+- Add a dedicated, opt-in Apple Intelligence provider while keeping existing OpenAI credentials and consent independent.
+- Recognize speech on-device and turn English or German requests into reviewable expense drafts with Foundation Models on supported iOS 26+ devices.
+- Apply corrections to stable draft IDs, keep unrelated drafts, serialize follow-up requests, and preserve manual removals during generation.
+- Explain device/model availability and speech downloads; stop capture on audio interruptions and backgrounding.
+- Prepare a separately gated Private Cloud Compute path for iOS 27. Access is not granted or enabled yet.
+- Preserve iOS 17 support for manual entry and the existing OpenAI provider. Real Apple inference and microphone validation remain required before release.
+
 ## 1.3.1 — 2026-09-15
 
 Internal TestFlight candidate (build 44; follows build 42).
