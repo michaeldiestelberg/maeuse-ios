@@ -7,11 +7,11 @@
 - [x] FileDocument replaced with Transferable JSON export while retaining iOS 17 support.
 - [x] Editor/calendar/dashboard adapted for shorter windows; editable amounts above €1,000 corrected.
 - [x] Baseline iOS 26.5 regression run passed 47 tests, including backup replacement and on-disk persistence.
-- [x] Final iOS 26.5 regression run with Xcode 27 passed 49 tests, including large-amount and resizing coverage.
+- [x] Final build 44: all 50 iOS 26.5 tests pass with Xcode 27, including large amounts, resizing, and connection cancellation.
 - [x] Xcode 27 Release build and static analysis pass with zero warnings (27A266a).
-- [ ] iOS 27 regression and interactive checks pass; evidence recorded in `ios27-compatibility.md`.
+- [x] Final build 44: all 50 iOS 27 tests pass; targeted interactive checks and limits recorded in `ios27-compatibility.md`.
 - [x] Live Voice Mode regression with recorded English/German expenses passed using the production session configuration and authorized test key.
-- [ ] Xcode Cloud workflow uses Xcode 27 and assigns build `44`.
+- [x] Xcode Cloud workflow pinned to Xcode 27 RC (27A266a); Next Build Number set to `44`.
 - [ ] Release commit pushed to `main`; **Maeuse | Default** succeeds.
 - [ ] Build `1.3.1 (44)` is processed and distributed to the internal Family group.
 - [ ] Physical iPhone microphone, interruptions, Bluetooth, and widget/control launches checked. No physical device is currently connected; these remain explicit TestFlight follow-up items.
