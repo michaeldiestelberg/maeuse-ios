@@ -13,10 +13,12 @@
 
 | | |
 | --- | --- |
-| Version | 1.3.1 (build 44) |
+| Version | 1.3.1 (build 45) |
 | Platform | iPhone · iOS 17 or later |
 | Status | Internal TestFlight candidate; 1.3.0 (32) remains live on the App Store |
 | Languages | English and German |
+
+Build 45 adds safer backup restoration, strict amount/date validation, protection against stale voice updates, and resumable voice capture after audio interruptions. Validation: 63 tests pass on iOS 26.5; the Release build and static analysis pass without warnings. iOS 27 simulator launch and physical-device audio checks remain follow-up items.
 
 Latest App Store release (build 32): Lock Screen, Home Screen, and Control Center capture, improved control icons and expense deletion, Voice Mode haptics, and a more stable expense editor with the keyboard open.
 

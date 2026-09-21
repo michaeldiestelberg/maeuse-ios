@@ -69,6 +69,9 @@ final class ExpensePersistenceTests: XCTestCase {
             context.insert(Expense(id: "later", amount: 12, desc: "Later", date: date))
             try context.save()
             try BackupService.replaceAllExpenses(in: context, with: BackupService.parseBackup(data: backup))
+            let liveRows = try context.fetch(FetchDescriptor<Expense>())
+            XCTAssertEqual(liveRows.map(\.id), ["stable-id"])
+            XCTAssertEqual(liveRows.first?.amount, 18.90)
         }
         let reopened = try container(at: url)
         let rows = try reopened.mainContext.fetch(FetchDescriptor<Expense>())
@@ -177,7 +180,113 @@ final class ExpensePersistenceTests: XCTestCase {
         }
     }
 
+    func testSuccessfulRestoreRefreshesMountedSwiftDataQuery() async throws {
+        let store = try container()
+        store.mainContext.insert(Expense(id: "keep", amount: 30, desc: "Before", date: .now))
+        try store.mainContext.save()
+        var displayed: [String] = []
+        let scene = try XCTUnwrap(UIApplication.shared.connectedScenes.first as? UIWindowScene)
+        let previousWindow = scene.windows.first(where: \.isKeyWindow)
+        let window = UIWindow(windowScene: scene)
+        let host = UIHostingController(rootView: RestoreQueryProbe { displayed = $0 }.modelContainer(store))
+        window.rootViewController = host
+        window.makeKeyAndVisible()
+        defer { window.isHidden = true; previousWindow?.makeKeyAndVisible() }
+        try await Task.sleep(for: .milliseconds(200))
+        XCTAssertEqual(displayed, ["keep:30.0:Before"])
+        let updated = Expense(id: "keep", amount: 20, desc: "After", date: .now)
+        try BackupService.replaceAllExpenses(in: store.mainContext, with: [ExpenseBackup(from: updated)])
+        for _ in 0..<20 {
+            if displayed == ["keep:20.0:After"] { break }
+            try await Task.sleep(for: .milliseconds(50))
+        }
+        XCTAssertEqual(displayed, ["keep:20.0:After"], "An already-mounted ledger must update after a successful isolated restore")
+    }
+
     private func descendants(of view: UIView) -> [UIView] {
         view.subviews.flatMap { [$0] + descendants(of: $0) }
+    }
+}
+
+@MainActor
+final class BackupFailureRegressionTests: XCTestCase {
+    func testRestoreSaveFailurePreservesOriginalLedger() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let url = directory.appendingPathComponent("readonly.store")
+        let schema = Schema([Expense.self])
+        do {
+            let store = try ModelContainer(for: schema, configurations: [ModelConfiguration(schema: schema, url: url)])
+            store.mainContext.insert(Expense(id: "keep", amount: 24, desc: "Original", date: .now))
+            try store.mainContext.save()
+        }
+        let readonly = try ModelContainer(for: schema, configurations: [ModelConfiguration(schema: schema, url: url, allowsSave: false)])
+        let data = Data(#"[{"id":"replace","amount":8,"description":"New","date":"2026-09-21","splitMode":"percent","splitValue":50}]"#.utf8)
+        XCTAssertThrowsError(try BackupService.replaceAllExpenses(in: readonly.mainContext,
+            with: BackupService.parseBackup(data: data)))
+        let rows = try readonly.mainContext.fetch(FetchDescriptor<Expense>())
+        XCTAssertEqual(rows.map(\.id), ["keep"])
+        XCTAssertEqual(rows.first?.amount, 24)
+        let fresh = try ModelContext(readonly).fetch(FetchDescriptor<Expense>())
+        XCTAssertEqual(fresh.map(\.id), ["keep"])
+        XCTAssertEqual(fresh.first?.amount, 24)
+    }
+}
+
+@MainActor
+final class ExpenseValidationRegressionTests: XCTestCase {
+    func testUnsafeBackupNumbersAndDatesAreRejectedBeforeReplacement() throws {
+        let schema = Schema([Expense.self])
+        let store = try ModelContainer(for: schema, configurations: [ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)])
+        store.mainContext.insert(Expense(id: "keep", amount: 24, desc: "Original", date: .now))
+        try store.mainContext.save()
+        let base: [String: Any] = ["id": "new", "amount": 20, "description": "Coffee", "date": "2026-09-21", "splitMode": "percent", "splitValue": 50]
+        let invalid: [(String, Any)] = [("splitValue", 1e30), ("splitValue", -1), ("splitValue", 101),
+            ("amount", 1e300), ("amount", -5), ("amount", 0), ("amount", 0.001), ("id", " "),
+            ("date", "2026-02-30"), ("date", "2026-9-01")]
+        for (key, value) in invalid {
+            var row = base
+            row[key] = value
+            let data = try JSONSerialization.data(withJSONObject: [row])
+            XCTAssertThrowsError(try BackupService.parseBackup(data: data), "\(key): \(value)")
+            let decoded = try JSONDecoder().decode([ExpenseBackup].self, from: data)
+            XCTAssertThrowsError(try BackupService.replaceAllExpenses(in: store.mainContext, with: decoded))
+            XCTAssertEqual(try store.mainContext.fetch(FetchDescriptor<Expense>()).map(\.id), ["keep"])
+        }
+        let duplicates = try JSONDecoder().decode([ExpenseBackup].self,
+            from: JSONSerialization.data(withJSONObject: [base, base]))
+        XCTAssertThrowsError(try BackupService.replaceAllExpenses(in: store.mainContext, with: duplicates))
+    }
+
+    func testInvalidAlreadyStoredSplitCanBeRenderedAndEditedWithoutTrapping() {
+        for split in [1e30, Double.infinity, Double.nan, -1, 101] {
+            let row = Expense(amount: 10, desc: "Invalid old row", date: .now, splitValue: split)
+            XCTAssertEqual(ExpenseListViewModel().formatSplit(row), loc("InvalidSplit"))
+            let editor = ExpenseEditorViewModel()
+            editor.prepareForEdit(row)
+            XCTAssertFalse(editor.canSave)
+            XCTAssertTrue(editor.partnerFraction.isFinite)
+        }
+    }
+
+    func testValidationAcceptsLimitsAndRejectsNonfiniteMoney() {
+        XCTAssertTrue(ExpenseValidation.isValid(amount: 0.01, splitMode: .percent, splitValue: 0))
+        XCTAssertTrue(ExpenseValidation.isValid(amount: ExpenseValidation.maximumAmount, splitMode: .percent, splitValue: 100))
+        XCTAssertTrue(ExpenseValidation.isValid(amount: 10, splitMode: .fixed, splitValue: 20))
+        for number in [Double.infinity, -Double.infinity, Double.nan] {
+            XCTAssertFalse(ExpenseValidation.isValid(amount: number, splitMode: .percent, splitValue: 50))
+            XCTAssertFalse(ExpenseValidation.isValid(amount: 10, splitMode: .fixed, splitValue: number))
+        }
+    }
+}
+
+private struct RestoreQueryProbe: View {
+    @Query private var expenses: [Expense]
+    let changed: ([String]) -> Void
+    var body: some View {
+        let rows = expenses.map { "\($0.id):\($0.amount):\($0.desc)" }.sorted()
+        Text(rows.joined(separator: ","))
+            .onChange(of: rows, initial: true) { _, values in changed(values) }
     }
 }

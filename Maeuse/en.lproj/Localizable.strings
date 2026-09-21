@@ -167,3 +167,14 @@
 "Close" = "Close";
 
 "StateListeningAndThinking" = "Listening and processing…";
+
+// Release reliability and recovery
+"InvalidSplit" = "Invalid split";
+"VoiceInvalidResult" = "This request could not be understood reliably. Your existing drafts are safe. Resume listening and try again.";
+"VoiceResponseFailed" = "Processing this request failed. Your existing drafts are safe. Resume listening and try again.";
+"VoiceIncompleteResult" = "This request was not processed completely. Your existing drafts are safe. Resume listening and repeat it.";
+"VoiceAudioInterrupted" = "Recording was interrupted. Your drafts are safe. Resume listening when you are ready.";
+"VoiceAudioChanged" = "The microphone connection changed. Your drafts are safe. Resume listening to reconnect.";
+"VoiceResumeListening" = "Resume listening";
+"VoiceInvalidDate" = "Check date";
+"VoiceInvalidDateQuestion" = "Please repeat the date for the expense marked “Check date”.";

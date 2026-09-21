@@ -1,3 +1,4 @@
+import AVFoundation
 import XCTest
 @testable import Maeuse
 
@@ -120,7 +121,7 @@ final class RealtimeVoiceWorkspaceTests: XCTestCase {
         XCTAssertEqual(payload.expenses.first?.draft.normalizedAmount, 4)
     }
 
-    func testParsesFunctionArgumentsDoneOnlyOnce() throws {
+    func testWaitsForSuccessfulResponseBeforeApplyingArguments() throws {
         let arguments = """
         {
           "user_understanding": "Remove the coffee.",
@@ -157,12 +158,13 @@ final class RealtimeVoiceWorkspaceTests: XCTestCase {
         XCTAssertTrue(duplicate.isEmpty)
         let second = try parser.parse(try JSONSerialization.data(withJSONObject: responseDoneEvent))
 
-        XCTAssertEqual(first.compactMap(\.workspaceSyncPayload).count, 1)
-        XCTAssertEqual(second.compactMap(\.workspaceSyncPayload).count, 0)
+        XCTAssertEqual(first.compactMap(\.workspaceSyncPayload).count, 0)
+        XCTAssertEqual(second.compactMap(\.workspaceSyncPayload).count, 1)
     }
 
     func testWorkspaceAppliesDateAndSplitDefaultsWithoutMissingBadges() {
         let viewModel = VoiceModeViewModel()
+        viewModel.open()
         let payload = VoiceWorkspaceSyncPayload(
             userUnderstanding: "I bought groceries for 10 euros.",
             clarificationQuestion: "",
@@ -194,6 +196,7 @@ final class RealtimeVoiceWorkspaceTests: XCTestCase {
 
     func testWorkspaceSyncReplacesLatestUnderstandingAndAppliesCorrections() {
         let viewModel = VoiceModeViewModel()
+        viewModel.open()
         let payload = VoiceWorkspaceSyncPayload(
             userUnderstanding: "I bought coffee for 5 euros.",
             clarificationQuestion: "",
@@ -241,6 +244,7 @@ final class RealtimeVoiceWorkspaceTests: XCTestCase {
 
     func testUnclearAudioShowsClarificationWithoutInventingUnderstanding() {
         let viewModel = VoiceModeViewModel()
+        viewModel.open()
         let payload = VoiceWorkspaceSyncPayload(
             userUnderstanding: " \n ",
             clarificationQuestion: "How much was the coffee?",
@@ -261,6 +265,7 @@ final class RealtimeVoiceWorkspaceTests: XCTestCase {
 
     func testResetClearsUnderstandingAndClarification() {
         let viewModel = VoiceModeViewModel()
+        viewModel.open()
         viewModel.realtimeVoiceService(RealtimeVoiceService(), didReceive: .workspaceSync(
             VoiceWorkspaceSyncPayload(
                 userUnderstanding: "Coffee", clarificationQuestion: "How much was it?",
@@ -278,6 +283,7 @@ final class RealtimeVoiceWorkspaceTests: XCTestCase {
 
     func testProcessingPersistsDuringSpeechAndUntilEachPendingResultArrives() {
         let viewModel = VoiceModeViewModel()
+        viewModel.open()
         let service = RealtimeVoiceService()
         func send(_ event: RealtimeVoiceServiceEvent) { viewModel.realtimeVoiceService(service, didReceive: event) }
         func sync(_ responseID: String, amount: Double) {
@@ -316,6 +322,7 @@ final class RealtimeVoiceWorkspaceTests: XCTestCase {
 
     func testProcessingClearsOnNoOpCompletionErrorAndReset() {
         let viewModel = VoiceModeViewModel()
+        viewModel.open()
         let service = RealtimeVoiceService()
         func send(_ event: RealtimeVoiceServiceEvent) { viewModel.realtimeVoiceService(service, didReceive: event) }
         send(.microphoneStarted)
@@ -347,6 +354,7 @@ final class RealtimeVoiceWorkspaceTests: XCTestCase {
 
     func testMouseReadinessWaitsForCaptureRatherThanConnectionOrPermission() {
         let viewModel = VoiceModeViewModel()
+        viewModel.open()
         let service = RealtimeVoiceService()
         viewModel.phase = .connecting
 
@@ -367,6 +375,7 @@ final class RealtimeVoiceWorkspaceTests: XCTestCase {
 
     func testFailureAndSessionEndNeverShowAReadyMicrophone() {
         let viewModel = VoiceModeViewModel()
+        viewModel.open()
         let service = RealtimeVoiceService()
         viewModel.realtimeVoiceService(service, didReceive: .microphoneStarted)
         viewModel.realtimeVoiceService(service, didReceive: .error("Connection failed"))
@@ -375,6 +384,7 @@ final class RealtimeVoiceWorkspaceTests: XCTestCase {
 
         viewModel.resetWorkspace()
         XCTAssertFalse(viewModel.microphoneIsReady)
+        viewModel.open()
         viewModel.realtimeVoiceService(service, didReceive: .microphoneStarted)
         viewModel.phase = .finalizing
         XCTAssertFalse(viewModel.microphoneIsReady)
@@ -399,6 +409,7 @@ final class RealtimeVoiceWorkspaceTests: XCTestCase {
 
     func testStatusEventsDoNotAddSessionBubbles() {
         let viewModel = VoiceModeViewModel()
+        viewModel.open()
         let service = RealtimeVoiceService()
 
         viewModel.realtimeVoiceService(service, didReceive: .microphoneReady)
@@ -430,6 +441,7 @@ final class RealtimeVoiceWorkspaceTests: XCTestCase {
         XCTAssertEqual(VoiceInputMeter.level(pcm16: audio(decibels: -10)), 1)
 
         let viewModel = VoiceModeViewModel()
+        viewModel.open()
         let service = RealtimeVoiceService()
         viewModel.realtimeVoiceService(service, didReceive: .microphoneStarted)
         for data in [quiet, normal, Data(repeating: 0, count: 2_048)] {
@@ -449,6 +461,7 @@ final class RealtimeVoiceWorkspaceTests: XCTestCase {
 
     func testThreeDraftsStayInPlaceWhenCorrectionPayloadReordersThem() {
         let viewModel = VoiceModeViewModel()
+        viewModel.open()
         let service = RealtimeVoiceService()
         func draft(_ id: String, _ amount: Double, confidence: Double = 1) -> VoiceExpenseDraftPayload {
             VoiceExpenseDraftPayload(id: id, title: id, amount: amount,
@@ -485,6 +498,7 @@ final class RealtimeVoiceWorkspaceTests: XCTestCase {
 
     func testClarificationClearsAfterAnswerAndSavingWaitsForResponse() {
         let viewModel = VoiceModeViewModel()
+        viewModel.open()
         let service = RealtimeVoiceService()
         viewModel.realtimeVoiceService(service, didReceive: .workspaceSync(
             VoiceWorkspaceSyncPayload(userUnderstanding: "Coffee", clarificationQuestion: "How much?",
@@ -505,6 +519,7 @@ final class RealtimeVoiceWorkspaceTests: XCTestCase {
 
     func testHistoryDeduplicatesResponseButKeepsRepeatedSpeechAndIgnoresEmptyNotes() {
         let viewModel = VoiceModeViewModel()
+        viewModel.open()
         let service = RealtimeVoiceService()
         func sync(_ id: String, _ text: String, question: String = "") {
             var payload = VoiceWorkspaceSyncPayload(userUnderstanding: text, clarificationQuestion: question,
@@ -535,6 +550,7 @@ final class RealtimeVoiceWorkspaceTests: XCTestCase {
     func testHistoryUsesResponseIdentityAcrossToolCallsAndCompletionFallback() throws {
         var parser = RealtimeServerEventParser()
         let viewModel = VoiceModeViewModel()
+        viewModel.open()
         let service = RealtimeVoiceService()
         let arguments = #"{"user_understanding":"Actually, fourteen.","clarification_question":"","expenses":[],"changed_expense_ids":[],"removed_expense_ids":[]}"#
         func deliver(_ event: [String: Any]) throws {
@@ -567,12 +583,13 @@ final class RealtimeVoiceWorkspaceTests: XCTestCase {
                 events = try parser.parse(JSONSerialization.data(withJSONObject: ["type": "response.done", "response": response]))
             } else {
                 _ = try parser.parse(JSONSerialization.data(withJSONObject: ["type": "response.created", "response": response]))
-                events = try parser.parse(JSONSerialization.data(withJSONObject: ["type": "response.function_call_arguments.done",
-                    "response_id": "note-response", "call_id": "note-call", "name": "sync_expense_workspace", "arguments": arguments]))
+                events = try parser.parse(JSONSerialization.data(withJSONObject: ["type": "response.done",
+                    "response": ["id": "note-response", "output": response["output"]!]]))
             }
             let payload = try XCTUnwrap(events.compactMap(\.workspaceSyncPayload).first)
             XCTAssertTrue(payload.isAppGenerated)
             let viewModel = VoiceModeViewModel()
+            viewModel.open()
             viewModel.drafts = [VoiceExpenseDraft(id: "coffee", title: "Coffee", amount: 4,
                 dateISO: nil, splitMode: .percent, splitValue: 50, confidence: 1, missingFields: [])]
             viewModel.realtimeVoiceService(RealtimeVoiceService(), didReceive: .workspaceSync(payload))
@@ -583,6 +600,7 @@ final class RealtimeVoiceWorkspaceTests: XCTestCase {
 
     func testRejectsIncompleteDraftsForSaving() {
         let viewModel = VoiceModeViewModel()
+        viewModel.open()
         viewModel.drafts = [
             VoiceExpenseDraft(
                 id: "missing-title",
@@ -614,6 +632,7 @@ final class RealtimeVoiceWorkspaceTests: XCTestCase {
 
     func testValidatesAndBoundsVoiceDraftsBeforeSaving() {
         let viewModel = VoiceModeViewModel()
+        viewModel.open()
         let draft = VoiceExpenseDraft(
             id: "expense-1",
             title: "Dinner",
@@ -881,5 +900,151 @@ private extension RealtimeParsedEvent {
             return payload
         }
         return nil
+    }
+}
+
+@MainActor
+final class VoiceRecoveryRegressionTests: XCTestCase {
+    private let arguments = #"{"user_understanding":"Coffee","clarification_question":"","expenses":[{"id":"coffee","title":"Coffee","amount":4,"date_iso":"2026-09-21","split_mode":"percent","split_value":50,"confidence":1,"missing_fields":[]}],"changed_expense_ids":["coffee"],"removed_expense_ids":[]}"#
+
+    private func response(status: String = "completed", arguments: String? = nil) throws -> Data {
+        try JSONSerialization.data(withJSONObject: ["type": "response.done", "response": [
+            "id": "response-1", "status": status, "output": [["type": "function_call",
+                "name": "sync_expense_workspace", "call_id": "call-1", "arguments": arguments ?? self.arguments]]]])
+    }
+
+    private func payload(id: String = "coffee", date: String? = "2026-09-21") -> VoiceWorkspaceSyncPayload {
+        VoiceWorkspaceSyncPayload(userUnderstanding: "Coffee", clarificationQuestion: "",
+            expenses: [VoiceExpenseDraftPayload(id: id, title: "Coffee", amount: 4, dateISO: date,
+                splitMode: "percent", splitValue: 50, confidence: 1, missingFields: [])],
+            changedExpenseIDs: [id], removedExpenseIDs: [])
+    }
+
+    func testFailedIncompleteAndMalformedResultsExposeErrorsWithoutApplyingDrafts() throws {
+        for data in try [response(status: "failed"), response(status: "incomplete"), response(arguments: "{bad}")] {
+            var parser = RealtimeServerEventParser()
+            let events = try parser.parse(data)
+            XCTAssertTrue(events.contains { if case .error = $0 { return true }; return false })
+            XCTAssertTrue(events.compactMap(\.workspaceSyncPayload).isEmpty)
+        }
+    }
+
+    func testCancelledResponseDoesNotCommitEvenCompleteArguments() throws {
+        var parser = RealtimeServerEventParser()
+        let events = try parser.parse(response(status: "cancelled"))
+        XCTAssertEqual(events, [.responseFinished(id: "response-1")])
+    }
+
+    func testMalformedSecondToolPreventsPartialCommitAndSuccessfulResponseIsDeduplicated() throws {
+        var object = try XCTUnwrap(JSONSerialization.jsonObject(with: response()) as? [String: Any])
+        var result = try XCTUnwrap(object["response"] as? [String: Any])
+        var output = try XCTUnwrap(result["output"] as? [[String: Any]])
+        output.append(["type": "function_call", "name": "sync_expense_workspace", "call_id": "bad", "arguments": "{}"])
+        result["output"] = output
+        object["response"] = result
+        var parser = RealtimeServerEventParser()
+        XCTAssertTrue(try parser.parse(JSONSerialization.data(withJSONObject: object)).compactMap(\.workspaceSyncPayload).isEmpty)
+        parser = RealtimeServerEventParser()
+        XCTAssertEqual(try parser.parse(response()).compactMap(\.workspaceSyncPayload).count, 1)
+        XCTAssertTrue(try parser.parse(response()).isEmpty)
+    }
+
+    func testManualRemovalSurvivesStaleSnapshotAndAllowsExplicitNewID() throws {
+        let service = RealtimeVoiceService()
+        let vm = VoiceModeViewModel(realtime: service)
+        vm.open()
+        vm.realtimeVoiceService(service, didReceive: .workspaceSync(payload()))
+        vm.realtimeVoiceService(service, didReceive: .responseStarted(id: "pending", isAppGenerated: false))
+        vm.removeDraft(try XCTUnwrap(vm.drafts.first))
+        vm.realtimeVoiceService(service, didReceive: .workspaceSync(payload()))
+        XCTAssertTrue(vm.drafts.isEmpty)
+        XCTAssertTrue(try XCTUnwrap(vm.resumeWorkspaceContext()).contains("coffee"))
+        vm.realtimeVoiceService(service, didReceive: .workspaceSync(payload(id: "coffee-readded")))
+        XCTAssertEqual(vm.drafts.map(\.id), ["coffee-readded"])
+        XCTAssertEqual(RealtimeVoiceService.workspaceNoteEvent("removed")["type"] as? String, "conversation.item.create")
+    }
+
+    func testQueuedOldConnectionCannotMutateClosedOrReopenedWorkspace() async throws {
+        let service = RealtimeVoiceService()
+        let vm = VoiceModeViewModel(realtime: service)
+        vm.isPresented = true
+        let oldID = service.connectionID
+        service.receiveServerEvent(try response(), connectionID: oldID)
+        XCTAssertEqual(vm.drafts.count, 1, "Exercise the real ingress before cancelling")
+        let data = try response()
+        let queued = Task { @MainActor in service.receiveServerEvent(data, connectionID: oldID) }
+        vm.cancelSession()
+        await queued.value
+        XCTAssertFalse(vm.isPresented)
+        XCTAssertTrue(vm.drafts.isEmpty)
+        XCTAssertTrue(vm.understandingHistory.isEmpty)
+        XCTAssertEqual(vm.phase, .idle)
+        vm.open()
+        service.receiveServerEvent(data, connectionID: oldID)
+        service.handleAudioLifecycle(.interrupted, connectionID: oldID)
+        XCTAssertTrue(vm.drafts.isEmpty)
+        XCTAssertTrue(vm.errorMessage.isEmpty)
+        XCTAssertEqual(vm.phase, .idle)
+    }
+
+    func testAudioLifecycleStopsReadinessAndPreservesWorkspaceForResume() throws {
+        for event in [VoiceAudioLifecycleEvent.interrupted, .routeChanged, .configurationChanged, .mediaServicesReset] {
+            let service = RealtimeVoiceService()
+            let vm = VoiceModeViewModel(realtime: service)
+            vm.isPresented = true
+            vm.realtimeVoiceService(service, didReceive: .workspaceSync(payload()))
+            vm.realtimeVoiceService(service, didReceive: .microphoneStarted)
+            vm.realtimeVoiceService(service, didReceive: .microphoneLevel(0.6))
+            vm.realtimeVoiceService(service, didReceive: .listeningStopped)
+            service.handleAudioLifecycle(event, connectionID: service.connectionID)
+            XCTAssertFalse(vm.microphoneIsReady)
+            XCTAssertFalse(vm.microphoneIsActive)
+            XCTAssertEqual(vm.microphoneLevel, 0)
+            XCTAssertFalse(vm.isProcessingRequest)
+            XCTAssertEqual(vm.phase, .error)
+            XCTAssertFalse(vm.errorMessage.isEmpty)
+            XCTAssertEqual(vm.drafts.map(\.id), ["coffee"])
+            XCTAssertEqual(vm.understandingHistory.count, 1)
+            let context = try XCTUnwrap(vm.resumeWorkspaceContext())
+            XCTAssertTrue(context.contains("coffee"))
+            XCTAssertTrue(context.contains("2026-09-21"))
+            vm.restartSession()
+            XCTAssertEqual(vm.phase, .connecting)
+            XCTAssertEqual(vm.drafts.map(\.id), ["coffee"])
+            vm.cancelSession() // Cancel before the connection task can access credentials/network.
+        }
+    }
+
+    func testPlatformAudioNotificationsMapToRecoveryWithoutReactingToOwnCategoryChange() {
+        func notification(_ name: Notification.Name, _ key: String, _ value: UInt) -> Notification {
+            Notification(name: name, userInfo: [key: NSNumber(value: value)])
+        }
+        XCTAssertEqual(VoiceAudioLifecycleEvent(notification: notification(AVAudioSession.interruptionNotification,
+            AVAudioSessionInterruptionTypeKey, AVAudioSession.InterruptionType.began.rawValue)), .interrupted)
+        XCTAssertNil(VoiceAudioLifecycleEvent(notification: notification(AVAudioSession.interruptionNotification,
+            AVAudioSessionInterruptionTypeKey, AVAudioSession.InterruptionType.ended.rawValue)))
+        XCTAssertEqual(VoiceAudioLifecycleEvent(notification: notification(AVAudioSession.routeChangeNotification,
+            AVAudioSessionRouteChangeReasonKey, AVAudioSession.RouteChangeReason.oldDeviceUnavailable.rawValue)), .routeChanged)
+        XCTAssertNil(VoiceAudioLifecycleEvent(notification: notification(AVAudioSession.routeChangeNotification,
+            AVAudioSessionRouteChangeReasonKey, AVAudioSession.RouteChangeReason.categoryChange.rawValue)))
+        XCTAssertEqual(VoiceAudioLifecycleEvent(notification: Notification(name: .AVAudioEngineConfigurationChange)), .configurationChanged)
+        XCTAssertEqual(VoiceAudioLifecycleEvent(notification: Notification(name: AVAudioSession.mediaServicesWereResetNotification)), .mediaServicesReset)
+    }
+
+    func testInvalidVoiceDateCannotSaveAndCorrectionUnblocksSaving() {
+        let service = RealtimeVoiceService()
+        let vm = VoiceModeViewModel()
+        vm.open()
+        for date in ["not-a-date", "2026-02-30", "2026-2-01", "2026-09-21junk", "0000-01-01"] {
+            vm.realtimeVoiceService(service, didReceive: .workspaceSync(payload(date: date)))
+            XCTAssertFalse(vm.canSaveDrafts, date)
+            XCTAssertTrue(vm.expensesForSaving().isEmpty, date)
+            XCTAssertFalse(vm.clarificationQuestion.isEmpty, date)
+        }
+        vm.realtimeVoiceService(service, didReceive: .workspaceSync(payload(date: "2024-02-29")))
+        XCTAssertTrue(vm.canSaveDrafts)
+        XCTAssertEqual(vm.expensesForSaving().first?.dateISO, "2024-02-29")
+        vm.realtimeVoiceService(service, didReceive: .workspaceSync(payload(date: nil)))
+        XCTAssertEqual(vm.expensesForSaving().first?.dateISO, VoiceModeViewModel.todayISOString())
     }
 }

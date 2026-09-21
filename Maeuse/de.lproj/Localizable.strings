@@ -167,3 +167,14 @@
 "Close" = "Schließen";
 
 "StateListeningAndThinking" = "Zuhören und verarbeiten …";
+
+// Release reliability and recovery
+"InvalidSplit" = "Ungültige Aufteilung";
+"VoiceInvalidResult" = "Diese Anfrage konnte nicht zuverlässig verstanden werden. Deine bisherigen Entwürfe bleiben erhalten. Setze die Aufnahme fort und versuche es erneut.";
+"VoiceResponseFailed" = "Die Verarbeitung dieser Anfrage ist fehlgeschlagen. Deine bisherigen Entwürfe bleiben erhalten. Setze die Aufnahme fort und versuche es erneut.";
+"VoiceIncompleteResult" = "Diese Anfrage wurde nicht vollständig verarbeitet. Deine bisherigen Entwürfe bleiben erhalten. Setze die Aufnahme fort und wiederhole sie.";
+"VoiceAudioInterrupted" = "Die Aufnahme wurde unterbrochen. Deine Entwürfe bleiben erhalten. Setze die Aufnahme fort, wenn du bereit bist.";
+"VoiceAudioChanged" = "Die Mikrofonverbindung hat sich geändert. Deine Entwürfe bleiben erhalten. Setze die Aufnahme fort, um die Verbindung neu herzustellen.";
+"VoiceResumeListening" = "Aufnahme fortsetzen";
+"VoiceInvalidDate" = "Datum prüfen";
+"VoiceInvalidDateQuestion" = "Bitte wiederhole das Datum für die Ausgabe mit dem Hinweis „Datum prüfen“.";

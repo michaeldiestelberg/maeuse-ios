@@ -14,113 +14,79 @@ enum RealtimeParsedEvent: Equatable {
 }
 
 struct RealtimeServerEventParser {
-    private var functionArgumentBuffers: [String: String] = [:]
     private var emittedFunctionCallIDs: Set<String> = []
+    private var completedResponseIDs: Set<String> = []
     private var appGeneratedResponseIDs: Set<String> = []
 
     mutating func parse(_ data: Data) throws -> [RealtimeParsedEvent] {
         guard let object = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let type = object["type"] as? String else {
-            return []
-        }
-
+              let type = object["type"] as? String else { return [] }
         switch type {
-        case "session.created", "session.updated":
-            return [.sessionReady]
-
-        case "input_audio_buffer.speech_started":
-            return [.listeningStarted]
-
-        case "input_audio_buffer.speech_stopped":
-            return [.listeningStopped]
-
+        case "session.created", "session.updated": return [.sessionReady]
+        case "input_audio_buffer.speech_started": return [.listeningStarted]
+        case "input_audio_buffer.speech_stopped": return [.listeningStopped]
         case "response.created":
             recordResponseSource(object)
             let id = responseID(in: object)
             return [.responseStarted(id: id, isAppGenerated: appGeneratedResponseIDs.contains(id))]
-
         case "response.done":
             recordResponseSource(object)
-            var events = parseResponseDone(object)
-            events.append(.responseFinished(id: responseID(in: object)))
-            return events
-
-        case "response.function_call_arguments.delta":
-            let key = functionCallBufferKey(from: object)
-            let delta = object["delta"] as? String ?? ""
-            functionArgumentBuffers[key, default: ""] += delta
-            return [.functionArgumentsDelta]
-
+            let id = responseID(in: object)
+            if id != "unidentified-response", !completedResponseIDs.insert(id).inserted { return [] }
+            return parseResponseDone(object) + [.responseFinished(id: id)]
+        case "response.function_call_arguments.delta": return [.functionArgumentsDelta]
         case "response.function_call_arguments.done":
-            return parseFunctionArgumentsDone(object)
-
-        case "response.output_text.delta":
-            guard let delta = object["delta"] as? String, !delta.isEmpty else { return [] }
-            return [.assistantTextDelta(delta)]
-
-        case "response.output_text.done":
-            guard let text = object["text"] as? String, !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-                return []
-            }
-            return [.assistantTextDone(text)]
-
-        case "error":
-            return [.error(parseErrorMessage(object))]
-
-        default:
+            // This event also occurs for cancelled/incomplete responses. Only the
+            // final response contains both authoritative arguments and status.
             return []
+        case "response.output_text.delta":
+            guard let text = object["delta"] as? String, !text.isEmpty else { return [] }
+            return [.assistantTextDelta(text)]
+        case "response.output_text.done":
+            guard let text = object["text"] as? String, !text.isEmpty else { return [] }
+            return [.assistantTextDone(text)]
+        case "error": return [.error(parseErrorMessage(object))]
+        default: return []
         }
     }
 
     private mutating func parseResponseDone(_ object: [String: Any]) -> [RealtimeParsedEvent] {
-        guard let response = object["response"] as? [String: Any],
-              let output = response["output"] as? [[String: Any]] else {
-            return []
+        guard let response = object["response"] as? [String: Any] else {
+            return [.error(loc("VoiceInvalidResult"))]
         }
-
-        return output.compactMap { item in
-            guard item["type"] as? String == "function_call",
-                  item["name"] as? String == "sync_expense_workspace",
-                  let arguments = item["arguments"] as? String else {
-                return nil
-            }
-
+        let status = response["status"] as? String ?? "completed"
+        if status == "cancelled" { return [] }
+        if status != "completed" {
+            return [.error(loc(status == "incomplete" ? "VoiceIncompleteResult" : "VoiceResponseFailed"))]
+        }
+        guard let output = response["output"] as? [[String: Any]] else {
+            return [.error(loc("VoiceInvalidResult"))]
+        }
+        let id = response["id"] as? String
+        var decoded: [(VoiceWorkspaceSyncPayload, String?)] = []
+        var hasTool = false
+        for item in output where item["type"] as? String == "function_call" {
+            hasTool = true
             let callID = item["call_id"] as? String
-            if let callID, emittedFunctionCallIDs.contains(callID) {
-                return nil
+            if let callID, emittedFunctionCallIDs.contains(callID) { continue }
+            guard item["name"] as? String == "sync_expense_workspace",
+                  let arguments = item["arguments"] as? String,
+                  let data = arguments.data(using: .utf8),
+                  var payload = try? JSONDecoder().decode(VoiceWorkspaceSyncPayload.self, from: data) else {
+                return [.error(loc("VoiceInvalidResult"))]
             }
-            guard let event = decodeWorkspaceSync(arguments, callID: callID, responseID: response["id"] as? String) else { return nil }
+            payload.responseID = id ?? callID
+            payload.isAppGenerated = id.map { appGeneratedResponseIDs.contains($0) } ?? false
+            decoded.append((payload, callID))
+        }
+        // Never publish part of a response when another tool call in it is invalid.
+        if !hasTool, !appGeneratedResponseIDs.contains(id ?? "") {
+            return [.error(loc("VoiceInvalidResult"))]
+        }
+        return decoded.map { payload, callID in
             if let callID { emittedFunctionCallIDs.insert(callID) }
-            return event
+            return .workspaceSync(payload, callID: callID)
         }
-    }
-
-    private mutating func parseFunctionArgumentsDone(_ object: [String: Any]) -> [RealtimeParsedEvent] {
-        let key = functionCallBufferKey(from: object)
-        let arguments = object["arguments"] as? String ?? functionArgumentBuffers[key] ?? ""
-        functionArgumentBuffers[key] = nil
-
-        guard (object["name"] as? String == nil) || object["name"] as? String == "sync_expense_workspace" else {
-            return []
-        }
-
-        let callID = object["call_id"] as? String
-        if let callID, emittedFunctionCallIDs.contains(callID) { return [] }
-        if let event = decodeWorkspaceSync(arguments, callID: callID, responseID: object["response_id"] as? String) {
-            if let callID { emittedFunctionCallIDs.insert(callID) }
-            return [event]
-        }
-        return []
-    }
-
-    private func decodeWorkspaceSync(_ arguments: String, callID: String?, responseID: String?) -> RealtimeParsedEvent? {
-        guard let data = arguments.data(using: .utf8),
-              var payload = try? JSONDecoder().decode(VoiceWorkspaceSyncPayload.self, from: data) else {
-            return nil
-        }
-        payload.responseID = responseID ?? callID
-        payload.isAppGenerated = responseID.map { appGeneratedResponseIDs.contains($0) } ?? false
-        return .workspaceSync(payload, callID: callID)
     }
 
     private func responseID(in object: [String: Any]) -> String {
@@ -135,24 +101,8 @@ struct RealtimeServerEventParser {
         appGeneratedResponseIDs.insert(id)
     }
 
-    private func functionCallBufferKey(from object: [String: Any]) -> String {
-        if let callID = object["call_id"] as? String { return callID }
-        if let itemID = object["item_id"] as? String { return itemID }
-        if let outputIndex = object["output_index"] { return "output-\(outputIndex)" }
-        return "default"
-    }
-
     private func parseErrorMessage(_ object: [String: Any]) -> String {
-        if let error = object["error"] as? [String: Any],
-           let message = error["message"] as? String {
-            return message
-        }
-
-        if let message = object["message"] as? String {
-            return message
-        }
-
-        return "Realtime session failed."
+        (object["error"] as? [String: Any])?["message"] as? String
+            ?? object["message"] as? String ?? loc("VoiceResponseFailed")
     }
-
 }

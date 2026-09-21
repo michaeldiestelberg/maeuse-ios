@@ -1,5 +1,19 @@
 # Mäuse 1.3.1 TestFlight Checklist
 
+## Build 45 — pre-release review fixes
+
+- [x] Marketing version remains `1.3.1`; repository build number is `45`.
+- [x] All seven review findings have fixes, with 13 new regression tests.
+- [x] All 63 tests pass on iOS 26.5, including actual restore write failure, live query refresh, stale voice events, draft removal, dates, and audio recovery.
+- [x] Xcode 27 Release build and static analysis pass without warnings.
+- [x] Recovery UI and English/German localization parity verified.
+- [ ] Release commit pushed to `main`; **Maeuse | Default** succeeds.
+- [ ] Build `1.3.1 (45)` is processed and distributed to the internal Family group.
+- [ ] iOS 27 runtime verification: both simulator attempts stalled before app launch even after restarting Device Hub and simulator services; retry after a Mac restart.
+- [ ] Physical iPhone microphone, interruptions, Bluetooth, and widget/control launches checked through TestFlight.
+
+Evidence and scope: `Review/1.3.1-review-fixes.md`. Historical build 44 results below do not substitute for a fresh build 45 iOS 27 or hardware pass.
+
 ## Build 44 — iOS 27 compatibility
 
 - [x] Marketing version remains `1.3.1`; repository build number is `44`.

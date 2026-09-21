@@ -67,7 +67,10 @@ final class Expense {
     }()
 
     static func dateFromISO(_ string: String) -> Date? {
-        isoFormatter.date(from: string)
+        guard string.range(of: #"^[0-9]{4}-[0-9]{2}-[0-9]{2}$"#, options: .regularExpression) != nil,
+              let year = Int(string.prefix(4)), year > 0,
+              let date = isoFormatter.date(from: string), isoFormatter.string(from: date) == string else { return nil }
+        return date
     }
 }
 
@@ -93,8 +96,10 @@ struct ExpenseBackup: Codable {
     }
 
     func toExpense() -> Expense? {
-        guard let expenseDate = Expense.dateFromISO(date) else { return nil }
         let mode = SplitMode(rawValue: splitMode) ?? .percent
+        guard !id.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+              ExpenseValidation.isValid(amount: amount, splitMode: mode, splitValue: splitValue),
+              let expenseDate = Expense.dateFromISO(date) else { return nil }
         let created: Date
         if let createdStr = createdAt {
             created = ISO8601DateFormatter().date(from: createdStr) ?? Date()
@@ -129,4 +134,15 @@ extension Double {
         return "€" + (formatter.string(from: NSNumber(value: self)) ?? "0.00")
     }
 
+}
+
+/// Shared limits keep imported/model-generated values safe for cent arithmetic.
+enum ExpenseValidation {
+    static let maximumAmount = 999_999_999.99
+
+    static func isValid(amount: Double, splitMode: SplitMode, splitValue: Double) -> Bool {
+        guard amount.isFinite, amount > 0, amount <= maximumAmount, amount.roundedMoney > 0,
+              splitValue.isFinite, splitValue >= 0 else { return false }
+        return splitValue <= (splitMode == .percent ? 100 : maximumAmount)
+    }
 }

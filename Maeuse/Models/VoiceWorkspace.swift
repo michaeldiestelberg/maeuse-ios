@@ -67,7 +67,7 @@ struct VoiceExpenseDraft: Identifiable, Equatable {
     }
 
     var normalizedAmount: Double {
-        guard let amount, amount.isFinite else { return 0 }
+        guard let amount, amount.isFinite, amount <= ExpenseValidation.maximumAmount else { return 0 }
         return max(0, amount).roundedMoney
     }
 
@@ -96,19 +96,13 @@ struct VoiceExpenseDraft: Identifiable, Equatable {
             return false
         }
 
-        let proposedSplit = splitValue ?? 50
-        guard proposedSplit.isFinite, proposedSplit >= 0 else { return false }
-
-        switch normalizedSplitMode {
-        case .percent:
-            return proposedSplit <= 100
-        case .fixed:
-            return true
-        }
+        if let dateISO, Expense.dateFromISO(dateISO) == nil { return false }
+        guard !missingFields.contains(.title), !missingFields.contains(.amount) else { return false }
+        return ExpenseValidation.isValid(amount: amount, splitMode: normalizedSplitMode, splitValue: splitValue ?? 50)
     }
 
-    func normalizedDate(defaultISO: String) -> Date {
-        Expense.dateFromISO(dateISO ?? defaultISO) ?? Date()
+    func normalizedDate(defaultISO: String) -> Date? {
+        Expense.dateFromISO(dateISO ?? defaultISO)
     }
 
     var partnerShare: Double {

@@ -69,24 +69,20 @@ struct BackupService {
         in context: ModelContext,
         with backups: [ExpenseBackup]
     ) throws {
+        guard Set(backups.map(\.id)).count == backups.count else { throw BackupError.duplicateExpenseIDs }
         let expenses = try backups.map { backup -> Expense in
             guard let expense = backup.toExpense() else { throw BackupError.invalidExpense }
             return expense
         }
 
-        do {
-            // Stage replacement in one context save so failure can restore the
-            // original ledger, including when imported IDs match existing rows.
-            for expense in try context.fetch(FetchDescriptor<Expense>()) {
-                context.delete(expense)
-            }
-            for expense in expenses {
-                context.insert(expense)
-            }
-            try context.save()
-        } catch {
-            context.rollback()
-            throw error
+        // SwiftData can leave a failed save's inserted/deleted objects registered
+        // even after rollback. Never perform a destructive restore in the UI context.
+        let replacement = ModelContext(context.container)
+        replacement.autosaveEnabled = false
+        for expense in try replacement.fetch(FetchDescriptor<Expense>()) {
+            replacement.delete(expense)
         }
+        for expense in expenses { replacement.insert(expense) }
+        try replacement.save()
     }
 }

@@ -241,7 +241,7 @@ enum RealtimeSessionConfiguration {
 
         # Session Context
         - Current date: \(currentDateISO)
-        - Each session starts with an empty workspace.
+        - Use the app-provided initial workspace when supplied; otherwise each session starts empty.
         - Capture one or more expenses from the conversation.
         - The user may correct, rename, split, date, or remove expenses by voice.
         - Do not save expenses yourself. The app saves the active workspace only when the user ends the session.
@@ -277,6 +277,8 @@ enum RealtimeSessionConfiguration {
         # Removal and Corrections
         - If the user removes an expense, omit it from the expenses array and include its id in removed_expense_ids.
         - Preserve stable ids for expenses across corrections.
+        - IDs removed by an app-generated note are permanently retired. If the user explicitly asks to add that expense again, assign a new id. Never resurrect a retired id from earlier conversation context.
+        - App-generated workspace notes need no response; use them when processing the next spoken request.
         - Use changed_expense_ids for expenses whose fields changed in this turn.
         """
     }

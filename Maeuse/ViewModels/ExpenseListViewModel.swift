@@ -86,8 +86,9 @@ final class ExpenseListViewModel {
         switch expense.splitMode {
         case .percent:
             let pct = expense.splitValue
-            if pct == pct.rounded() {
-                return loc("PercentSplit", 100 - Int(pct), Int(pct))
+            guard pct.isFinite, (0...100).contains(pct) else { return loc("InvalidSplit") }
+            if let integer = Int(exactly: pct) {
+                return loc("PercentSplit", 100 - integer, integer)
             }
             return loc("PercentSplitDecimal", 100 - pct, pct)
         case .fixed:

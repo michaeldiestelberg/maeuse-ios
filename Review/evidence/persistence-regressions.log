@@ -1,0 +1,13 @@
+existing reference 30.0 Before
+existing context [("keep", 20.0, "After")]
+fresh context [("keep", 20.0, "After")]
+SwiftData.DefaultStore save failed with error: Error Domain=NSCocoaErrorDomain Code=513 "The file couldn’t be saved because you don’t have permission." UserInfo={NSPersistentStoreOptions={
+    NSInferMappingModelAutomaticallyOption = 1;
+    NSMigratePersistentStoresAutomaticallyOption = 1;
+    NSPersistentHistoryTrackingKey = 1;
+    NSPersistentStoreRemoteChangeNotificationOptionKey = 1;
+    NSReadOnlyPersistentStoreOption = 1;
+}, reason=Unable to write to file opened Read Only., storeURL=/var/folders/tj/mptnfv5n7sg1ysn9kdd5nngr0000gn/T/B19C5921-5A23-4C8F-83B3-F31231859D0B/ledger.store}
+Expected write failure: 513
+Failed restore preserved original in live and fresh contexts
+Rejected original crashing backup

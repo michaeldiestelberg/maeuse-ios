@@ -47,6 +47,9 @@ struct VoiceSheet: View {
                             .padding(14)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .background(Color.maeusDestructive.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
+                        Button(loc("VoiceResumeListening")) { viewModel.restartSession() }
+                            .buttonStyle(GlassSecondaryButtonStyle())
+                            .accessibilityIdentifier("voice-restart")
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -479,7 +482,8 @@ private struct VoiceExpenseDraftCard: View {
         }
     }
     private func formatDate(_ iso: String?) -> String {
-        guard let iso, let date = Expense.dateFromISO(iso) else { return loc("Today") }
+        guard let iso else { return loc("Today") }
+        guard let date = Expense.dateFromISO(iso) else { return loc("VoiceInvalidDate") }
         let calendar = Calendar.current
         if calendar.isDateInToday(date) { return loc("Today") }
         if calendar.isDateInYesterday(date) { return loc("Yesterday") }

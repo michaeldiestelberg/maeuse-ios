@@ -28,13 +28,15 @@ final class VoiceModeViewModel {
     var microphoneLevel: Double = 0
     var isSaving: Bool = false
 
-    private let realtime = RealtimeVoiceService()
+    private let realtime: RealtimeVoiceService
+    private var removedDraftIDs: Set<String> = []
     private var connectionTask: Task<Void, Never>?
     private var hasStartedSession = false
     private var didSignalListeningReady = false
 
-    init() {
-        realtime.setDelegate(self)
+    init(realtime: RealtimeVoiceService? = nil) {
+        self.realtime = realtime ?? RealtimeVoiceService()
+        self.realtime.setDelegate(self)
     }
 
     var microphoneIsReady: Bool {
@@ -241,6 +243,9 @@ final class VoiceModeViewModel {
 
         hasStartedSession = true
         phase = .connecting
+        errorMessage = ""
+        didSignalListeningReady = false
+        let workspaceContext = resumeWorkspaceContext()
 
         let previousConnection = connectionTask
         connectionTask = Task { @MainActor in
@@ -248,44 +253,64 @@ final class VoiceModeViewModel {
             await previousConnection?.value
             guard !Task.isCancelled else { return }
             do {
-                try await realtime.connect()
+                try await realtime.connect(workspaceContext: workspaceContext)
             } catch {
-                guard !Task.isCancelled else { return }
+                guard !Task.isCancelled, phase != .error else { return }
                 phase = .error
                 errorMessage = error.localizedDescription
             }
         }
     }
 
-    func cancelSession() {
+    func restartSession() {
+        guard isPresented, phase == .error else { return }
+        connectionTask?.cancel()
         realtime.disconnect()
+        clearProcessingState()
+        hasStartedSession = false
+        startSession()
+    }
+
+    /// Resume the exact reviewable workspace, including deletion tombstones.
+    func resumeWorkspaceContext() -> String? {
+        guard !drafts.isEmpty || !removedDraftIDs.isEmpty else { return nil }
+        let rows: [[String: Any]] = drafts.map { draft in
+            ["id": draft.id, "title": draft.title, "amount": draft.amount as Any? ?? NSNull(),
+             "date_iso": draft.dateISO as Any? ?? NSNull(), "split_mode": draft.splitMode?.rawValue as Any? ?? NSNull(),
+             "split_value": draft.splitValue as Any? ?? NSNull(), "missing_fields": draft.missingFields.map(\.rawValue)]
+        }
+        guard let data = try? JSONSerialization.data(withJSONObject: ["expenses": rows, "removed_ids": removedDraftIDs.sorted()]),
+              let text = String(data: data, encoding: .utf8) else { return nil }
+        return "App-provided initial workspace, not a spoken request. Keep these drafts and IDs when processing the next spoken request. Removed IDs must stay removed; an explicit re-add must use a new ID. Do not respond to this note. \(text)"
+    }
+
+    func cancelSession() {
         resetWorkspace()
-        isPresented = false
     }
 
     func finishAfterSave() {
-        realtime.disconnect()
         resetWorkspace()
-        isPresented = false
     }
 
     func removeDraft(_ draft: VoiceExpenseDraft) {
+        removedDraftIDs.insert(draft.id)
         drafts.removeAll { $0.id == draft.id }
         updatedExpenseIDs.remove(draft.id)
         changedFieldsByExpenseID[draft.id] = nil
         clarificationQuestion = ""
-        realtime.sendWorkspaceNote("The user removed expense \(draft.id) named \(draft.normalizedTitle) from the temporary workspace. Keep it removed unless the user asks to add it again.")
+        realtime.sendWorkspaceNote("The user removed expense \(draft.id) named \(draft.normalizedTitle) from the temporary workspace. This ID must stay removed for the rest of the session. If the user explicitly asks to add it again, use a new ID. Do not respond to this app-generated note.")
     }
 
     func expensesForSaving() -> [Expense] {
         guard canSaveDrafts else { return [] }
 
         let todayISO = Self.todayISOString()
-        return drafts.map { draft in
-            Expense(
+        return drafts.compactMap { draft in
+            guard let date = draft.normalizedDate(defaultISO: todayISO) else { return nil }
+            return Expense(
                 amount: draft.normalizedAmount,
                 desc: draft.normalizedTitle,
-                date: draft.normalizedDate(defaultISO: todayISO),
+                date: date,
                 splitMode: draft.normalizedSplitMode,
                 splitValue: draft.normalizedSplitValue
             )
@@ -294,6 +319,9 @@ final class VoiceModeViewModel {
 
     func resetWorkspace() {
         connectionTask?.cancel()
+        realtime.disconnect()
+        isPresented = false
+        removedDraftIDs = []
         phase = .idle
         errorMessage = ""
         understandingHistory = []
@@ -333,7 +361,7 @@ final class VoiceModeViewModel {
             result[draft.id] = draft
         }
 
-        let incomingDrafts = payload.expenses.map { payloadDraft -> VoiceExpenseDraft in
+        let incomingDrafts = payload.expenses.filter { !removedDraftIDs.contains($0.id) }.map { payloadDraft -> VoiceExpenseDraft in
             var next = applyDefaultWorkspaceFields(to: payloadDraft.draft, todayISO: todayISO)
             if let previous = previousDrafts[next.id],
                previous.withoutChangeTimestamp == next.withoutChangeTimestamp {
@@ -364,6 +392,9 @@ final class VoiceModeViewModel {
         })
         updatedExpenseIDs = updatedIDs
         drafts = nextDrafts
+        if clarificationQuestion.isEmpty, drafts.contains(where: { $0.dateISO.map { Expense.dateFromISO($0) == nil } ?? false }) {
+            clarificationQuestion = loc("VoiceInvalidDateQuestion")
+        }
 
         if !addedIDs.isEmpty {
             playVoiceHaptic(.success)
@@ -431,6 +462,7 @@ final class VoiceModeViewModel {
 
 extension VoiceModeViewModel: RealtimeVoiceServiceDelegate {
     func realtimeVoiceService(_ service: RealtimeVoiceService, didReceive event: RealtimeVoiceServiceEvent) {
+        guard isPresented else { return }
         switch event {
         case .connected:
             phase = microphoneIsActive ? .listening : .connecting
@@ -477,6 +509,8 @@ extension VoiceModeViewModel: RealtimeVoiceServiceDelegate {
             // Incidental model narration must not race the structured draft update.
             break
         case .error(let message):
+            microphoneIsActive = false
+            microphoneLevel = 0
             clearProcessingState()
             phase = .error
             errorMessage = message

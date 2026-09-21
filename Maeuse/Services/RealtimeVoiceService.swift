@@ -24,466 +24,256 @@ enum RealtimeVoiceServiceEvent {
     case error(String)
 }
 
-// URLSession delegate callbacks and audio taps cross thread boundaries; the service
-// owns that mutable state and hops UI-facing events back to the main actor.
-final class RealtimeVoiceService: NSObject, @unchecked Sendable {
-    @MainActor private weak var delegate: RealtimeVoiceServiceDelegate?
-
+/// Transport, parser, and lifecycle state have one owner. Every callback carries
+/// the connection identity so cancellation also invalidates already-queued work.
+@MainActor
+final class RealtimeVoiceService: NSObject {
+    private weak var delegate: RealtimeVoiceServiceDelegate?
     private let logger = Logger(subsystem: "com.michaeldiestelberg.maeuse", category: "RealtimeVoice")
-    private let apiKeyStore = OpenAIAPIKeyStore.shared
     private let clientSecretService = OpenAIRealtimeClientSecretService()
-    private let eventQueue = DispatchQueue(label: "maeuse.realtime.events")
-    private let audioSendQueue = DispatchQueue(label: "maeuse.realtime.audio-send")
-    // AVAudioSession is process-wide. Serialize activation/deactivation across
-    // service instances without blocking the UI when a voice sheet is closed.
     private static let audioSessionQueue = DispatchQueue(label: "maeuse.realtime.audio-session", qos: .userInitiated)
-    private let targetAudioFormat = AVAudioFormat(
-        commonFormat: .pcmFormatInt16,
-        sampleRate: 24_000,
-        channels: 1,
-        interleaved: true
-    )!
-
     private var urlSession: URLSession?
     private var webSocketTask: URLSessionWebSocketTask?
     private var webSocketOpenContinuation: CheckedContinuation<Void, Error>?
     private var audioEngine: AVAudioEngine?
-    private var audioConverter: AVAudioConverter?
+    private var audioObservers: [NSObjectProtocol] = []
     private var parser = RealtimeServerEventParser()
     private var isDisconnecting = false
     private var lastLevelEmit = Date.distantPast
-    private var didReportLocalAudio = false
-    private var didReportAudioUpload = false
+    private(set) var connectionID = UUID()
 
-    @MainActor
-    func setDelegate(_ delegate: RealtimeVoiceServiceDelegate?) {
-        self.delegate = delegate
-    }
+    func setDelegate(_ delegate: RealtimeVoiceServiceDelegate?) { self.delegate = delegate }
 
-    func connect() async throws {
+    func connect(workspaceContext: String? = nil) async throws {
         try Task.checkCancellation()
-        logger.info("Starting Realtime voice connection.")
         disconnect()
         isDisconnecting = false
-
+        let id = connectionID
         do {
-            let credential = try await createSessionCredential()
-            try Task.checkCancellation()
-            try await connectWebSocket(credential: credential)
-            try Task.checkCancellation()
-            try await sendSessionUpdate()
-            try Task.checkCancellation()
+            guard let key = try OpenAIAPIKeyStore.shared.readAPIKey() else { throw RealtimeVoiceError.missingAPIKey }
+            let credential = try await clientSecretService.createClientSecret(apiKey: key)
+            try checkConnection(id)
+            try await connectWebSocket(credential: credential.value)
+            try checkConnection(id)
+            try await sendAsync(["type": "session.update", "session": RealtimeSessionConfiguration.webSocketSession()])
+            if let workspaceContext { try await sendAsync(Self.workspaceNoteEvent(workspaceContext)) }
+            try checkConnection(id)
             try await prepareAudioSession()
-            try Task.checkCancellation()
-            try startAudioCapture()
+            try checkConnection(id)
+            try startAudioCapture(connectionID: id)
         } catch {
-            disconnect()
+            if connectionID == id { disconnect() }
+            // A cancelled activation may finish after disconnect. Queue cleanup
+            // before the view model starts the next serialized connection attempt.
+            else { deactivateAudioSession() }
             throw error
         }
     }
 
-    func disconnect() {
-        logger.info("Disconnecting Realtime voice session.")
-        isDisconnecting = true
+    private func checkConnection(_ id: UUID) throws {
+        try Task.checkCancellation()
+        guard id == connectionID, !isDisconnecting else { throw CancellationError() }
+    }
 
+    func disconnect() {
+        connectionID = UUID()
+        isDisconnecting = true
+        for observer in audioObservers { NotificationCenter.default.removeObserver(observer) }
+        audioObservers = []
         stopAudioCapture()
         deactivateAudioSession()
-
-        webSocketOpenContinuation?.resume(throwing: RealtimeVoiceError.disconnected)
+        let continuation = webSocketOpenContinuation
         webSocketOpenContinuation = nil
-
+        continuation?.resume(throwing: RealtimeVoiceError.disconnected)
         webSocketTask?.cancel(with: .goingAway, reason: nil)
         webSocketTask = nil
-
         urlSession?.invalidateAndCancel()
         urlSession = nil
-
         parser = RealtimeServerEventParser()
-        didReportLocalAudio = false
-        didReportAudioUpload = false
+        lastLevelEmit = .distantPast
+    }
+
+    static func workspaceNoteEvent(_ text: String) -> [String: Any] {
+        ["type": "conversation.item.create", "item": ["type": "message", "role": "user",
+            "content": [["type": "input_text", "text": text]]]]
     }
 
     func sendWorkspaceNote(_ text: String) {
-        let event: [String: Any] = [
-            "type": "conversation.item.create",
-            "item": [
-                "type": "message",
-                "role": "user",
-                "content": [
-                    [
-                        "type": "input_text",
-                        "text": text
-                    ]
-                ]
-            ]
-        ]
-        send(event)
-        sendTextResponseCreate()
-    }
-
-    private func createSessionCredential() async throws -> String {
-        guard let apiKey = try apiKeyStore.readAPIKey() else {
-            throw RealtimeVoiceError.missingAPIKey
-        }
-
-        let clientSecret = try await clientSecretService.createClientSecret(apiKey: apiKey)
-        guard !clientSecret.value.isEmpty else {
-            throw OpenAIRealtimeClientSecretError.decodeFailed
-        }
-        return clientSecret.value
+        // The local action has already updated the UI. Record it for the next
+        // spoken turn without attempting a competing response.create.
+        send(Self.workspaceNoteEvent(text))
     }
 
     private func connectWebSocket(credential: String) async throws {
+        guard !credential.isEmpty else { throw OpenAIRealtimeClientSecretError.decodeFailed }
         var components = URLComponents(string: "wss://api.openai.com/v1/realtime")!
-        components.queryItems = [
-            URLQueryItem(name: "model", value: RealtimeSessionConfiguration.model)
-        ]
-
-        guard let url = components.url else {
-            throw RealtimeVoiceError.webSocketFailed("Could not create Realtime WebSocket URL.")
-        }
-
-        var request = URLRequest(url: url)
+        components.queryItems = [URLQueryItem(name: "model", value: RealtimeSessionConfiguration.model)]
+        var request = URLRequest(url: components.url!)
         request.timeoutInterval = 20
         request.setValue("Bearer \(credential)", forHTTPHeaderField: "Authorization")
-
         let session = URLSession(configuration: .default, delegate: self, delegateQueue: nil)
         let task = session.webSocketTask(with: request)
         urlSession = session
         webSocketTask = task
-
         try await withCheckedThrowingContinuation { continuation in
             webSocketOpenContinuation = continuation
             task.resume()
         }
     }
 
-    private func sendSessionUpdate() async throws {
-        try await sendAsync([
-            "type": "session.update",
-            "session": RealtimeSessionConfiguration.webSocketSession()
-        ])
-    }
-
-    private func sendTextResponseCreate() {
-        send([
-            "type": "response.create",
-            "response": [
-                "output_modalities": ["text"],
-                "metadata": ["maeuse_source": "workspace_note"]
-            ]
-        ])
-    }
-
     private func prepareAudioSession() async throws {
         let permitted = await withCheckedContinuation { continuation in
-            if #available(iOS 17.0, *) {
-                AVAudioApplication.requestRecordPermission { allowed in
-                    continuation.resume(returning: allowed)
-                }
-            } else {
-                AVAudioSession.sharedInstance().requestRecordPermission { allowed in
-                    continuation.resume(returning: allowed)
-                }
-            }
+            AVAudioApplication.requestRecordPermission { continuation.resume(returning: $0) }
         }
-
-        guard permitted else {
-            throw RealtimeVoiceError.microphoneDenied
-        }
-
+        guard permitted else { throw RealtimeVoiceError.microphoneDenied }
         try Task.checkCancellation()
-        do {
-            try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-                Self.audioSessionQueue.async {
-                    do {
-                        let session = AVAudioSession.sharedInstance()
-                        try session.setCategory(.playAndRecord, mode: .voiceChat, options: [.defaultToSpeaker, .allowBluetoothHFP])
-                        try session.setPreferredIOBufferDuration(0.02)
-                        try session.setActive(true)
-                        continuation.resume()
-                    } catch {
-                        continuation.resume(throwing: error)
-                    }
-                }
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            Self.audioSessionQueue.async {
+                do {
+                    let session = AVAudioSession.sharedInstance()
+                    try session.setCategory(.playAndRecord, mode: .voiceChat, options: [.defaultToSpeaker, .allowBluetoothHFP])
+                    try session.setPreferredIOBufferDuration(0.02)
+                    try session.setActive(true)
+                    continuation.resume()
+                } catch { continuation.resume(throwing: error) }
             }
-            logger.info("AVAudioSession active for Realtime voice capture.")
-            emit(.microphoneReady)
-        } catch {
-            logger.error("Could not activate AVAudioSession: \(error.localizedDescription, privacy: .public)")
-            throw RealtimeVoiceError.audioSessionFailed(error.localizedDescription)
         }
     }
 
     private func deactivateAudioSession() {
         Self.audioSessionQueue.async { [logger] in
-            do {
-                try AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
-            } catch {
-                logger.warning("Could not deactivate AVAudioSession: \(error.localizedDescription, privacy: .public)")
-            }
+            do { try AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation) }
+            catch { logger.warning("Could not deactivate audio: \(error.localizedDescription, privacy: .public)") }
         }
     }
 
-    private func startAudioCapture() throws {
+    private func startAudioCapture(connectionID id: UUID) throws {
         let engine = AVAudioEngine()
-        let inputNode = engine.inputNode
-        let inputFormat = inputNode.outputFormat(forBus: 0)
-
-        // Simulator and disconnected Bluetooth routes can report channel
-        // metadata while still exposing a zero-rate, unusable input format.
-        // Installing a tap with that format raises an Objective-C exception
-        // instead of returning a Swift error, so validate both dimensions.
-        guard inputFormat.channelCount > 0, inputFormat.sampleRate > 0 else {
-            throw RealtimeVoiceError.noMicrophoneInput
+        let input = engine.inputNode
+        let format = input.outputFormat(forBus: 0)
+        guard format.channelCount > 0, format.sampleRate > 0 else { throw RealtimeVoiceError.noMicrophoneInput }
+        let processor = try VoiceAudioProcessor(inputFormat: format)
+        input.installTap(onBus: 0, bufferSize: 2_048, format: format) { [weak self] buffer, _ in
+            guard let data = processor.convert(buffer) else { return }
+            // Dispatch preserves audio-chunk ordering and only sends immutable PCM.
+            DispatchQueue.main.async { [weak self] in
+                guard let self, self.connectionID == id, !self.isDisconnecting else { return }
+                self.send(["type": "input_audio_buffer.append", "audio": data.base64EncodedString()])
+                let now = Date()
+                if now.timeIntervalSince(self.lastLevelEmit) >= 0.05 {
+                    self.lastLevelEmit = now
+                    self.emit(.microphoneLevel(VoiceInputMeter.level(pcm16: data)))
+                }
+            }
         }
-
-        guard let converter = AVAudioConverter(from: inputFormat, to: targetAudioFormat) else {
-            throw RealtimeVoiceError.audioSessionFailed("Could not create audio converter.")
-        }
-
-        audioConverter = converter
-        inputNode.installTap(onBus: 0, bufferSize: 2_048, format: inputFormat) { [weak self] buffer, _ in
-            self?.handleAudioBuffer(buffer)
-        }
-
         engine.prepare()
-        do {
-            try engine.start()
-        } catch {
-            inputNode.removeTap(onBus: 0)
+        do { try engine.start() }
+        catch {
+            input.removeTap(onBus: 0)
             throw RealtimeVoiceError.audioSessionFailed(error.localizedDescription)
         }
-
         audioEngine = engine
-        logger.info("AVAudioEngine started for Realtime voice capture.")
+        observeAudioLifecycle(engine: engine, connectionID: id)
         emit(.microphoneStarted)
     }
 
     private func stopAudioCapture() {
-        guard let audioEngine else { return }
-
-        audioEngine.inputNode.removeTap(onBus: 0)
-        audioEngine.stop()
-        self.audioEngine = nil
-        audioConverter = nil
-
-        logger.info("AVAudioEngine stopped for Realtime voice capture.")
+        if let engine = audioEngine {
+            engine.inputNode.removeTap(onBus: 0)
+            engine.stop()
+            audioEngine = nil
+        }
         emit(.microphoneStopped)
     }
 
-    private func handleAudioBuffer(_ buffer: AVAudioPCMBuffer) {
-        guard let pcmData = convertToPCM16(buffer), !pcmData.isEmpty else {
-            return
-        }
-        // Meter the same mono samples we upload, regardless of the input route's format.
-        emitAudioLevel(fromPCM16: pcmData)
-
-        audioSendQueue.async { [weak self] in
-            self?.sendAudioChunk(pcmData)
+    private func observeAudioLifecycle(engine: AVAudioEngine, connectionID id: UUID) {
+        let center = NotificationCenter.default
+        for name in [AVAudioSession.interruptionNotification, AVAudioSession.routeChangeNotification,
+                     AVAudioSession.mediaServicesWereResetNotification, AVAudioSession.mediaServicesWereLostNotification,
+                     Notification.Name.AVAudioEngineConfigurationChange] {
+            let object: AnyObject = name == Notification.Name.AVAudioEngineConfigurationChange ? engine : AVAudioSession.sharedInstance()
+            audioObservers.append(center.addObserver(forName: name, object: object, queue: nil) { [weak self] notification in
+                guard let event = VoiceAudioLifecycleEvent(notification: notification) else { return }
+                Task { @MainActor [weak self] in
+                    self?.handleAudioLifecycle(event, connectionID: id)
+                }
+            })
         }
     }
 
-    private func emitAudioLevel(fromPCM16 data: Data) {
-        let now = Date()
-        guard now.timeIntervalSince(lastLevelEmit) >= 0.05 else { return }
-        lastLevelEmit = now
-        let normalized = VoiceInputMeter.level(pcm16: data)
-
-        if normalized > 0.04, !didReportLocalAudio {
-            didReportLocalAudio = true
-            logger.info("Local microphone audio detected.")
-        }
-
-        emit(.microphoneLevel(normalized))
-    }
-
-    private func convertToPCM16(_ buffer: AVAudioPCMBuffer) -> Data? {
-        guard let converter = audioConverter else { return nil }
-
-        let ratio = targetAudioFormat.sampleRate / buffer.format.sampleRate
-        let frameCapacity = AVAudioFrameCount(Double(buffer.frameLength) * ratio) + 32
-        guard let outputBuffer = AVAudioPCMBuffer(pcmFormat: targetAudioFormat, frameCapacity: frameCapacity) else {
-            return nil
-        }
-
-        let input = AudioConversionInput(buffer: buffer)
-        var conversionError: NSError?
-        let status = converter.convert(to: outputBuffer, error: &conversionError) { _, outStatus in
-            if input.didProvideBuffer {
-                outStatus.pointee = .noDataNow
-                return nil
-            }
-
-            input.didProvideBuffer = true
-            outStatus.pointee = .haveData
-            return input.buffer
-        }
-
-        guard status != .error else {
-            if let conversionError {
-                logger.warning("Audio conversion failed: \(conversionError.localizedDescription, privacy: .public)")
-            }
-            return nil
-        }
-
-        let audioBuffer = outputBuffer.audioBufferList.pointee.mBuffers
-        guard let bytes = audioBuffer.mData, audioBuffer.mDataByteSize > 0 else {
-            return nil
-        }
-
-        return Data(bytes: bytes, count: Int(audioBuffer.mDataByteSize))
-    }
-
-    private func sendAudioChunk(_ pcmData: Data) {
-        guard !isDisconnecting, webSocketTask != nil else { return }
-
-        if !didReportAudioUpload {
-            didReportAudioUpload = true
-            logger.info("Sending microphone audio chunks to OpenAI Realtime.")
-        }
-
-        send([
-            "type": "input_audio_buffer.append",
-            "audio": pcmData.base64EncodedString()
-        ])
-    }
-
-    private func sendFunctionOutput(callID: String) {
-        let event: [String: Any] = [
-            "type": "conversation.item.create",
-            "item": [
-                "type": "function_call_output",
-                "call_id": callID,
-                "output": #"{"status":"ok"}"#
-            ]
-        ]
-        send(event)
+    func handleAudioLifecycle(_ event: VoiceAudioLifecycleEvent, connectionID id: UUID) {
+        guard id == connectionID, !isDisconnecting else { return }
+        // Never tear down an engine synchronously from its internal notification queue.
+        failConnection(with: .error(loc(event == .interrupted ? "VoiceAudioInterrupted" : "VoiceAudioChanged")))
     }
 
     private func send(_ event: [String: Any]) {
-        guard let webSocketTask else {
-            logger.warning("Dropped Realtime client event because WebSocket is not connected.")
-            return
-        }
-
-        guard let message = makeMessage(from: event) else {
-            logger.warning("Dropped Realtime client event because JSON encoding failed.")
-            return
-        }
-
-        webSocketTask.send(message) { [weak self, weak webSocketTask] error in
-            guard let self,
-                  let webSocketTask,
-                  webSocketTask === self.webSocketTask,
-                  !self.isDisconnecting,
-                  let error else { return }
-
-            self.logger.error("Realtime WebSocket send failed: \(error.localizedDescription, privacy: .public)")
-            self.failConnection(with: .error("Realtime send failed: \(error.localizedDescription)"))
+        guard !isDisconnecting, let task = webSocketTask,
+              let message = makeMessage(event) else { return }
+        let id = connectionID
+        task.send(message) { [weak self] error in
+            guard let error else { return }
+            Task { @MainActor [weak self] in
+                guard let self, self.connectionID == id, !self.isDisconnecting else { return }
+                self.failConnection(with: .error(error.localizedDescription))
+            }
         }
     }
 
     private func sendAsync(_ event: [String: Any]) async throws {
-        guard let webSocketTask else {
-            throw RealtimeVoiceError.disconnected
-        }
-
-        guard let message = makeMessage(from: event) else {
-            throw RealtimeVoiceError.webSocketFailed("Could not encode Realtime event.")
-        }
-
-        try await webSocketTask.send(message)
+        guard let task = webSocketTask, let message = makeMessage(event) else { throw RealtimeVoiceError.disconnected }
+        try await task.send(message)
     }
 
-    private func makeMessage(from event: [String: Any]) -> URLSessionWebSocketTask.Message? {
+    private func makeMessage(_ event: [String: Any]) -> URLSessionWebSocketTask.Message? {
         guard let data = try? JSONSerialization.data(withJSONObject: event),
-              let string = String(data: data, encoding: .utf8) else {
-            return nil
-        }
-        return .string(string)
+              let text = String(data: data, encoding: .utf8) else { return nil }
+        return .string(text)
     }
 
     private func receiveLoop() {
-        guard let webSocketTask else { return }
-
-        webSocketTask.receive { [weak self, weak webSocketTask] result in
-            guard let self,
-                  let webSocketTask,
-                  webSocketTask === self.webSocketTask else { return }
-
-            switch result {
-            case .success(let message):
-                self.handleWebSocketMessage(message)
-                self.receiveLoop()
-            case .failure(let error):
-                guard !self.isDisconnecting else { return }
-                self.logger.error("Realtime WebSocket receive failed: \(error.localizedDescription, privacy: .public)")
-                self.failConnection(with: .error("Realtime session failed: \(error.localizedDescription)"))
-            }
-        }
-    }
-
-    private func handleWebSocketMessage(_ message: URLSessionWebSocketTask.Message) {
-        switch message {
-        case .string(let string):
-            handleServerEvent(Data(string.utf8))
-        case .data(let data):
-            handleServerEvent(data)
-        @unknown default:
-            break
-        }
-    }
-
-    private func handleServerEvent(_ data: Data) {
-        if let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-           let type = object["type"] as? String {
-            logger.debug("Received Realtime server event: \(type, privacy: .public)")
-        }
-
-        eventQueue.async { [weak self] in
-            guard let self else { return }
-            do {
-                let events = try self.parser.parse(data)
-                for event in events {
-                    self.handleParsedEvent(event)
+        guard let task = webSocketTask else { return }
+        let id = connectionID
+        task.receive { [weak self] result in
+            Task { @MainActor [weak self] in
+                guard let self, self.connectionID == id, !self.isDisconnecting else { return }
+                switch result {
+                case .success(let message):
+                    switch message {
+                    case .string(let text): self.receiveServerEvent(Data(text.utf8), connectionID: id)
+                    case .data(let data): self.receiveServerEvent(data, connectionID: id)
+                    @unknown default: break
+                    }
+                    if !self.isDisconnecting { self.receiveLoop() }
+                case .failure(let error): self.failConnection(with: .error(error.localizedDescription))
                 }
-            } catch {
-                self.failConnection(with: .error("Could not parse Realtime event: \(error.localizedDescription)"))
             }
         }
     }
 
-    private func handleParsedEvent(_ event: RealtimeParsedEvent) {
-        switch event {
-        case .sessionReady:
-            break
-        case .listeningStarted:
-            logger.info("OpenAI Realtime reported speech started.")
-            emit(.listeningStarted)
-        case .listeningStopped:
-            logger.info("OpenAI Realtime reported speech stopped.")
-            emit(.listeningStopped)
-        case .responseStarted(let id, let isAppGenerated):
-            logger.info("OpenAI Realtime response started.")
-            emit(.responseStarted(id: id, isAppGenerated: isAppGenerated))
-        case .responseFinished(let id):
-            logger.info("OpenAI Realtime response finished.")
-            emit(.responseFinished(id: id))
-        case .functionArgumentsDelta:
-            break
-        case .assistantTextDelta(let text):
-            emit(.assistantTextDelta(text))
-        case .assistantTextDone(let text):
-            emit(.assistantText(text))
-        case .workspaceSync(let payload, let callID):
-            emit(.workspaceSync(payload))
-            if let callID {
-                sendFunctionOutput(callID: callID)
+    func receiveServerEvent(_ data: Data, connectionID id: UUID) {
+        guard id == connectionID, !isDisconnecting else { return }
+        do {
+            for event in try parser.parse(data) {
+                guard id == connectionID, !isDisconnecting else { break }
+                switch event {
+                case .sessionReady, .functionArgumentsDelta: break
+                case .listeningStarted: emit(.listeningStarted)
+                case .listeningStopped: emit(.listeningStopped)
+                case .responseStarted(let id, let app): emit(.responseStarted(id: id, isAppGenerated: app))
+                case .responseFinished(let id): emit(.responseFinished(id: id))
+                case .assistantTextDelta(let text): emit(.assistantTextDelta(text))
+                case .assistantTextDone(let text): emit(.assistantText(text))
+                case .workspaceSync(let payload, let callID):
+                    emit(.workspaceSync(payload))
+                    if let callID {
+                        send(["type": "conversation.item.create", "item": ["type": "function_call_output",
+                            "call_id": callID, "output": #"{"status":"ok"}"#]])
+                    }
+                case .error(let text): failConnection(with: .error(text))
+                }
             }
-        case .error(let message):
-            failConnection(with: .error(message))
-        }
+        } catch { failConnection(with: .error(loc("VoiceInvalidResult"))) }
     }
 
     private func failConnection(with event: RealtimeVoiceServiceEvent) {
@@ -493,11 +283,95 @@ final class RealtimeVoiceService: NSObject, @unchecked Sendable {
     }
 
     private func emit(_ event: RealtimeVoiceServiceEvent) {
-        Task { @MainActor [weak self] in
-            guard let self else { return }
-            self.delegate?.realtimeVoiceService(self, didReceive: event)
+        delegate?.realtimeVoiceService(self, didReceive: event)
+    }
+}
+
+enum VoiceAudioLifecycleEvent: Equatable, Sendable {
+    case interrupted, routeChanged, configurationChanged, mediaServicesReset
+
+    init?(notification: Notification) {
+        switch notification.name {
+        case AVAudioSession.interruptionNotification:
+            guard (notification.userInfo?[AVAudioSessionInterruptionTypeKey] as? NSNumber)?.uintValue
+                    == AVAudioSession.InterruptionType.began.rawValue else { return nil }
+            self = .interrupted
+        case AVAudioSession.routeChangeNotification:
+            guard let raw = (notification.userInfo?[AVAudioSessionRouteChangeReasonKey] as? NSNumber)?.uintValue,
+                  let reason = AVAudioSession.RouteChangeReason(rawValue: raw),
+                  [.newDeviceAvailable, .oldDeviceUnavailable, .noSuitableRouteForCategory, .routeConfigurationChange].contains(reason) else { return nil }
+            self = .routeChanged
+        case Notification.Name.AVAudioEngineConfigurationChange: self = .configurationChanged
+        case AVAudioSession.mediaServicesWereResetNotification, AVAudioSession.mediaServicesWereLostNotification: self = .mediaServicesReset
+        default: return nil
         }
     }
+}
+
+extension RealtimeVoiceService: URLSessionWebSocketDelegate {
+    nonisolated func urlSession(_ session: URLSession, webSocketTask: URLSessionWebSocketTask, didOpenWithProtocol protocol: String?) {
+        Task { @MainActor [weak self] in
+            guard let self, webSocketTask === self.webSocketTask, !self.isDisconnecting else { return }
+            let continuation = self.webSocketOpenContinuation
+            self.webSocketOpenContinuation = nil
+            continuation?.resume()
+            self.receiveLoop()
+            self.emit(.connected)
+        }
+    }
+
+    nonisolated func urlSession(_ session: URLSession, webSocketTask: URLSessionWebSocketTask,
+                               didCloseWith closeCode: URLSessionWebSocketTask.CloseCode, reason: Data?) {
+        Task { @MainActor [weak self] in
+            guard let self, webSocketTask === self.webSocketTask else { return }
+            self.failConnection(with: .disconnected)
+        }
+    }
+
+    nonisolated func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
+        guard let error else { return }
+        Task { @MainActor [weak self] in
+            guard let self, task === self.webSocketTask else { return }
+            if let continuation = self.webSocketOpenContinuation {
+                self.webSocketOpenContinuation = nil
+                continuation.resume(throwing: error)
+            } else { self.failConnection(with: .error(error.localizedDescription)) }
+        }
+    }
+}
+
+/// One processor per tap; its converter is used only by that tap's serial callback.
+private final class VoiceAudioProcessor: @unchecked Sendable {
+    private let converter: AVAudioConverter
+    private let target = AVAudioFormat(commonFormat: .pcmFormatInt16, sampleRate: 24_000, channels: 1, interleaved: true)!
+
+    init(inputFormat: AVAudioFormat) throws {
+        guard let converter = AVAudioConverter(from: inputFormat, to: target) else { throw RealtimeVoiceError.noMicrophoneInput }
+        self.converter = converter
+    }
+
+    func convert(_ buffer: AVAudioPCMBuffer) -> Data? {
+        let capacity = AVAudioFrameCount(Double(buffer.frameLength) * target.sampleRate / buffer.format.sampleRate) + 32
+        guard let output = AVAudioPCMBuffer(pcmFormat: target, frameCapacity: capacity) else { return nil }
+        let input = AudioConversionInput(buffer: buffer)
+        var error: NSError?
+        let status = converter.convert(to: output, error: &error) { _, status in
+            guard !input.didProvideBuffer else { status.pointee = .noDataNow; return nil }
+            input.didProvideBuffer = true
+            status.pointee = .haveData
+            return input.buffer
+        }
+        guard status != .error else { return nil }
+        let audio = output.audioBufferList.pointee.mBuffers
+        guard let bytes = audio.mData, audio.mDataByteSize > 0 else { return nil }
+        return Data(bytes: bytes, count: Int(audio.mDataByteSize))
+    }
+}
+
+private final class AudioConversionInput: @unchecked Sendable {
+    let buffer: AVAudioPCMBuffer
+    var didProvideBuffer = false
+    init(buffer: AVAudioPCMBuffer) { self.buffer = buffer }
 }
 
 enum VoiceInputMeter {
@@ -520,58 +394,6 @@ enum VoiceInputMeter {
         // without requiring near-clipping input to fully extend the bars.
         let decibels = 20 * log10(rms)
         return min(1, max(0, (decibels + 55) / 40))
-    }
-}
-
-extension RealtimeVoiceService: URLSessionWebSocketDelegate {
-    func urlSession(
-        _ session: URLSession,
-        webSocketTask: URLSessionWebSocketTask,
-        didOpenWithProtocol protocol: String?
-    ) {
-        guard webSocketTask === self.webSocketTask else { return }
-        logger.info("Realtime WebSocket opened.")
-        webSocketOpenContinuation?.resume(returning: ())
-        webSocketOpenContinuation = nil
-        receiveLoop()
-        emit(.connected)
-    }
-
-    func urlSession(
-        _ session: URLSession,
-        webSocketTask: URLSessionWebSocketTask,
-        didCloseWith closeCode: URLSessionWebSocketTask.CloseCode,
-        reason: Data?
-    ) {
-        guard webSocketTask === self.webSocketTask else { return }
-        logger.info("Realtime WebSocket closed: \(String(describing: closeCode), privacy: .public)")
-        guard !isDisconnecting else { return }
-        failConnection(with: .disconnected)
-    }
-
-    func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
-        guard task === webSocketTask else { return }
-
-        if let error {
-            if let continuation = webSocketOpenContinuation {
-                webSocketOpenContinuation = nil
-                continuation.resume(throwing: error)
-                return
-            }
-
-            guard !isDisconnecting else { return }
-            logger.error("Realtime WebSocket task failed: \(error.localizedDescription, privacy: .public)")
-            failConnection(with: .error("Realtime session failed: \(error.localizedDescription)"))
-        }
-    }
-}
-
-private final class AudioConversionInput: @unchecked Sendable {
-    let buffer: AVAudioPCMBuffer
-    var didProvideBuffer = false
-
-    init(buffer: AVAudioPCMBuffer) {
-        self.buffer = buffer
     }
 }
 

@@ -2,6 +2,17 @@
 
 This file records user-facing changes to Mäuse. App Store and GitHub release notes should be based on the matching version section.
 
+## 1.3.1 (45) — 2026-09-21
+
+Internal TestFlight candidate with the pre-release review fixes; follows build 44.
+
+- Backup import rejects unsupported amounts, invalid split values, and invalid dates before changing the ledger. Invalid split values already stored can be displayed and corrected without crashing.
+- Backup replacement uses an isolated transaction so a failed save leaves the live ledger intact.
+- Manually removed voice drafts stay removed when an older result arrives. Closing a session also rejects delayed callbacks from that connection.
+- Failed, incomplete, and malformed voice responses show an error and preserve existing drafts. Only successfully completed structured results update the workspace.
+- Explicitly invalid voice dates require correction before saving; omitted dates still default to today.
+- Audio interruptions and device changes stop the listening indicator and offer **Resume listening**, preserving drafts and request history.
+
 ## 1.3.1 — 2026-09-15
 
 Internal TestFlight candidate (build 44; follows build 42).

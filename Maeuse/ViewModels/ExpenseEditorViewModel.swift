@@ -53,7 +53,7 @@ final class ExpenseEditorViewModel {
     var partnerFraction: Double {
         guard parsedAmount > 0 else { return 0.5 }
         let fraction = splitMode == .fixed ? parsedSplitValue / parsedAmount : parsedSplitValue / 100
-        return min(max(fraction, 0), 1)
+        return fraction.isFinite ? min(max(fraction, 0), 1) : 0.5
     }
 
     var partnerPercent: Int {
@@ -84,7 +84,7 @@ final class ExpenseEditorViewModel {
 
 
     var canSave: Bool {
-        parsedAmount > 0
+        ExpenseValidation.isValid(amount: parsedAmount, splitMode: splitMode, splitValue: parsedSplitValue)
     }
 
     // MARK: - Actions
@@ -94,6 +94,7 @@ final class ExpenseEditorViewModel {
     /// increments so the slider feels decisive rather than fiddly.
     func setPartnerFraction(_ fraction: Double) {
         splitMode = .percent
+        guard fraction.isFinite else { return }
         let clamped = min(max(fraction, 0), 1)
         let pct = clamped * 100
         let snapped = (pct / 5).rounded() * 5
@@ -125,8 +126,11 @@ final class ExpenseEditorViewModel {
         date = expense.date
 
         splitMode = expense.splitMode
-        splitValueText = expense.splitValue == expense.splitValue.rounded()
-            ? String(Int(expense.splitValue)) : String(format: "%.2f", expense.splitValue)
+        if let integer = Int(exactly: expense.splitValue) {
+            splitValueText = String(integer)
+        } else {
+            splitValueText = String(expense.splitValue)
+        }
 
         editingExpense = expense
         isPresented = true
