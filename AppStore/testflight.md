@@ -2,7 +2,7 @@
 
 TestFlight is strongly recommended before App Store submission, especially for microphone permission, Voice Mode, Keychain persistence, backup import/export, and real-device layout checks. Internal testing does not require Beta App Review; the first external build may.
 
-## Build 45 focus
+## Build 46 focus
 
 - Export and restore a valid backup; check that the open ledger refreshes immediately. Invalid amounts, split values, and dates must leave the original ledger intact.
 - Remove a voice draft while a response is pending; the removed draft must stay removed. Close and reopen Voice Mode while a request is pending; the old session must not refill the new workspace.
@@ -11,7 +11,7 @@ TestFlight is strongly recommended before App Store submission, especially for m
 - On a physical iPhone, interrupt capture with a call/Siri and disconnect/reconnect a Bluetooth headset. The microphone must stop showing ready, and **Resume listening** must restore capture while retaining drafts/history.
 - Please test on iOS 27: local simulator launch was blocked, so this build has 63 passing iOS 26.5 tests but no new local iOS 27 pass.
 
-### Build 45 — Deutsch
+### Build 46 — Deutsch
 
 Bitte Backup-Export und Wiederherstellung prüfen: Die geöffnete Übersicht soll sofort aktualisiert werden; ungültige Beträge, Aufteilungen oder Daten dürfen die vorhandenen Ausgaben nicht ersetzen. Entferne einen Sprachentwurf während einer laufenden Anfrage und schließe/öffne den Sprachmodus: Alte Antworten dürfen entfernte Entwürfe oder eine geschlossene Sitzung nicht wiederherstellen. Fehler sollen verständlich angezeigt werden und vorhandene Entwürfe erhalten bleiben. Setze die Aufnahme mit „Aufnahme fortsetzen“ fort. Prüfe das Ausgabedatum vor dem Speichern. Teste Anrufe/Siri und Bluetooth-Wechsel auf einem echten iPhone. Bitte auch iOS 27 prüfen: Lokal bestanden alle 63 Tests unter iOS 26.5, die iOS-27-Simulatoren blieben vor dem App-Start hängen.
 
