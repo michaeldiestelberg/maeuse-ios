@@ -13,12 +13,12 @@
 
 | | |
 | --- | --- |
-| Version | 1.3.1 (build 46) |
+| Version | 1.3.1 (build 47) |
 | Platform | iPhone · iOS 17 or later |
 | Status | Internal TestFlight candidate; 1.3.0 (32) remains live on the App Store |
 | Languages | English and German |
 
-Build 46 adds safer backup restoration, strict amount/date validation, protection against stale voice updates, and resumable voice capture after audio interruptions. Validation: 63 tests pass on iOS 26.5; the Release build and static analysis pass without warnings. iOS 27 simulator launch and physical-device audio checks remain follow-up items.
+Build 47 makes the welcome screen scroll in short windows and keeps its content comfortably sized in wide windows. It also includes the safer backup restoration, amount/date validation, stale voice update protection, and resumable voice capture from build 46. Validation: all 64 tests pass on iOS 27, including English/German welcome resizing; the Release build and static analysis pass without warnings. TestFlight distribution is tracked in `AppStore/submission-checklist.md`; physical-device audio checks remain outstanding.
 
 Latest App Store release (build 32): Lock Screen, Home Screen, and Control Center capture, improved control icons and expense deletion, Voice Mode haptics, and a more stable expense editor with the keyboard open.
 
@@ -86,7 +86,7 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
 The Xcode project is the source of truth for both version values:
 
 - `MARKETING_VERSION` is the user-facing version (`1.3.1`).
-- `CURRENT_PROJECT_VERSION` is the App Store Connect build number (`44`).
+- `CURRENT_PROJECT_VERSION` is the App Store Connect build number (`47`).
 
 Use `scripts/bump-version.sh` before creating a new archive. See [RELEASING.md](RELEASING.md) for the full release workflow and [CHANGELOG.md](CHANGELOG.md) for user-facing release notes.
 

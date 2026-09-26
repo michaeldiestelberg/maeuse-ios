@@ -13,34 +13,44 @@ struct OnboardingView: View {
             FloatingCheeseHole(size: 120, duration: 9, fill: onboardingHole, stroke: Color.maeusCardBorder).offset(x: -185, y: -410)
             FloatingCheeseHole(size: 70, duration: 7, delay: 1, fill: onboardingHole, stroke: Color.maeusCardBorder).offset(x: 205, y: -260)
             FloatingCheeseHole(size: 40, duration: 8, delay: 2, fill: onboardingHole, stroke: Color.maeusCardBorder).offset(x: -210, y: 255)
-            VStack(spacing: 14) {
-                Spacer(minLength: 28)
-                MouseCoin(size: 92, fill: logoCoinFill, shadow: colorScheme == .dark ? 0 : 6) {
-                    Text("€").font(.system(size: 42, weight: .heavy, design: .rounded)).foregroundStyle(Color.maeusInk)
-                }
-                .scaleEffect(appeared ? 1 : 0.82).opacity(appeared ? 1 : 0).offset(y: appeared ? 0 : 10)
-                Text("Mäuse").font(.system(size: 44, weight: .heavy, design: .rounded)).tracking(-1.5)
-                Text(loc("SplitSubtitle")).font(.system(size: 15, weight: .bold, design: .rounded)).multilineTextAlignment(.center)
+            GeometryReader { geometry in
+                ScrollView {
+                    VStack(spacing: 14) {
+                        Spacer(minLength: 28)
+                        MouseCoin(size: 92, fill: logoCoinFill, shadow: colorScheme == .dark ? 0 : 6) {
+                            Text("€").font(.system(size: 42, weight: .heavy, design: .rounded)).foregroundStyle(Color.maeusInk)
+                        }
+                        .scaleEffect(appeared ? 1 : 0.82).opacity(appeared ? 1 : 0).offset(y: appeared ? 0 : 10)
+                        Text("Mäuse").font(.system(size: 44, weight: .heavy, design: .rounded)).tracking(-1.5)
+                        Text(loc("SplitSubtitle")).font(.system(size: 15, weight: .bold, design: .rounded)).multilineTextAlignment(.center)
 
-                VStack(spacing: 10) {
-                    step(1, loc("LogExpenseTitle"), loc("LogExpenseDesc"), delay: 0.1)
-                    step(2, loc("ChooseSplitTitle"), loc("ChooseSplitDesc"), delay: 0.22)
-                    step(3, loc("TrackTotalsTitle"), loc("TrackTotalsDesc"), delay: 0.34)
-                }.padding(.top, 8)
-                Spacer(minLength: 12)
-                Button(loc("GetStarted")) {
-                    onDismiss(true)
-                    withAnimation(.easeOut(duration: 0.3)) { isPresented = false }
+                        VStack(spacing: 10) {
+                            step(1, loc("LogExpenseTitle"), loc("LogExpenseDesc"), delay: 0.1)
+                            step(2, loc("ChooseSplitTitle"), loc("ChooseSplitDesc"), delay: 0.22)
+                            step(3, loc("TrackTotalsTitle"), loc("TrackTotalsDesc"), delay: 0.34)
+                        }.padding(.top, 8)
+                        Spacer(minLength: 12)
+                        Button(loc("GetStarted")) {
+                            onDismiss(true)
+                            withAnimation(.easeOut(duration: 0.3)) { isPresented = false }
+                        }
+                        .font(.system(size: 16, weight: .heavy, design: .rounded))
+                        .foregroundStyle(ctaForeground).frame(maxWidth: .infinity).padding(.vertical, 16)
+                        .background {
+                            let shape = RoundedRectangle(cornerRadius: 18, style: .continuous)
+                            ZStack { shape.fill(ctaShadow).offset(x: 4, y: 4); shape.fill(ctaBackground) }
+                        }
+                        Text(loc("SlangHint")).fixedSize(horizontal: false, vertical: true).font(.system(size: 12, weight: .bold, design: .rounded)).italic().multilineTextAlignment(.center)
+                    }
+                    .foregroundStyle(Color.maeusForeground)
+                    .padding(.horizontal, 32)
+                    .padding(.bottom, 28)
+                    .frame(maxWidth: 600)
+                    .frame(minHeight: geometry.size.height)
+                    .frame(maxWidth: .infinity)
                 }
-                .font(.system(size: 16, weight: .heavy, design: .rounded))
-                .foregroundStyle(ctaForeground).frame(maxWidth: .infinity).padding(.vertical, 16)
-                .background {
-                    let shape = RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    ZStack { shape.fill(ctaShadow).offset(x: 4, y: 4); shape.fill(ctaBackground) }
-                }
-                Text(loc("SlangHint")).font(.system(size: 12, weight: .bold, design: .rounded)).italic().multilineTextAlignment(.center)
+                .scrollBounceBehavior(.basedOnSize)
             }
-            .foregroundStyle(Color.maeusForeground).padding(.horizontal, 32).padding(.bottom, 28)
         }
         .fontDesign(.rounded)
         .onAppear {
@@ -56,6 +66,7 @@ struct OnboardingView: View {
             VStack(alignment: .leading, spacing: 1) {
                 Text(title).font(.system(size: 14, weight: .heavy, design: .rounded))
                 Text(subtitle).font(.system(size: 12, weight: .bold, design: .rounded)).foregroundStyle(Color.maeusTextSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             Spacer()
         }

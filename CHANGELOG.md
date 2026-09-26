@@ -2,6 +2,10 @@
 
 This file records user-facing changes to Mäuse. App Store and GitHub release notes should be based on the matching version section.
 
+## 1.3.1 (47) — 2026-09-26
+
+- The welcome screen scrolls in short windows, keeping the introduction and Get Started action reachable when resized. Wider windows keep a comfortable reading width.
+
 ## 1.3.1 (46) — 2026-09-21
 
 Retries build 45 with the same review fixes. Xcode Cloud rejected the retired Xcode 27 release-candidate environment before compilation; the workflow now uses the supported final Xcode 27 (27A266a) release.

@@ -1,5 +1,15 @@
 # Mäuse 1.3.1 TestFlight Checklist
 
+## Build 47 — welcome screen resizing
+
+- [x] Marketing version remains `1.3.1`; repository build number is `47`.
+- [x] Welcome content scrolls in short windows and uses a bounded width in wide windows.
+- [x] All 64 iOS 27 tests pass. English/German welcome renders reviewed at 320×400, 700×400, and 393×852, including a return to the short size; the start button and footer remain reachable.
+- [x] Xcode 27 Release build and static analysis pass without warnings.
+- [ ] Release commit pushed to `main`; **Maeuse | Default** succeeds.
+- [ ] Build `1.3.1 (47)` is processed and distributed to the internal Family group.
+- [ ] Physical iPhone microphone, interruptions, Bluetooth, and widget/control launches checked through TestFlight.
+
 ## Build 46 — pre-release review fixes
 
 - [x] Marketing version remains `1.3.1`; repository build number is `46`.

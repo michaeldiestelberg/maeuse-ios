@@ -180,6 +180,53 @@ final class ExpensePersistenceTests: XCTestCase {
         }
     }
 
+    func testWelcomeRemainsScrollableAfterResizing() async throws {
+        let scene = try XCTUnwrap(UIApplication.shared.connectedScenes.first as? UIWindowScene)
+        let previousWindow = scene.windows.first(where: \.isKeyWindow)
+        let previousLanguage = LanguageManager.shared.languagePreference
+        let window = UIWindow(windowScene: scene)
+        defer {
+            window.isHidden = true
+            previousWindow?.makeKeyAndVisible()
+            LanguageManager.shared.languagePreference = previousLanguage
+        }
+        for language in [AppLanguage.english, .german] {
+            LanguageManager.shared.languagePreference = language
+            let host = UIHostingController(rootView: OnboardingView(isPresented: .constant(true), onDismiss: { _ in }))
+            window.rootViewController = host
+            window.makeKeyAndVisible()
+            for size in [CGSize(width: 320, height: 400), CGSize(width: 700, height: 400),
+                         CGSize(width: 393, height: 852), CGSize(width: 320, height: 400)] {
+                window.frame = CGRect(origin: .zero, size: size)
+                host.view.frame = window.bounds
+                host.view.setNeedsLayout()
+                host.view.layoutIfNeeded()
+                try await Task.sleep(for: .milliseconds(700))
+                host.view.layoutIfNeeded()
+                let scroll = try XCTUnwrap(descendants(of: host.view).compactMap { $0 as? UIScrollView }.first)
+                XCTAssertGreaterThan(scroll.bounds.height, 100)
+                XCTAssertLessThanOrEqual(scroll.contentSize.width, scroll.bounds.width + 1,
+                                         "Welcome must not require horizontal scrolling")
+                if size.height <= 400 {
+                    XCTAssertGreaterThan(scroll.contentSize.height, scroll.bounds.height,
+                                         "The welcome actions must be reachable by scrolling in short windows")
+                }
+                let bottom = max(-scroll.adjustedContentInset.top,
+                                 scroll.contentSize.height - scroll.bounds.height + scroll.adjustedContentInset.bottom)
+                scroll.setContentOffset(CGPoint(x: 0, y: bottom), animated: false)
+                host.view.layoutIfNeeded()
+                XCTAssertEqual(scroll.contentOffset.y, bottom, accuracy: 1)
+                let image = UIGraphicsImageRenderer(bounds: host.view.bounds).image { _ in
+                    host.view.drawHierarchy(in: host.view.bounds, afterScreenUpdates: true)
+                }
+                let attachment = XCTAttachment(image: image)
+                attachment.name = "welcome-\(language.rawValue)-\(Int(size.width))x\(Int(size.height))-bottom"
+                attachment.lifetime = .keepAlways
+                add(attachment)
+            }
+        }
+    }
+
     func testSuccessfulRestoreRefreshesMountedSwiftDataQuery() async throws {
         let store = try container()
         store.mainContext.insert(Expense(id: "keep", amount: 30, desc: "Before", date: .now))
