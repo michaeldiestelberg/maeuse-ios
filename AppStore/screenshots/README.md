@@ -1,6 +1,6 @@
 # App Store Screenshot Set
 
-Capture real app UI from the iPhone 17 Pro Max simulator in portrait orientation. The raw simulator output is an accepted 6.9-inch App Store size. Provide the same four scenes in English and German.
+For 1.4.0, scenes 01–04 are fresh captures from an isolated iPhone 18 Pro Max simulator running iOS 27, using synthetic data. Framed output is 1320×2868. Provide the same five scenes in English and German. Scene 05 is retained from 1.3.0 because the widget UI is unchanged.
 
 ## Order
 
@@ -17,12 +17,12 @@ Capture real app UI from the iPhone 17 Pro Max simulator in portrait orientation
 3. `03-voice`
    - English caption: Just say it. Review it. Save it.
    - German caption: Sagen. Prüfen. Speichern.
-   - Voice workspace showing two recognized, reviewable expense drafts. No real microphone recording or API credential is used for the screenshot.
+   - Voice workspace showing three recognized, reviewable expense drafts. No real microphone recording or API credential is used for the screenshot.
 
 4. `04-settings`
-   - English caption: Your data stays on your iPhone.
-   - German caption: Eure Daten bleiben auf dem iPhone.
-   - Settings showing verified Voice Mode, the two Voice Mode toggles, backup controls, and privacy/support access. The visible API suffix is synthetic. Re-captured for 1.3.0 after the consent badge, withdrawal button, and disclosure paragraphs were removed.
+   - English caption: Your expenses. Your control.
+   - German caption: Eure Ausgaben. Eure Kontrolle.
+   - Settings showing verified Voice Mode, the two Voice Mode toggles, backup controls, and privacy/support access. The visible API suffix is synthetic. Freshly captured for 1.4.0; consent is revoked by turning Voice Mode off.
 
 5. `05-widgets`
    - English caption: Capture it before you forget.

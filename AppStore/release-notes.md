@@ -13,7 +13,33 @@ When shipping a new marketing version:
 
 ---
 
-## 1.3.1 — TestFlight candidate
+## 1.4.0 — proposed App Store release
+
+### English (U.S.)
+
+A better Voice Mode
+A newer AI model improves recognition of spoken numbers and letters. Voice capture now works without separate transcription charges.
+
+A clearer way to review
+See your expenses in a compact list, correct them by voice, and review your requests in “What I understood.” New animations show when Mäuse is listening or processing. You stay in control of what gets saved.
+
+Improvements for iOS 27
+More flexible layouts for the welcome screen, expense editor, and calendar, plus more reliable backups, fixes for editing large amounts, and better recovery when voice capture is interrupted.
+
+### German
+
+Ein besserer Sprachmodus
+Ein neueres KI-Modell erkennt gesprochene Zahlen und Buchstaben besser. Die Spracheingabe kommt jetzt ohne separate Transkriptionsgebühren aus.
+
+Ausgaben übersichtlicher prüfen
+Sieh deine Ausgaben in einer kompakten Liste, korrigiere sie per Sprache und prüfe deine Anfragen unter „So habe ich dich verstanden“. Neue Animationen zeigen, wann Mäuse zuhört oder eine Anfrage verarbeitet. Du entscheidest, was gespeichert wird.
+
+Verbesserungen für iOS 27
+Flexiblere Ansichten für den Willkommensbildschirm, Ausgabeneditor und Kalender. Dazu kommen zuverlässigere Backups, Korrekturen beim Bearbeiten großer Beträge und eine bessere Wiederaufnahme nach Unterbrechungen der Spracheingabe.
+
+---
+
+## 1.3.1 — historical TestFlight candidate
 
 ### English
 

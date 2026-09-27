@@ -1,6 +1,6 @@
 # Recommended App Privacy Answers
 
-These answers reflect Mäuse 1.2.0 with Voice Mode enabled and OpenAI's default API retention controls as documented on July 12, 2026.
+These answers reflect Mäuse 1.4.0 with Voice Mode enabled and OpenAI's default API retention controls as documented on September 27, 2026.
 
 ## Does this app collect data?
 
@@ -58,3 +58,5 @@ The iPhone app contains no advertising or analytics SDK. Vercel Web Analytics ru
 ## Review before submission
 
 Reconfirm OpenAI's current `/v1/realtime` retention policy immediately before submission. If the implementation or OpenAI account configuration changes—for example, an approved Zero Data Retention project is used—update these answers only after verifying the production behavior.
+
+Source rechecked: https://developers.openai.com/api/docs/guides/your-data — Realtime: no training by default, 30-day abuse monitoring, no application-state retention. Existing privacy labels should be preserved; no new data category is introduced by this update.

@@ -2,6 +2,20 @@
 
 This file records user-facing changes to Mäuse. App Store and GitHub release notes should be based on the matching version section.
 
+## 1.4.0 (48) — App Store candidate, 2026-09-27
+
+Consolidates the changes tested in 1.3.1 builds 33–47 since public version 1.3.0 (32). Version 1.3.1 was distributed through TestFlight only.
+
+- Voice Mode uses GPT-Realtime-2.1 for audio understanding and draft creation, with improved alphanumeric recognition. The separate transcription service and its additional charges are removed.
+- A redesigned Voice Mode shows compact, stable draft cards, highlights corrections, and keeps a chronological “What I understood” history. Listening and processing animations make the session state visible, with Reduce Motion alternatives.
+- The welcome screen, expense editor, calendar, and dashboard adapt to short or wide windows on iOS 27. Save and Cancel remain accessible in the editor.
+- JSON export uses the current system exporter while retaining iOS 17 support. Backup import validates amounts, splits, IDs, and dates before an isolated replacement transaction; failed saves preserve the existing ledger.
+- Editing amounts above €1,000 preserves their value in English and German.
+- Removed drafts stay removed when delayed voice results arrive. Failed or malformed responses preserve existing drafts, and closed sessions ignore stale callbacks.
+- Invalid spoken dates require correction. Audio interruptions and route changes offer Resume listening without losing the draft workspace.
+
+No app behavior changes after the user-tested build 47; this candidate changes release versioning and App Store materials only. App Store copy and submission await the account holder’s approval.
+
 ## 1.3.1 (47) — 2026-09-26
 
 - The welcome screen scrolls in short windows, keeping the introduction and Get Started action reachable when resized. Wider windows keep a comfortable reading width.

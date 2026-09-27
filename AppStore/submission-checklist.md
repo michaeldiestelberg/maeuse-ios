@@ -1,4 +1,23 @@
-# Mäuse 1.3.1 TestFlight Checklist
+# Mäuse release checklist
+
+## 1.4.0 (48) — App Store candidate
+
+- [x] Account holder approved build 47 in testing on September 27 and requested a 1.4.0 minor release.
+- [x] Build 47 / commit `cbdaa1e` succeeded in Xcode Cloud and was confirmed processed and assigned to Family (2 internal testers).
+- [x] Marketing version bumped to `1.4.0`; repository build number `48`.
+- [x] App behavior is unchanged from the user-tested build 47.
+- [x] English/German release notes and full submission copy drafted for account-holder review.
+- [x] Realtime data retention/training statements rechecked against current OpenAI documentation.
+- [x] Current English/German screenshots captured and visually reviewed; unchanged widget scenes retained.
+- [x] Candidate validation passes with Xcode 27: 64 iOS 27 tests, Release build, and static analysis; no warnings.
+- [ ] Xcode Cloud archive uses TestFlight and App Store deployment preparation; Next Build Number matches 48.
+- [ ] Build 1.4.0 (48) succeeds and finishes processing in App Store Connect.
+- [ ] Existing dedicated App Review credential confirmed active and compatible with GPT-Realtime-2.1.
+- [ ] Account holder approves the exact copy and screenshots in `1.4.0-approval.md`.
+- [ ] Approved copy and screenshots saved to the 1.4.0 version; build 48 attached; release method Manual Release.
+- [ ] Version 1.4.0 submitted to App Review after explicit approval.
+
+User test acceptance is recorded as supplied; no unreported individual hardware scenario is marked as separately verified.
 
 ## Build 47 — welcome screen resizing
 
@@ -6,8 +25,8 @@
 - [x] Welcome content scrolls in short windows and uses a bounded width in wide windows.
 - [x] All 64 iOS 27 tests pass. English/German welcome renders reviewed at 320×400, 700×400, and 393×852, including a return to the short size; the start button and footer remain reachable.
 - [x] Xcode 27 Release build and static analysis pass without warnings.
-- [ ] Release commit pushed to `main`; **Maeuse | Default** succeeds.
-- [ ] Build `1.3.1 (47)` is processed and distributed to the internal Family group.
+- [x] Release commit pushed to `main`; **Maeuse | Default** succeeds.
+- [x] Build `1.3.1 (47)` is processed and distributed to the internal Family group.
 - [ ] Physical iPhone microphone, interruptions, Bluetooth, and widget/control launches checked through TestFlight.
 
 ## Build 46 — pre-release review fixes

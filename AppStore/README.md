@@ -1,6 +1,6 @@
 # Mäuse App Store Launch Package
 
-This folder contains the product-page copy, compliance answers, reviewer notes, screenshot plan, and final submission checklist for Mäuse 1.3.0.
+This folder contains the product-page copy, compliance answers, reviewer notes, screenshot plan, and final submission checklist for Mäuse 1.4.0.
 
 ## App record
 
@@ -8,9 +8,9 @@ This folder contains the product-page copy, compliance answers, reviewer notes, 
 - Bundle ID: `com.michaeldiestelberg.maeuse`
 - Platform: iOS, iPhone only
 - Minimum OS: iOS 17.0
-- Version: `1.3.0`
-- Primary language: English (U.S.)
-- Additional localization: German
+- Version: `1.4.0`
+- Primary language: German
+- Additional localization: English (U.S.)
 - Primary category: Finance
 - Secondary category: Lifestyle
 - Price: Free
@@ -34,3 +34,7 @@ This folder contains the product-page copy, compliance answers, reviewer notes, 
 - `screenshots/README.md`: screenshot order, captions, and technical specifications.
 
 Do not place a real OpenAI API key in this repository. Add a temporary reviewer credential only in App Store Connect immediately before submission and revoke it after review.
+
+## Current approval package
+
+See `1.4.0-approval.md` for all proposed App Store copy and screenshots. Do not upload that copy or submit to App Review until the account holder approves it.

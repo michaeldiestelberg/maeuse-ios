@@ -10,7 +10,7 @@ Ausgaben-Tracker für Paare
 
 ## Werbetext
 
-Getrennte Konten, gemeinsame Kosten: Ausgaben direkt vom Sperrbildschirm diktieren, fair aufteilen und am Monatsende wissen, wer wem wie viel schuldet.
+Der neue Sprachmodus: übersichtliche Entwürfe, einfache Korrekturen per Sprache und keine separaten Transkriptionsgebühren. Gemeinsame Kosten, getrennte Konten.
 
 ## Beschreibung
 
@@ -33,7 +33,9 @@ Startet eine neue Ausgabe direkt über ein Widget auf dem Home- oder Sperrbildsc
 
 ODER EINFACH SAGEN
 
-Der optionale Sprachmodus verwandelt einen kurzen Satz in einen oder mehrere Ausgabenentwürfe. Ein Echtzeit-Sprachmodell erkennt beim Sprechen die relevanten Angaben. Vor dem Speichern könnt ihr jeden Entwurf prüfen und behaltet so die Kontrolle.
+Der optionale Sprachmodus verwandelt eure gesprochenen Angaben mit GPT-Realtime-2.1 in einen oder mehrere Ausgabenentwürfe. Prüft sie in einer kompakten Liste, korrigiert sie per Sprache und seht unter „So habe ich dich verstanden“ eure Anfragen und Korrekturen in der richtigen Reihenfolge. Animationen zeigen, wann Mäuse zuhört oder eine Anfrage verarbeitet. Erst wenn ihr auf Speichern tippt, werden die Ausgaben übernommen.
+
+Die Spracheingabe funktioniert in einer Sitzung, ohne separaten Transkriptionsdienst und dessen zusätzliche Gebühren.
 
 PRIVAT VON ANFANG AN
 
@@ -43,7 +45,7 @@ PRIVAT VON ANFANG AN
 • Backup als JSON-Datei exportieren und wiederherstellen
 • Manuelle Erfassung funktioniert offline
 
-Der optionale Sprachmodus erfordert einen eigenen kompatiblen OpenAI-API-Schlüssel. Nur während einer Sprachsitzung und nach eurer Zustimmung werden Mikrofon-Audio und gesprochene Ausgabendetails direkt an OpenAI gesendet.
+Der optionale Sprachmodus erfordert einen eigenen kompatiblen OpenAI-API-Schlüssel. Nur während einer Sprachsitzung und nach eurer Zustimmung werden Mikrofon-Audio, gesprochene Ausgabendetails und die aktuellen Sprachentwürfe direkt an OpenAI gesendet. Für die Nutzung der OpenAI-API können Kosten anfallen.
 
 Mäuse unterstützt Dark Mode sowie ein helles oder systemweites Erscheinungsbild.
 
@@ -56,11 +58,5 @@ teilen,rechnungen,budget,gemeinsam,partner,haushalt,geld,sprache,widget,abrechnu
 1. Getrennte Konten. Klare Bilanz.
 2. In Sekunden eine Ausgabe erfassen.
 3. Sagen. Prüfen. Speichern.
-4. Eure Daten bleiben auf dem iPhone.
+4. Eure Ausgaben. Eure Kontrolle.
 5. Erfassen, bevor es vergessen ist.
-
-## Versionshinweise für den ersten Store-Release
-
-Beim ersten App-Store-Release nicht sichtbar. Falls App Store Connect 1.2.0 als Update behandelt:
-
-Mäuse ist bereit für den App-Store-Start: flexible Aufteilungen, Monatssummen, JSON-Backup und -Wiederherstellung, deutsche und englische Oberfläche sowie ein optionaler Sprachmodus für mehrere Ausgaben mit klaren Datenschutzeinstellungen.

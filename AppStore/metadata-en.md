@@ -10,7 +10,7 @@ Expense tracker for couples
 
 ## Promotional text
 
-Keep separate accounts without keeping score. Dictate shared expenses from your Lock Screen, split them fairly, and know exactly what to settle at month's end.
+Meet the new Voice Mode: clearer expense drafts, easy spoken corrections, and no separate transcription charges. Built for shared expenses and separate accounts.
 
 ## Description
 
@@ -33,7 +33,9 @@ Open a new expense straight from a Home Screen or Lock Screen widget, the Lock S
 
 OR JUST SAY IT
 
-Optional Voice Mode turns a quick sentence into one or more expense drafts. A real-time voice model extracts the details while you speak. Review every draft before saving, so you stay in control.
+Optional Voice Mode turns what you say into one or more expense drafts using GPT-Realtime-2.1. Review drafts in a compact list, correct them by voice, and expand “What I understood” to see your requests and corrections in order. Animated feedback shows when Mäuse is listening or processing. Nothing is added to your expenses until you tap Save.
+
+Voice capture works in one session, without a separate transcription service or its additional charges.
 
 PRIVATE BY DEFAULT
 
@@ -43,7 +45,7 @@ PRIVATE BY DEFAULT
 • Export and restore a portable JSON backup
 • Manual entry works offline
 
-Optional Voice Mode requires your own compatible OpenAI API key. Only during a voice session, and after you consent, microphone audio and spoken expense details are sent directly to OpenAI.
+Optional Voice Mode requires your own compatible OpenAI API key. Only during a voice session, and after you consent, microphone audio, spoken expense details, and the current voice drafts are sent directly to OpenAI. OpenAI API usage charges may apply.
 
 Enjoy Dark Mode, or choose light or system appearance.
 
@@ -56,11 +58,5 @@ shared,bills,split,budget,partner,household,money,voice,widget,reconcile,settle,
 1. Separate accounts. One clear balance.
 2. Add an expense in seconds.
 3. Just say it. Review it. Save it.
-4. Your data stays on your iPhone.
+4. Your expenses. Your control.
 5. Capture it before you forget.
-
-## First-version release notes
-
-Not shown for the first App Store version. If App Store Connect treats 1.2.0 as an update, use:
-
-Mäuse is ready for its App Store launch with flexible expense splitting, monthly totals, JSON backup and restore, English and German localization, and optional multi-expense Voice Mode with clear privacy controls.

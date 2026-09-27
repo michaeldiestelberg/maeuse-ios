@@ -13,12 +13,12 @@
 
 | | |
 | --- | --- |
-| Version | 1.3.1 (build 47) |
+| Version | 1.4.0 (build 48) |
 | Platform | iPhone · iOS 17 or later |
-| Status | Internal TestFlight candidate; 1.3.0 (32) remains live on the App Store |
+| Status | App Store candidate, awaiting copy approval; 1.3.0 (32) remains live |
 | Languages | English and German |
 
-Build 47 makes the welcome screen scroll in short windows and keeps its content comfortably sized in wide windows. It also includes the safer backup restoration, amount/date validation, stale voice update protection, and resumable voice capture from build 46. Validation: all 64 tests pass on iOS 27, including English/German welcome resizing; the Release build and static analysis pass without warnings. TestFlight distribution is tracked in `AppStore/submission-checklist.md`; physical-device audio checks remain outstanding.
+Version 1.4.0 brings GPT-Realtime-2.1 voice capture without separate transcription charges, a redesigned Voice Mode with compact drafts and request history, and iOS 27 layout and reliability improvements. It contains the same app behavior as user-tested build 47. All 64 iOS 27 tests passed again for candidate build 48, as did the Release build and static analysis with no warnings. Distribution is tracked in `AppStore/submission-checklist.md`. App Store copy and submission await approval.
 
 Latest App Store release (build 32): Lock Screen, Home Screen, and Control Center capture, improved control icons and expense deletion, Voice Mode haptics, and a more stable expense editor with the keyboard open.
 
@@ -85,8 +85,8 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
 
 The Xcode project is the source of truth for both version values:
 
-- `MARKETING_VERSION` is the user-facing version (`1.3.1`).
-- `CURRENT_PROJECT_VERSION` is the App Store Connect build number (`47`).
+- `MARKETING_VERSION` is the user-facing version (`1.4.0`).
+- `CURRENT_PROJECT_VERSION` is the App Store Connect build number (`48`).
 
 Use `scripts/bump-version.sh` before creating a new archive. See [RELEASING.md](RELEASING.md) for the full release workflow and [CHANGELOG.md](CHANGELOG.md) for user-facing release notes.
 
