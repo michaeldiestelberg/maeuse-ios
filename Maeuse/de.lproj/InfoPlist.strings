@@ -1,1 +1,2 @@
-"NSMicrophoneUsageDescription" = "Mäuse verwendet dein Mikrofon, um gesprochene Ausgabendetails an OpenAI Realtime zu senden.";
+"NSMicrophoneUsageDescription" = "Mäuse verwendet dein Mikrofon, um Ausgaben mit dem gewählten Sprachmodus zu erfassen.";
+"NSSpeechRecognitionUsageDescription" = "Mäuse verwendet lokale Spracherkennung für den Apple-Sprachmodus. Audio bleibt auf deinem iPhone.";

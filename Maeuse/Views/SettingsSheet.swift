@@ -10,6 +10,7 @@ struct SettingsSheet: View {
 
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.scenePhase) private var scenePhase
 
     @AppStorage("maeuse.colorScheme") private var colorSchemePreference: String = "system"
     @State private var languageManager = LanguageManager.shared
@@ -93,8 +94,13 @@ struct SettingsSheet: View {
         } message: {
             Text(viewModel.voiceErrorMessage)
         }
+        .onAppear { viewModel.refreshLocalAvailability() }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { viewModel.refreshLocalAvailability() }
+        }
+        .onChange(of: languageManager.activeLanguageCode) { _, _ in viewModel.refreshLocalAvailability() }
         .sheet(isPresented: $showVoiceConsent) {
-            VoicePrivacyConsentSheet {
+            VoicePrivacyConsentSheet(provider: viewModel.voiceSettings.provider) {
                 viewModel.acceptVoiceConsent()
                 viewModel.voiceEnabled = true
                 showVoiceConsent = false
@@ -211,6 +217,41 @@ struct SettingsSheet: View {
         VStack(alignment: .leading, spacing: 14) {
             themeLabel(loc("VoiceMode"))
 
+            VStack(spacing: 10) {
+                ForEach(VoiceProvider.allCases) { provider in
+                    Button { viewModel.selectProvider(provider) } label: {
+                        VStack(alignment: .leading, spacing: 6) {
+                            HStack {
+                                Text(provider.title).font(.subheadline.weight(.heavy))
+                                Spacer()
+                                Image(systemName: viewModel.voiceSettings.provider == provider ? "checkmark.circle.fill" : "circle")
+                            }
+                            Text(loc(provider == .appleLocal ? "VoiceAppleSummary" : "VoiceCloudSummary"))
+                                .font(.caption).fixedSize(horizontal: false, vertical: true)
+                        }
+                        .foregroundStyle(Color.maeusForeground)
+                        .padding(14)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(viewModel.voiceSettings.provider == provider ? Color.maeusCheese.opacity(0.2) : Color.maeusInputBackground,
+                                    in: RoundedRectangle(cornerRadius: 12))
+                        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.maeusCardBorder, lineWidth: 1.5))
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(viewModel.isVerifying)
+                    .accessibilityIdentifier("voice-provider-\(provider.rawValue)")
+                    .accessibilityAddTraits(viewModel.voiceSettings.provider == provider ? .isSelected : [])
+                }
+            }
+
+            if viewModel.voiceSettings.provider == .appleLocal {
+                Text(viewModel.localAvailability.message)
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(Color.maeusTextSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text(loc("LocalRequirements")).font(.caption).foregroundStyle(Color.maeusTextSecondary)
+                Button(loc("LocalCheckAgain")) { viewModel.refreshLocalAvailability() }
+                    .buttonStyle(GlassSecondaryButtonStyle())
+            } else {
             if viewModel.hasSavedVoiceAPIKey {
                 savedVoiceKeyRow
             } else {
@@ -254,6 +295,8 @@ struct SettingsSheet: View {
                 .buttonStyle(GlassSecondaryButtonStyle())
             }
 
+            }
+
             Divider()
                 .overlay(Color.maeusSoftBorder)
 
@@ -276,7 +319,8 @@ struct SettingsSheet: View {
                 }
             }
             .tint(Color.maeusPrimary)
-            .disabled(!viewModel.voiceSettings.isVerified || !viewModel.hasSavedVoiceAPIKey)
+            .disabled(!viewModel.voiceEnabled && !viewModel.canEnableVoice)
+            .accessibilityIdentifier("voice-enable")
 
             Toggle(isOn: Binding(
                 get: { viewModel.voiceSettings.hapticsEnabled },
@@ -448,6 +492,7 @@ struct SettingsSheet: View {
 }
 
 private struct VoicePrivacyConsentSheet: View {
+    let provider: VoiceProvider
     let onAccept: () -> Void
     let onCancel: () -> Void
 
@@ -462,10 +507,15 @@ private struct VoicePrivacyConsentSheet: View {
                     }
                     .frame(maxWidth: .infinity)
 
-                    Text(loc("VoicePrivacyIntro"))
+                    Text(loc(provider == .appleLocal ? "LocalPrivacyIntro" : "VoicePrivacyIntro"))
                         .font(.system(size: 15, weight: .bold, design: .rounded))
                         .foregroundStyle(Color.maeusTextSecondary)
 
+                    if provider == .appleLocal {
+                        disclosureRow(icon: "iphone", title: loc("LocalPrivacyDataTitle"), body: loc("LocalPrivacyDataBody"))
+                        disclosureRow(icon: "waveform", title: loc("LocalPrivacyExperienceTitle"), body: loc("LocalPrivacyExperienceBody"))
+                        disclosureRow(icon: "creditcard", title: loc("LocalPrivacyCostTitle"), body: loc("LocalPrivacyCostBody"))
+                    } else {
                     disclosureRow(
                         icon: "mic.fill",
                         title: loc("VoicePrivacyDataTitle"),
@@ -483,6 +533,8 @@ private struct VoicePrivacyConsentSheet: View {
                         title: loc("VoicePrivacyBillingTitle"),
                         body: loc("VoicePrivacyBillingDesc")
                     )
+
+                    }
 
                     Link(loc("ReadPrivacyPolicy"), destination: URL(string: "https://xn--muse-loa.app/privacy.html#voice-mode")!)
                         .font(.system(size: 14, weight: .heavy, design: .rounded))

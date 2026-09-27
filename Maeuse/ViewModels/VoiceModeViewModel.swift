@@ -28,15 +28,32 @@ final class VoiceModeViewModel {
     var microphoneLevel: Double = 0
     var isSaving: Bool = false
 
-    private let realtime: RealtimeVoiceService
+    private(set) var provider: VoiceProvider = .openAI
+    private(set) var localTranscript = ""
+    private var service: (any VoiceSessionService)?
+    private let serviceFactory: (VoiceProvider) -> any VoiceSessionService
+    private var sessionID = UUID()
     private var removedDraftIDs: Set<String> = []
     private var connectionTask: Task<Void, Never>?
     private var hasStartedSession = false
     private var didSignalListeningReady = false
 
-    init(realtime: RealtimeVoiceService? = nil) {
-        self.realtime = realtime ?? RealtimeVoiceService()
-        self.realtime.setDelegate(self)
+    init(realtime: RealtimeVoiceService? = nil,
+         serviceFactory: ((VoiceProvider) -> any VoiceSessionService)? = nil) {
+        self.serviceFactory = serviceFactory ?? { provider in
+            switch provider {
+            case .appleLocal: return AppleLocalVoiceService()
+            case .openAI: return realtime ?? RealtimeVoiceService()
+            }
+        }
+        if let realtime {
+            service = realtime
+            let id = sessionID
+            realtime.onEvent = { [weak self] event in
+                guard let self, self.sessionID == id else { return }
+                self.handleVoiceEvent(event)
+            }
+        }
     }
 
     var microphoneIsReady: Bool {
@@ -55,7 +72,7 @@ final class VoiceModeViewModel {
     }
 
     var canEndSession: Bool {
-        !isUserSpeaking && !isProcessingRequest && phase != .connecting && phase != .thinking && phase != .finalizing
+        !(provider == .appleLocal && microphoneIsActive) && !isUserSpeaking && !isProcessingRequest && phase != .connecting && phase != .thinking && phase != .finalizing
     }
 
     var canSaveDrafts: Bool {
@@ -78,12 +95,19 @@ final class VoiceModeViewModel {
 
     // MARK: - Actions
 
-    func open() {
+    func open(provider: VoiceProvider = .openAI) {
         resetWorkspace()
+        self.provider = provider
         isPresented = true
     }
 
     #if targetEnvironment(simulator)
+    func setLocalScreenshotProvider() {
+        provider = .appleLocal
+        microphoneIsActive = false
+        phase = .idle
+    }
+
     func openScreenshotPreview() {
         resetWorkspace()
         hasStartedSession = true
@@ -127,7 +151,7 @@ final class VoiceModeViewModel {
                         let samples = buffer.audioBufferList.pointee.mBuffers
                         if let bytes = samples.mData {
                             let pcm = Data(bytes: bytes, count: Int(samples.mDataByteSize))
-                            self.realtimeVoiceService(self.realtime, didReceive: .microphoneLevel(VoiceInputMeter.level(pcm16: pcm)))
+                            self.handleVoiceEvent(.microphoneLevel(VoiceInputMeter.level(pcm16: pcm)))
                         }
                         try await Task.sleep(for: .seconds(Double(buffer.frameLength) / audio.processingFormat.sampleRate))
                     }
@@ -141,7 +165,7 @@ final class VoiceModeViewModel {
         if ProcessInfo.processInfo.arguments.contains("--voice-connection-error") {
             drafts = []
             understandingHistory = []
-            realtimeVoiceService(realtime, didReceive: .error(loc("SessionDisconnectedMsg")))
+            handleVoiceEvent(.error(loc("SessionDisconnectedMsg")))
         }
         if ProcessInfo.processInfo.arguments.contains("--voice-connecting") ||
            ProcessInfo.processInfo.arguments.contains("--voice-connect-transition") {
@@ -154,7 +178,7 @@ final class VoiceModeViewModel {
                 Task { @MainActor [weak self] in
                     try? await Task.sleep(for: .seconds(6))
                     guard let self, self.isPresented, self.phase == .connecting else { return }
-                    self.realtimeVoiceService(self.realtime, didReceive: .microphoneStarted)
+                    self.handleVoiceEvent(.microphoneStarted)
                     self.microphoneLevel = ProcessInfo.processInfo.arguments.contains("--voice-silent") ? 0 : 0.45
                 }
             }
@@ -163,14 +187,14 @@ final class VoiceModeViewModel {
             drafts = []
             understandingHistory = []
             microphoneLevel = 0
-            realtimeVoiceService(realtime, didReceive: .listeningStopped)
+            handleVoiceEvent(.listeningStopped)
         }
         if ProcessInfo.processInfo.arguments.contains("--voice-processing-existing") {
             microphoneLevel = 0
-            realtimeVoiceService(realtime, didReceive: .listeningStopped)
-            realtimeVoiceService(realtime, didReceive: .responseStarted(id: "preview-pending", isAppGenerated: false))
+            handleVoiceEvent(.listeningStopped)
+            handleVoiceEvent(.responseStarted(id: "preview-pending", isAppGenerated: false))
             if ProcessInfo.processInfo.arguments.contains("--voice-processing-speaking") {
-                realtimeVoiceService(realtime, didReceive: .listeningStarted)
+                handleVoiceEvent(.listeningStarted)
                 microphoneLevel = 0.5
             }
         }
@@ -186,14 +210,14 @@ final class VoiceModeViewModel {
                     for turn in 0..<3 {
                         try await pause(2)
                         guard let self, self.isPresented else { return }
-                        self.realtimeVoiceService(self.realtime, didReceive: .listeningStarted)
+                        self.handleVoiceEvent(.listeningStarted)
                         self.microphoneLevel = 0.6
                         try await pause(2)
                         guard self.isPresented else { return }
                         self.microphoneLevel = 0
-                        self.realtimeVoiceService(self.realtime, didReceive: .listeningStopped)
+                        self.handleVoiceEvent(.listeningStopped)
                         let id = "demo-\(turn)"
-                        self.realtimeVoiceService(self.realtime, didReceive: .responseStarted(id: id, isAppGenerated: false))
+                        self.handleVoiceEvent(.responseStarted(id: id, isAppGenerated: false))
                         try await pause(4)
                         guard self.isPresented else { return }
                         var entries = [VoiceExpenseDraftPayload(id: "flowers", title: german ? "Blumen" : "Flowers",
@@ -203,13 +227,13 @@ final class VoiceModeViewModel {
                             entries.append(VoiceExpenseDraftPayload(id: "coffee", title: german ? "Kaffee" : "Coffee",
                                 amount: 4.5, dateISO: nil, splitMode: nil, splitValue: nil, confidence: 1, missingFields: []))
                         }
-                        self.realtimeVoiceService(self.realtime, didReceive: .workspaceSync(VoiceWorkspaceSyncPayload(
+                        self.handleVoiceEvent(.workspaceSync(VoiceWorkspaceSyncPayload(
                             responseID: id, userUnderstanding: turn == 1
                                 ? (german ? "Die Blumen waren dreizehn fünfzig." : "The flowers were thirteen fifty.")
                                 : requests[turn == 0 ? 0 : 1],
                             clarificationQuestion: "", expenses: entries,
                             changedExpenseIDs: [turn == 2 ? "coffee" : "flowers"], removedExpenseIDs: [])))
-                        self.realtimeVoiceService(self.realtime, didReceive: .responseFinished(id: id))
+                        self.handleVoiceEvent(.responseFinished(id: id))
                     }
                 } catch { return }
             }
@@ -239,12 +263,19 @@ final class VoiceModeViewModel {
     #endif
 
     func startSession() {
-        guard !hasStartedSession else { return }
+        guard isPresented, !hasStartedSession else { return }
 
         hasStartedSession = true
         phase = .connecting
         errorMessage = ""
         didSignalListeningReady = false
+        let id = sessionID
+        let selectedService = serviceFactory(provider)
+        service = selectedService
+        selectedService.onEvent = { [weak self] event in
+            guard let self, self.sessionID == id else { return }
+            self.handleVoiceEvent(event)
+        }
         let workspaceContext = resumeWorkspaceContext()
 
         let previousConnection = connectionTask
@@ -253,9 +284,9 @@ final class VoiceModeViewModel {
             await previousConnection?.value
             guard !Task.isCancelled else { return }
             do {
-                try await realtime.connect(workspaceContext: workspaceContext)
+                try await selectedService.connect(workspaceContext: workspaceContext)
             } catch {
-                guard !Task.isCancelled, phase != .error else { return }
+                guard !Task.isCancelled, sessionID == id, phase != .error else { return }
                 phase = .error
                 errorMessage = error.localizedDescription
             }
@@ -265,7 +296,10 @@ final class VoiceModeViewModel {
     func restartSession() {
         guard isPresented, phase == .error else { return }
         connectionTask?.cancel()
-        realtime.disconnect()
+        sessionID = UUID()
+        service?.onEvent = nil
+        service?.disconnect()
+        service = nil
         clearProcessingState()
         hasStartedSession = false
         startSession()
@@ -273,13 +307,13 @@ final class VoiceModeViewModel {
 
     /// Resume the exact reviewable workspace, including deletion tombstones.
     func resumeWorkspaceContext() -> String? {
-        guard !drafts.isEmpty || !removedDraftIDs.isEmpty else { return nil }
+        guard !drafts.isEmpty || !removedDraftIDs.isEmpty || !clarificationQuestion.isEmpty else { return nil }
         let rows: [[String: Any]] = drafts.map { draft in
             ["id": draft.id, "title": draft.title, "amount": draft.amount as Any? ?? NSNull(),
              "date_iso": draft.dateISO as Any? ?? NSNull(), "split_mode": draft.splitMode?.rawValue as Any? ?? NSNull(),
              "split_value": draft.splitValue as Any? ?? NSNull(), "missing_fields": draft.missingFields.map(\.rawValue)]
         }
-        guard let data = try? JSONSerialization.data(withJSONObject: ["expenses": rows, "removed_ids": removedDraftIDs.sorted()]),
+        guard let data = try? JSONSerialization.data(withJSONObject: ["expenses": rows, "removed_ids": removedDraftIDs.sorted(), "clarification_question": clarificationQuestion]),
               let text = String(data: data, encoding: .utf8) else { return nil }
         return "App-provided initial workspace, not a spoken request. Keep these drafts and IDs when processing the next spoken request. Removed IDs must stay removed; an explicit re-add must use a new ID. Do not respond to this note. \(text)"
     }
@@ -298,7 +332,7 @@ final class VoiceModeViewModel {
         updatedExpenseIDs.remove(draft.id)
         changedFieldsByExpenseID[draft.id] = nil
         clarificationQuestion = ""
-        realtime.sendWorkspaceNote("The user removed expense \(draft.id) named \(draft.normalizedTitle) from the temporary workspace. This ID must stay removed for the rest of the session. If the user explicitly asks to add it again, use a new ID. Do not respond to this app-generated note.")
+        service?.sendWorkspaceNote("The user removed expense \(draft.id) named \(draft.normalizedTitle) from the temporary workspace. This ID must stay removed for the rest of the session. If the user explicitly asks to add it again, use a new ID. Do not respond to this app-generated note.")
     }
 
     func expensesForSaving() -> [Expense] {
@@ -319,7 +353,10 @@ final class VoiceModeViewModel {
 
     func resetWorkspace() {
         connectionTask?.cancel()
-        realtime.disconnect()
+        sessionID = UUID()
+        service?.onEvent = nil
+        service?.disconnect()
+        service = nil
         isPresented = false
         removedDraftIDs = []
         phase = .idle
@@ -335,6 +372,24 @@ final class VoiceModeViewModel {
         isSaving = false
         hasStartedSession = false
         didSignalListeningReady = false
+        localTranscript = ""
+    }
+
+    /// Local capture is deliberately turn based; never record while the model works.
+    func toggleLocalRecording() {
+        guard provider == .appleLocal else { return }
+        if microphoneIsActive {
+            service?.finishTurn()
+        } else if phase == .idle {
+            connectionTask?.cancel()
+            sessionID = UUID()
+            service?.onEvent = nil
+            service?.disconnect()
+            service = nil
+            hasStartedSession = false
+            localTranscript = ""
+            startSession()
+        }
     }
 
     static func todayISOString() -> String {
@@ -462,8 +517,19 @@ final class VoiceModeViewModel {
 
 extension VoiceModeViewModel: RealtimeVoiceServiceDelegate {
     func realtimeVoiceService(_ service: RealtimeVoiceService, didReceive event: RealtimeVoiceServiceEvent) {
+        handleVoiceEvent(event)
+    }
+
+    func handleVoiceEvent(_ event: RealtimeVoiceServiceEvent) {
         guard isPresented else { return }
         switch event {
+        case .localTurnReady:
+            clearProcessingState()
+            microphoneIsActive = false
+            microphoneLevel = 0
+            phase = .idle
+        case .localTranscript(let text):
+            localTranscript = text
         case .connected:
             phase = microphoneIsActive ? .listening : .connecting
         case .disconnected:

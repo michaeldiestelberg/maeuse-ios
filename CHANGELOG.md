@@ -2,7 +2,15 @@
 
 This file records user-facing changes to Mäuse. App Store and GitHub release notes should be based on the matching version section.
 
-## 1.4.0 (48) — App Store candidate, 2026-09-27
+## 1.5.0 (49) — internal TestFlight candidate, 2026-09-27
+
+- Choose Apple on-device voice capture or OpenAI cloud capture when enabling Voice Mode. Setup explains cost, privacy, device requirements, and the difference between short dictation turns and continuous capture in English and German.
+- Apple mode uses on-device speech recognition and Apple Foundation Models end to end. No OpenAI model, key, paid API, or cloud fallback is used in this mode. Downloaded Apple resources and an Apple Intelligence compatible device running iOS 26+ are required.
+- Dictate a short phrase, tap Process phrase, review the drafts, and use Record more for additions or corrections. Recording pauses during local processing. Existing drafts survive errors and interruptions.
+- Local amounts, partner shares, and dates are resolved from quoted speech and validated before saving. Missing prices require clarification; stale responses cannot restore removed drafts or refill closed sessions.
+- Existing installations keep their selected cloud mode. New installations select Apple with voice disabled, and switching providers requires fresh consent.
+
+## 1.4.0 (48) — submitted to App Review, 2026-09-27
 
 Consolidates the changes tested in 1.3.1 builds 33–47 since public version 1.3.0 (32). Version 1.3.1 was distributed through TestFlight only.
 
@@ -14,7 +22,7 @@ Consolidates the changes tested in 1.3.1 builds 33–47 since public version 1.3
 - Removed drafts stay removed when delayed voice results arrive. Failed or malformed responses preserve existing drafts, and closed sessions ignore stale callbacks.
 - Invalid spoken dates require correction. Audio interruptions and route changes offer Resume listening without losing the draft workspace.
 
-No app behavior changes after the user-tested build 47; this candidate changes release versioning and App Store materials only. App Store copy and submission await the account holder’s approval.
+No app behavior changes after the user-tested build 47; this candidate changes release versioning and App Store materials only. The account holder approved the copy and screenshots; build 48 was submitted on September 27, 2026. Status: Waiting for Review, with Manual Release enabled.
 
 ## 1.3.1 (47) — 2026-09-26
 

@@ -13,6 +13,28 @@ When shipping a new marketing version:
 
 ---
 
+## 1.5.0 — TestFlight preview
+
+These notes describe the beta. The 1.4.0 App Review submission and public website remain unchanged until the public release is ready.
+
+### English
+
+Free voice capture on your iPhone
+Choose Apple in Voice Mode settings to use on-device speech recognition and Apple Foundation Models, with no API key or usage fees. Your voice and expense processing stay on your iPhone. Requires iOS 26 or later, a compatible iPhone, Apple Intelligence enabled, and downloaded language resources.
+
+Choose how you dictate
+Apple mode works one short phrase at a time: dictate, tap Process phrase, review your drafts, and record more to add or correct expenses. The optional OpenAI mode keeps continuous capture with your own API account. Setup explains the differences in privacy, availability, experience, and costs before you choose.
+
+### German
+
+Kostenlose Spracherfassung auf deinem iPhone
+Wähle Apple in den Sprachmodus-Einstellungen für lokale Spracherkennung und Apple Foundation Models – ohne API-Schlüssel und ohne Nutzungsgebühren. Deine Stimme und die Verarbeitung deiner Ausgaben bleiben auf deinem iPhone. Erfordert iOS 26 oder neuer, ein kompatibles iPhone, aktiviertes Apple Intelligence und geladene Sprachressourcen.
+
+Wähle, wie du diktierst
+Der Apple-Modus arbeitet mit kurzen Diktaten: sprechen, auf „Verarbeiten“ tippen, Entwürfe prüfen und weiter diktieren, um Ausgaben hinzuzufügen oder zu korrigieren. Der optionale OpenAI-Modus bietet weiterhin fortlaufende Erfassung über dein eigenes API-Konto. Die Einrichtung erklärt Unterschiede bei Datenschutz, Verfügbarkeit, Bedienung und Kosten.
+
+---
+
 ## 1.4.0 — proposed App Store release
 
 ### English (U.S.)

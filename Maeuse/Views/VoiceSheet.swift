@@ -18,6 +18,9 @@ struct VoiceSheet: View {
             if !dynamicTypeSize.isAccessibilitySize { listeningHero }
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
+                    if viewModel.provider == .appleLocal {
+                        localControls
+                    }
                     Text(loc("VoiceYourDrafts"))
                         .font(.system(.headline, design: .rounded, weight: .heavy))
 
@@ -67,6 +70,31 @@ struct VoiceSheet: View {
         .task { viewModel.startSession() }
     }
 
+    private var localControls: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label(loc("VoiceAppleTitle"), systemImage: "iphone")
+                .font(.subheadline.weight(.heavy))
+            Text(loc(viewModel.microphoneIsActive ? "LocalRecordingHint" :
+                (viewModel.isProcessingRequest ? "LocalProcessingHint" : "LocalReadyHint")))
+                .font(.footnote).foregroundStyle(Color.maeusTextSecondary)
+            if !viewModel.localTranscript.isEmpty {
+                Text(viewModel.localTranscript).font(.callout)
+                    .accessibilityIdentifier("local-transcript")
+            }
+            if viewModel.phase != .error {
+                Button(loc(viewModel.microphoneIsActive ? "LocalFinishPhrase" : "LocalRecordMore")) {
+                    viewModel.toggleLocalRecording()
+                }
+                .buttonStyle(GlassSecondaryButtonStyle())
+                .disabled(!viewModel.microphoneIsActive && viewModel.phase != .idle)
+                .accessibilityIdentifier("local-record")
+            }
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.maeusInputBackground, in: RoundedRectangle(cornerRadius: 16))
+    }
+
     private var topBar: some View {
         HStack(spacing: 10) {
             Button {
@@ -105,11 +133,19 @@ struct VoiceSheet: View {
     private var canSave: Bool { viewModel.canSaveDrafts && viewModel.canEndSession }
 
     private var connectionEmblem: some View {
-        VoiceConnectionEmblem(isReady: viewModel.microphoneIsReady,
-            hasError: viewModel.phase == .error,
-            isProcessing: viewModel.isProcessingRequest,
-            isSpeaking: viewModel.isUserSpeaking || viewModel.microphoneLevel > 0.12,
-            level: viewModel.microphoneLevel)
+        Group {
+            if viewModel.provider == .appleLocal && viewModel.phase == .idle {
+                Image(systemName: "checkmark.circle.fill")
+                    .resizable().scaledToFit().padding(24)
+                    .foregroundStyle(Color.maeusCheese)
+            } else {
+                VoiceConnectionEmblem(isReady: viewModel.microphoneIsReady,
+                    hasError: viewModel.phase == .error,
+                    isProcessing: viewModel.isProcessingRequest,
+                    isSpeaking: viewModel.isUserSpeaking || viewModel.microphoneLevel > 0.12,
+                    level: viewModel.microphoneLevel)
+            }
+        }
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(viewModel.stateLabel)
             .accessibilityIdentifier("voice-connection-emblem")

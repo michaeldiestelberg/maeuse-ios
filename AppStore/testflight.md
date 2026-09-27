@@ -2,6 +2,20 @@
 
 TestFlight is strongly recommended before App Store submission, especially for microphone permission, Voice Mode, Keychain persistence, backup import/export, and real-device layout checks. Internal testing does not require Beta App Review; the first external build may.
 
+## Build 49 / 1.5.0 focus
+
+- Settings → Voice Mode → Apple · On device → Enable. No OpenAI key should be needed. Read the local disclosure and grant microphone/speech recognition access.
+- With Apple Intelligence and speech resources already downloaded, enable Airplane Mode. Dictate “Coffee four euros fifty and flowers twelve euros yesterday”, tap Process phrase, and check both amounts, dates, and default 50% shares. Try the equivalent German request with the app in German.
+- Record more to correct an amount, give a fixed partner euro share or a percentage, remove a draft by voice, and answer a missing-price question. Review the values before saving.
+- Deny microphone/speech permission; disable Apple Intelligence; try an unsupported device/language. The app must explain why local capture is unavailable and must never switch to OpenAI.
+- Close during recognition/processing; remove a draft while processing; interrupt capture with a call, Siri, Bluetooth change, or backgrounding. Preserve previous drafts and ignore stale callbacks.
+- Switch to OpenAI and back. Each switch must disable voice and ask for the newly selected provider’s disclosure before re-enabling. Cloud mode still requires a verified key.
+- Local mode pauses recording while processing, limits a recording to 50 seconds, and supports at most 10 drafts per session. Save a full session before starting another.
+
+### Build 49 — Deutsch
+
+Wähle Einstellungen → Sprachmodus → Apple · Auf dem Gerät und aktiviere den Modus ohne OpenAI-Schlüssel. Prüfe den Hinweis, erlaube Mikrofon und Spracherkennung und teste nach dem Laden aller Apple-Ressourcen im Flugmodus. Diktiere „Kaffee vier Euro fünfzig und Blumen zwölf Euro gestern“, tippe auf „Verarbeiten“ und prüfe beide Beträge, Daten und die Aufteilung. Teste Korrekturen, feste Partnerbeträge, Prozente, fehlende Preise und das Entfernen von Entwürfen. Prüfe auch verweigerte Berechtigungen, deaktiviertes Apple Intelligence, ungeeignete Geräte, Anrufe/Siri, Bluetooth-Wechsel und das Schließen während der Verarbeitung. Es darf niemals automatisch zu OpenAI gewechselt werden. Beim Anbieterwechsel muss der Modus ausgeschaltet und eine neue Einwilligung verlangt werden.
+
 ## Build 46 focus
 
 - Export and restore a valid backup; check that the open ledger refreshes immediately. Invalid amounts, split values, and dates must leave the original ledger intact.
@@ -103,7 +117,7 @@ Please focus on these flows:
 3. Navigate between months and confirm empty states.
 4. Export a JSON backup, add another expense, then import the backup. Confirm that the replacement warning is clear and that the restored values are correct.
 5. Switch between English and German, and between light, dark, and system appearance.
-6. Test without a network connection. Manual tracking and local backups should continue to work; Voice Mode should remain unavailable.
+6. Test without a network connection. Manual tracking, backups, and configured Apple voice mode should work; OpenAI voice requires internet.
 7. For Voice Mode, use a compatible OpenAI API project and key. Verify the key, review the disclosure, accept consent, and enable Voice Mode.
 8. Dictate several expenses in one sentence. Review, remove, correct, and save drafts. Confirm that ending the session stops microphone use.
 9. Turn Voice Mode off, then on again, and verify that the disclosure reappears and consent must be accepted before it re-enables. Then remove the saved key.
@@ -120,7 +134,7 @@ Bitte konzentriere dich auf diese Abläufe:
 3. Wechsle zwischen Monaten und prüfe leere Zustände.
 4. Exportiere ein JSON-Backup, füge eine weitere Ausgabe hinzu und importiere anschließend das Backup. Prüfe den Ersetzungshinweis und die wiederhergestellten Werte.
 5. Wechsle zwischen Deutsch und Englisch sowie hellem, dunklem und systemweitem Erscheinungsbild.
-6. Teste ohne Netzwerk. Manuelle Erfassung und lokale Backups sollen funktionieren; der Sprachmodus soll nicht verfügbar sein.
+6. Teste ohne Netzwerk. Manuelle Erfassung, Backups und der vorbereitete Apple-Sprachmodus sollen funktionieren; OpenAI benötigt Internet.
 7. Nutze für den Sprachmodus ein kompatibles OpenAI-API-Projekt. Verifiziere den Schlüssel, lies den Datenschutzhinweis, stimme zu und aktiviere den Sprachmodus.
 8. Diktiere mehrere Ausgaben in einem Satz. Prüfe, entferne, korrigiere und speichere Entwürfe. Das Beenden der Sitzung muss die Mikrofonnutzung stoppen.
 9. Deaktiviere den Sprachmodus, widerrufe die Einwilligung, entferne den Schlüssel und prüfe, dass eine erneute Aktivierung wieder eine Einwilligung verlangt.

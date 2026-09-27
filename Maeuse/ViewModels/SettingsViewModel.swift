@@ -18,11 +18,15 @@ final class SettingsViewModel {
     var voiceErrorMessage: String = ""
     var showVoiceError: Bool = false
     var hasSavedVoiceAPIKey: Bool = false
+    var localAvailability: LocalVoiceAvailability = .modelNotReady
 
     private let apiKeyStore = OpenAIAPIKeyStore.shared
     private let clientSecretService = OpenAIRealtimeClientSecretService()
 
-    init() {
+    private let availabilityProvider: () -> LocalVoiceAvailability
+
+    init(availabilityProvider: @escaping () -> LocalVoiceAvailability = { .current }) {
+        self.availabilityProvider = availabilityProvider
         let storedData = UserDefaults.standard.data(forKey: VoiceSettings.storageKey)
 
         if let data = storedData,
@@ -32,6 +36,7 @@ final class SettingsViewModel {
             self.voiceSettings = .default
         }
 
+        localAvailability = availabilityProvider()
         if !self.voiceSettings.hasCurrentConsent {
             self.voiceSettings.enabled = false
         }
@@ -46,14 +51,31 @@ final class SettingsViewModel {
         get { voiceSettings.enabled }
         set {
             if newValue {
-                voiceSettings.enabled = voiceSettings.isVerified
-                    && hasSavedVoiceAPIKey
-                    && voiceSettings.hasCurrentConsent
+                refreshLocalAvailability()
+                voiceSettings.enabled = canEnableVoice && voiceSettings.hasCurrentConsent
                 saveVoiceSettings()
             } else {
                 disableVoiceModeRevokingConsent()
             }
         }
+    }
+
+    var canEnableVoice: Bool {
+        switch voiceSettings.provider {
+        case .appleLocal: return localAvailability == .available
+        case .openAI: return voiceSettings.isVerified && hasSavedVoiceAPIKey && !isVerifying
+        }
+    }
+
+    func refreshLocalAvailability() { localAvailability = availabilityProvider() }
+
+    func selectProvider(_ provider: VoiceProvider) {
+        guard voiceSettings.provider != provider else { return }
+        disableVoiceModeRevokingConsent()
+        voiceSettings.provider = provider
+        voiceAPIKeyText = ""
+        refreshLocalAvailability()
+        saveVoiceSettings()
     }
 
     var hasVoiceConsent: Bool {
@@ -77,6 +99,7 @@ final class SettingsViewModel {
     }
 
     func verifyVoiceAPIKey() {
+        guard voiceSettings.provider == .openAI else { return }
         let enteredKey = voiceAPIKeyText.trimmingCharacters(in: .whitespacesAndNewlines)
         let candidateKey: String
         let shouldSaveNewKey: Bool
@@ -116,7 +139,7 @@ final class SettingsViewModel {
                 showStatusMessage(loc("ApiKeyVerifiedKeychain"))
             } catch {
                 voiceSettings.verifiedAt = nil
-                disableVoiceModeRevokingConsent()
+                if voiceSettings.provider == .openAI { disableVoiceModeRevokingConsent() }
                 showErrorMessage(loc("ApiKeyVerificationFailed", error.localizedDescription))
             }
             isVerifying = false
@@ -128,7 +151,9 @@ final class SettingsViewModel {
             try apiKeyStore.deleteAPIKey()
             voiceAPIKeyText = ""
             hasSavedVoiceAPIKey = false
-            voiceSettings = .default
+            voiceSettings.apiKeySuffix = nil
+            voiceSettings.verifiedAt = nil
+            if voiceSettings.provider == .openAI { disableVoiceModeRevokingConsent() }
             saveVoiceSettings()
             showStatusMessage(loc("RemovedApiKeyMsg"))
         } catch {
@@ -203,7 +228,8 @@ final class SettingsViewModel {
             hasSavedVoiceAPIKey = false
             voiceSettings.apiKeySuffix = nil
             voiceSettings.verifiedAt = nil
-            disableVoiceModeRevokingConsent()
+            if voiceSettings.provider == .openAI { disableVoiceModeRevokingConsent() }
+            else { saveVoiceSettings() }
             return
         }
 

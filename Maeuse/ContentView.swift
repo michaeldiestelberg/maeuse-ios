@@ -126,7 +126,7 @@ struct ContentView: View {
                     settingsVM.isPresented = false
                     return
                 }
-                voiceVM.open()
+                voiceVM.open(provider: settingsVM.voiceSettings.provider)
             } else {
                 if voiceVM.isPresented {
                     deferredCaptureLaunch = destination
@@ -202,6 +202,7 @@ struct ContentView: View {
             editorVM.description = LanguageManager.shared.activeLanguageCode == "de" ? "Wocheneinkauf" : "Weekly groceries"
             editorVM.setPartnerFraction(0.5)
         case "settings":
+            settingsVM.voiceSettings.provider = .openAI
             settingsVM.hasSavedVoiceAPIKey = true
             settingsVM.voiceSettings.apiKeySuffix = "7mQ2"
             settingsVM.voiceSettings.verifiedAt = Date()
@@ -209,6 +210,12 @@ struct ContentView: View {
             settingsVM.voiceSettings.consentedAt = Date()
             settingsVM.voiceSettings.enabled = true
             settingsVM.isPresented = true
+        case "local-settings":
+            settingsVM.selectProvider(.appleLocal)
+            settingsVM.isPresented = true
+        case "local-voice":
+            voiceVM.openScreenshotPreview()
+            voiceVM.setLocalScreenshotProvider()
         case "voice":
             voiceVM.openScreenshotPreview()
         default:

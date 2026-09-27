@@ -148,7 +148,7 @@ struct MainExpenseView: View {
                 Button { editorVM.prepareForNew() } label: {
                     MaeusePlusIcon(color: Color(light: .maeusInk, dark: .white))
                 }.buttonStyle(FABStyle(isPrimary: false)).accessibilityLabel(loc("AddExpense"))
-                Button { voiceVM.open() } label: {
+                Button { voiceVM.open(provider: settingsVM.voiceSettings.provider) } label: {
                     MaeuseMicIcon(size: 24, color: .maeusInk)
                 }.buttonStyle(FABStyle()).accessibilityLabel(loc("StartVoiceMode"))
             } else {

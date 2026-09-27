@@ -816,6 +816,7 @@ final class RealtimeVoiceWorkspaceTests: XCTestCase {
         // Simulator clones can inherit consent from manual QA. Each test must
         // establish its own consent state rather than trust persisted settings.
         viewModel.voiceSettings = .default
+        viewModel.voiceSettings.provider = .openAI
         viewModel.hasSavedVoiceAPIKey = true
         viewModel.voiceSettings.apiKeySuffix = "7mQ2"
         viewModel.voiceSettings.verifiedAt = Date()

@@ -13,12 +13,14 @@
 
 | | |
 | --- | --- |
-| Version | 1.4.0 (build 48) |
+| Version | 1.5.0 (build 49) |
 | Platform | iPhone · iOS 17 or later |
-| Status | App Store candidate, awaiting copy approval; 1.3.0 (32) remains live |
+| Status | Internal TestFlight candidate; 1.4.0 (48) remains in App Review |
 | Languages | English and German |
 
-Version 1.4.0 brings GPT-Realtime-2.1 voice capture without separate transcription charges, a redesigned Voice Mode with compact drafts and request history, and iOS 27 layout and reliability improvements. It contains the same app behavior as user-tested build 47. All 64 iOS 27 tests passed again for candidate build 48, as did the Release build and static analysis with no warnings. Distribution is tracked in `AppStore/submission-checklist.md`. App Store copy and submission await approval.
+Version 1.5.0 adds **Apple · On device** to Voice Mode: local Apple speech recognition and Foundation Models, with no API key, usage fees, or cloud fallback. Choose a provider in Settings before enabling Voice Mode. Apple mode requires iOS 26+, a compatible iPhone, enabled Apple Intelligence, and downloaded model/language resources.
+
+Version 1.4.0 brings GPT-Realtime-2.1 voice capture without separate transcription charges, a redesigned Voice Mode with compact drafts and request history, and iOS 27 layout and reliability improvements. It contains the same app behavior as user-tested build 47. All 64 iOS 27 tests passed again for candidate build 48, as did the Release build and static analysis with no warnings. Distribution is tracked in `AppStore/submission-checklist.md`. The approved copy and screenshots were submitted with build 48 on September 27, 2026. Apple confirms Waiting for Review; Manual Release is enabled.
 
 Latest App Store release (build 32): Lock Screen, Home Screen, and Control Center capture, improved control icons and expense deletion, Voice Mode haptics, and a more stable expense editor with the keyboard open.
 
@@ -43,9 +45,19 @@ Latest App Store release (build 32): Lock Screen, Home Screen, and Control Cente
 
 Mäuse has no account system, app backend, advertising, or tracking SDK. Expenses are stored locally and manual entry works offline. Backup files are created only when the user exports them.
 
-Voice Mode is optional. When a user enables it and starts a session, microphone audio and expense context are sent directly to OpenAI. The user supplies their own compatible OpenAI API key, which Mäuse stores in iOS Keychain. Drafts can be reviewed, corrected, or removed before anything is saved.
+Voice Mode is optional. Choose **Apple · On device** or **OpenAI · Cloud** in Settings, review the provider-specific disclosure, and enable it. Switching providers or disabling voice requires fresh consent. Existing cloud users keep their chosen provider; new installations start with Apple selected and voice disabled.
 
-Voice Mode uses `gpt-realtime-2.1` to interpret audio and create expense drafts in one session, without a separate transcription model. Drafts appear in a compact vertical list and stay in place when corrected. Expand **What I understood** to review the session’s requests and corrections in chronological order. The collapsed section shows only its title; expanding it opens directly into the entries. Save uses a static label, and the footer shows only the total. Entries preserve natural phrasing where understood, remain unchanged as drafts evolve, and clear when the session ends. This is an interpretation history, not a word-for-word transcript; clarification questions appear separately when needed.
+| | Apple · On device | OpenAI · Cloud |
+| --- | --- | --- |
+| Processing | On-device speech recognition and Apple Foundation Models; never OpenAI | Audio and expense context sent to OpenAI |
+| Cost | Free; no API key or per-request charge | Your own OpenAI API key and usage billing |
+| Internet | Only needed to download Apple resources initially | Required for capture |
+| Experience | Dictate, tap **Process phrase**, review, then **Record more**; up to 50 seconds per turn and 10 drafts per session | Continuous capture with automatic turn detection and more flexible requests |
+| Availability | iOS 26+, Apple Intelligence compatible device, enabled Intelligence, downloaded speech/model resources in the app language | Any supported iPhone with a compatible API key |
+
+Local mode checks availability at setup and before each recording. It stops with an explanation if unavailable; it never switches providers. Audio is not saved by Mäuse, and transcripts/context stay in memory until the session closes. The model identifies expense details; the app resolves quoted prices, shares, and dates deterministically and validates them before creating reviewable drafts. Short, clear phrases work best; unsupported date phrases may require a simpler date or manual entry. Review every draft before saving.
+
+The OpenAI option uses `gpt-realtime-2.1` to interpret audio and create expense drafts in one session, without a separate transcription model. Drafts appear in a compact vertical list and stay in place when corrected. Expand **What I understood** to review the session’s requests and corrections in chronological order. The collapsed section shows only its title; expanding it opens directly into the entries. Save uses a static label, and the footer shows only the total. Entries preserve natural phrasing where understood, remain unchanged as drafts evolve, and clear when the session ends. This is an interpretation history, not a word-for-word transcript; clarification questions appear separately when needed.
 
 The voice connection indicator starts as a cheese wheel with orbiting crumbs, then transforms into the mouse when microphone capture is ready. Its bars gently wave in silence and react more strongly to microphone input, using a decibel-based display range so normal speech is clearly visible. After each spoken request, three cheese crumbs orbit inside the mouse until the result is applied. Speaking while a result is pending restores the live bars and moves the crumbs to the rim. New drafts slide in without empty placeholders, and corrections briefly highlight the changed fields. Reduce Motion disables the idle wave, shows stationary processing crumbs, and replaces the connection orbit and transformation with a short crossfade; connection errors still appear as readable text.
 
@@ -85,8 +97,8 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
 
 The Xcode project is the source of truth for both version values:
 
-- `MARKETING_VERSION` is the user-facing version (`1.4.0`).
-- `CURRENT_PROJECT_VERSION` is the App Store Connect build number (`48`).
+- `MARKETING_VERSION` is the user-facing version (`1.5.0`).
+- `CURRENT_PROJECT_VERSION` is the App Store Connect build number (`49`).
 
 Use `scripts/bump-version.sh` before creating a new archive. See [RELEASING.md](RELEASING.md) for the full release workflow and [CHANGELOG.md](CHANGELOG.md) for user-facing release notes.
 

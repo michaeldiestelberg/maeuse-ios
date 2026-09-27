@@ -177,6 +177,7 @@ struct VoiceExpenseDraftPayload: Decodable, Equatable {
 
 /// Voice settings persisted in UserDefaults
 struct VoiceSettings: Codable {
+    var provider: VoiceProvider
     var apiKeySuffix: String?
     var verifiedAt: Date?
     var enabled: Bool
@@ -189,6 +190,7 @@ struct VoiceSettings: Codable {
 
     static var `default`: VoiceSettings {
         VoiceSettings(
+            provider: .appleLocal,
             apiKeySuffix: nil,
             verifiedAt: nil,
             enabled: false,
@@ -199,6 +201,7 @@ struct VoiceSettings: Codable {
     }
 
     init(
+        provider: VoiceProvider = .openAI,
         apiKeySuffix: String?,
         verifiedAt: Date?,
         enabled: Bool,
@@ -206,6 +209,7 @@ struct VoiceSettings: Codable {
         consentVersion: Int?,
         consentedAt: Date?
     ) {
+        self.provider = provider
         self.apiKeySuffix = apiKeySuffix
         self.verifiedAt = verifiedAt
         self.enabled = enabled
@@ -215,6 +219,7 @@ struct VoiceSettings: Codable {
     }
 
     enum CodingKeys: String, CodingKey {
+        case provider
         case apiKeySuffix
         case verifiedAt
         case enabled
@@ -225,6 +230,8 @@ struct VoiceSettings: Codable {
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
+        // Existing installations retain their explicitly enabled cloud provider.
+        provider = try container.decodeIfPresent(VoiceProvider.self, forKey: .provider) ?? .openAI
         apiKeySuffix = try container.decodeIfPresent(String.self, forKey: .apiKeySuffix)
         verifiedAt = try container.decodeIfPresent(Date.self, forKey: .verifiedAt)
         enabled = try container.decodeIfPresent(Bool.self, forKey: .enabled) ?? false
@@ -235,6 +242,7 @@ struct VoiceSettings: Codable {
 
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(provider, forKey: .provider)
         try container.encodeIfPresent(apiKeySuffix, forKey: .apiKeySuffix)
         try container.encodeIfPresent(verifiedAt, forKey: .verifiedAt)
         try container.encode(enabled, forKey: .enabled)
@@ -248,7 +256,7 @@ struct VoiceSettings: Codable {
     }
 
     var isReady: Bool {
-        enabled && isVerified && hasCurrentConsent
+        enabled && hasCurrentConsent && (provider == .appleLocal || isVerified)
     }
 
     var hasCurrentConsent: Bool {

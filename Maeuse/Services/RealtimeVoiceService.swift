@@ -8,6 +8,8 @@ protocol RealtimeVoiceServiceDelegate: AnyObject {
 }
 
 enum RealtimeVoiceServiceEvent {
+    case localTurnReady
+    case localTranscript(String)
     case connected
     case disconnected
     case microphoneReady
@@ -27,7 +29,8 @@ enum RealtimeVoiceServiceEvent {
 /// Transport, parser, and lifecycle state have one owner. Every callback carries
 /// the connection identity so cancellation also invalidates already-queued work.
 @MainActor
-final class RealtimeVoiceService: NSObject {
+final class RealtimeVoiceService: NSObject, VoiceSessionService {
+    var onEvent: ((RealtimeVoiceServiceEvent) -> Void)?
     private weak var delegate: RealtimeVoiceServiceDelegate?
     private let logger = Logger(subsystem: "com.michaeldiestelberg.maeuse", category: "RealtimeVoice")
     private let clientSecretService = OpenAIRealtimeClientSecretService()
@@ -283,6 +286,7 @@ final class RealtimeVoiceService: NSObject {
     }
 
     private func emit(_ event: RealtimeVoiceServiceEvent) {
+        onEvent?(event)
         delegate?.realtimeVoiceService(self, didReceive: event)
     }
 }

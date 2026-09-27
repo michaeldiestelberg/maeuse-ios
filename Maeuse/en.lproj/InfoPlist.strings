@@ -1,1 +1,2 @@
-"NSMicrophoneUsageDescription" = "Mäuse uses your microphone to send spoken expense details to OpenAI Realtime.";
+"NSMicrophoneUsageDescription" = "Mäuse uses your microphone to capture expenses with your chosen voice mode.";
+"NSSpeechRecognitionUsageDescription" = "Mäuse uses on-device speech recognition for Apple voice mode. Audio stays on your iPhone.";
