@@ -13,7 +13,7 @@
 - [ ] Xcode Cloud archive uses TestFlight and App Store deployment preparation; Next Build Number matches 48.
 - [ ] Build 1.4.0 (48) succeeds and finishes processing in App Store Connect.
 - [ ] Existing dedicated App Review credential confirmed active and compatible with GPT-Realtime-2.1.
-- [ ] Account holder approves the exact copy and screenshots in `1.4.0-approval.md`.
+- [x] Account holder approved the exact copy and screenshots in `1.4.0-approval.md` on September 27, 2026 and explicitly authorized App Store submission.
 - [ ] Approved copy and screenshots saved to the 1.4.0 version; build 48 attached; release method Manual Release.
 - [ ] Version 1.4.0 submitted to App Review after explicit approval.
 
