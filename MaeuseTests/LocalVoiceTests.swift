@@ -1,8 +1,74 @@
 import XCTest
+import AVFoundation
+import UIKit
 @testable import Maeuse
 
 @MainActor
 final class LocalVoiceTests: XCTestCase {
+    func testRecordingIgnoresStartupCategoryChangesAndInterruptionEnd() {
+        for reason in [AVAudioSession.RouteChangeReason.categoryChange, .override, .wakeFromSleep, .unknown] {
+            XCTAssertFalse(LocalRecordingLifecycle.shouldInterrupt(Notification(
+                name: AVAudioSession.routeChangeNotification,
+                userInfo: [AVAudioSessionRouteChangeReasonKey: NSNumber(value: reason.rawValue)])))
+        }
+        XCTAssertFalse(LocalRecordingLifecycle.shouldInterrupt(Notification(
+            name: AVAudioSession.interruptionNotification,
+            userInfo: [AVAudioSessionInterruptionTypeKey: NSNumber(value: AVAudioSession.InterruptionType.ended.rawValue)])))
+        XCTAssertFalse(LocalRecordingLifecycle.shouldInterrupt(Notification(name: AVAudioSession.interruptionNotification)))
+    }
+
+    func testRecordingStillStopsForRealInterruptionsAndRouteLoss() {
+        XCTAssertTrue(LocalRecordingLifecycle.shouldInterrupt(Notification(
+            name: AVAudioSession.interruptionNotification,
+            userInfo: [AVAudioSessionInterruptionTypeKey: NSNumber(value: AVAudioSession.InterruptionType.began.rawValue)])))
+        for reason in [AVAudioSession.RouteChangeReason.oldDeviceUnavailable, .newDeviceAvailable,
+                       .noSuitableRouteForCategory, .routeConfigurationChange] {
+            XCTAssertTrue(LocalRecordingLifecycle.shouldInterrupt(Notification(
+                name: AVAudioSession.routeChangeNotification,
+                userInfo: [AVAudioSessionRouteChangeReasonKey: NSNumber(value: reason.rawValue)])))
+        }
+        for name in [Notification.Name.AVAudioEngineConfigurationChange,
+                     AVAudioSession.mediaServicesWereLostNotification,
+                     AVAudioSession.mediaServicesWereResetNotification,
+                     UIApplication.didEnterBackgroundNotification] {
+            XCTAssertTrue(LocalRecordingLifecycle.shouldInterrupt(Notification(name: name)))
+        }
+    }
+
+    func testLocalRecoveryAndRepeatedTurnsRetainDraftsAndIgnoreOldCallbacks() async {
+        var services: [StubVoiceService] = []
+        let vm = VoiceModeViewModel(serviceFactory: { _ in
+            let service = StubVoiceService()
+            services.append(service)
+            return service
+        })
+        vm.open(provider: .appleLocal)
+        vm.drafts = [draft("coffee", "Coffee", 4)]
+        vm.startSession()
+        for _ in 0..<20 { await Task.yield() }
+        for _ in 0..<3 {
+            let active = services.last!
+            let stale = active.onEvent
+            active.onEvent?(.error(loc("VoiceAudioInterrupted")))
+            XCTAssertEqual(vm.phase, .error)
+            XCTAssertEqual(vm.drafts.map(\.id), ["coffee"])
+            vm.restartSession()
+            for _ in 0..<20 { await Task.yield() }
+            stale?(.error("stale interruption"))
+            XCTAssertTrue(vm.microphoneIsActive)
+            XCTAssertNotEqual(vm.phase, .error)
+            vm.toggleLocalRecording()
+            XCTAssertEqual(services.last?.finishedTurns, 1)
+            services.last?.onEvent?(.listeningStopped)
+            services.last?.onEvent?(.localTurnReady)
+            vm.toggleLocalRecording()
+            for _ in 0..<20 { await Task.yield() }
+            XCTAssertTrue(vm.microphoneIsActive)
+            XCTAssertEqual(vm.drafts.map(\.id), ["coffee"])
+        }
+        vm.cancelSession()
+    }
+
     private var savedSettings: Data?
     override func setUp() async throws {
         savedSettings = UserDefaults.standard.data(forKey: VoiceSettings.storageKey)

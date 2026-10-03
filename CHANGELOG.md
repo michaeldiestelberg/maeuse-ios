@@ -2,6 +2,12 @@
 
 This file records user-facing changes to Mäuse. App Store and GitHub release notes should be based on the matching version section.
 
+## 1.5.0 (50) — internal TestFlight candidate, 2026-10-03
+
+- Apple on-device recording ignores normal microphone category changes and interruption-end notifications instead of immediately showing “Recording was interrupted.” Audio-engine notifications are scoped to the active recorder.
+- Real interruptions, microphone route loss, backgrounding, and audio-service resets still stop recording safely. Existing drafts remain available when resuming or recording another phrase.
+- Verified locally on the Mac mini with Xcode 27: all 85 iOS 27 simulator tests passed, including repeated recovery and stale-callback regression coverage. Actual offline speech recognition and Foundation Models require an eligible physical iPhone; no physical device was connected during verification.
+
 ## 1.5.0 (49) — internal TestFlight candidate, 2026-09-27
 
 - Choose Apple on-device voice capture or OpenAI cloud capture when enabling Voice Mode. Setup explains cost, privacy, device requirements, and the difference between short dictation turns and continuous capture in English and German.

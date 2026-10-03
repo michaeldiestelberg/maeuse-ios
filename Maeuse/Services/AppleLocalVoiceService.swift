@@ -149,9 +149,13 @@ final class AppleLocalVoiceService: VoiceSessionService {
         for name in [AVAudioSession.interruptionNotification, AVAudioSession.routeChangeNotification,
                      AVAudioSession.mediaServicesWereResetNotification, AVAudioSession.mediaServicesWereLostNotification,
                      .AVAudioEngineConfigurationChange, UIApplication.didEnterBackgroundNotification] {
-            observers.append(NotificationCenter.default.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
+            // Scope engine notifications to this recorder. Session notifications
+            // are global and can include delayed category changes from startup.
+            let object: Any? = name == .AVAudioEngineConfigurationChange ? engine : nil
+            observers.append(NotificationCenter.default.addObserver(forName: name, object: object, queue: .main) { [weak self] notification in
+                let shouldInterrupt = LocalRecordingLifecycle.shouldInterrupt(notification)
                 Task { @MainActor [weak self] in
-                    guard let self, self.identity == id, self.engine != nil else { return }
+                    guard shouldInterrupt, let self, self.identity == id, self.engine != nil else { return }
                     self.fail(loc("VoiceAudioInterrupted"))
                 }
             })
@@ -255,4 +259,13 @@ final class AppleLocalVoiceService: VoiceSessionService {
     // Each new turn receives the current app workspace. Deletions during generation
     // are filtered by the view model's tombstones before any drafts are displayed.
     func sendWorkspaceNote(_ text: String) {}
+}
+
+/// Category changes are expected when activating/deactivating our microphone.
+/// An interruption ending is permission to resume, not a new interruption.
+enum LocalRecordingLifecycle {
+    static func shouldInterrupt(_ notification: Notification) -> Bool {
+        notification.name == UIApplication.didEnterBackgroundNotification ||
+            VoiceAudioLifecycleEvent(notification: notification) != nil
+    }
 }
