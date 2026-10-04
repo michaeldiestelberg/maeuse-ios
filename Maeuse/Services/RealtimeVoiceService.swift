@@ -10,6 +10,7 @@ protocol RealtimeVoiceServiceDelegate: AnyObject {
 enum RealtimeVoiceServiceEvent {
     case localTurnReady
     case localTranscript(String)
+    case localEndpointProgress(Double)
     case connected
     case disconnected
     case microphoneReady

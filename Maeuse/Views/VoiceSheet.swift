@@ -79,19 +79,14 @@ struct VoiceSheet: View {
     private var localControls: some View {
         VStack(spacing: 8) {
             Button { viewModel.toggleLocalRecording() } label: {
-                ZStack {
-                    Circle().fill(Color.maeusCheese)
-                    Circle().stroke(Color.maeusInk, lineWidth: 3)
-                    if viewModel.isProcessingRequest {
-                        ProgressView().tint(Color.maeusInk).scaleEffect(1.3)
-                    } else {
-                        Image(systemName: viewModel.microphoneIsActive ? "mic.fill" : "mic.slash.fill")
-                            .font(.system(size: dynamicTypeSize.isAccessibilitySize ? 28 : 38, weight: .bold))
-                            .foregroundStyle(Color.maeusInk)
-                    }
-                }
-                .frame(width: dynamicTypeSize.isAccessibilitySize ? 68 : 94,
-                       height: dynamicTypeSize.isAccessibilitySize ? 68 : 94)
+                LocalVoiceMicrophoneMotion(
+                    active: viewModel.microphoneIsActive,
+                    processing: viewModel.isProcessingRequest,
+                    connecting: viewModel.phase == .connecting,
+                    level: viewModel.microphoneLevel,
+                    endpoint: viewModel.localEndpointProgress,
+                    willResume: viewModel.localShouldListen,
+                    size: dynamicTypeSize.isAccessibilitySize ? 68 : 94)
             }
             .buttonStyle(.plain)
             .accessibilityLabel(localControlLabel)
@@ -262,6 +257,80 @@ struct VoiceSheet: View {
         }
         viewModel.finishAfterSave()
         dismiss()
+    }
+}
+
+/// Motion follows actual capture and the same endpoint clock that finishes speech.
+private struct LocalVoiceMicrophoneMotion: View {
+    let active: Bool
+    let processing: Bool
+    let connecting: Bool
+    let level: Double
+    let endpoint: Double
+    let willResume: Bool
+    let size: CGFloat
+    @Environment(\.accessibilityReduceMotion) private var systemReduceMotion
+    @Environment(\.scenePhase) private var scenePhase
+    @State private var started = Date.now
+
+    private var reduceMotion: Bool {
+        #if targetEnvironment(simulator)
+        systemReduceMotion || ProcessInfo.processInfo.arguments.contains("--voice-reduce-motion")
+        #else
+        systemReduceMotion
+        #endif
+    }
+
+    var body: some View {
+        TimelineView(.animation(minimumInterval: 1.0 / 20,
+            paused: reduceMotion || scenePhase != .active || !(active || processing || connecting))) { timeline in
+            let elapsed = timeline.date.timeIntervalSince(started)
+            let speaking = active && level >= 0.10
+            ZStack {
+                Circle().fill(Color.maeusCheese)
+                Circle().stroke(Color.maeusInk, lineWidth: 3)
+                if active {
+                    Circle().stroke(Color.maeusInk.opacity(speaking ? 0.45 : 0.20), lineWidth: 2)
+                        .scaleEffect(reduceMotion ? 1.08 : 1.08 + (speaking ? min(1, level) * 0.05 : sin(elapsed * .pi * 2 / 2.8) * 0.025))
+                    Circle().trim(from: 0, to: endpoint)
+                        .stroke(Color.maeusInk, style: StrokeStyle(lineWidth: 5, lineCap: .round))
+                        .rotationEffect(.degrees(-90)).padding(-5)
+                    if speaking {
+                        HStack(spacing: 4) {
+                            ForEach(0..<5) { index in
+                                Capsule().fill(Color.maeusInk)
+                                    .frame(width: size * 0.055,
+                                        height: size * (0.14 + min(1, level) * (index == 2 ? 0.38 : index % 2 == 0 ? 0.22 : 0.30)))
+                            }
+                        }
+                    } else {
+                        Image(systemName: "mic.fill").font(.system(size: size * 0.40, weight: .bold))
+                    }
+                } else if processing || connecting {
+                    Circle().trim(from: 0, to: 0.24)
+                        .stroke(Color.maeusInk, style: StrokeStyle(lineWidth: 5, lineCap: .round))
+                        .rotationEffect(.degrees(reduceMotion ? -90 : elapsed * 200)).padding(-5)
+                    Image(systemName: processing ? "mic.slash.fill" : "hourglass")
+                        .font(.system(size: size * 0.34, weight: .bold))
+                } else {
+                    Image(systemName: "mic.slash.fill").font(.system(size: size * 0.40, weight: .bold))
+                }
+                Image(systemName: active || connecting || (processing && willResume) ? "pause.fill" : "play.fill")
+                    .font(.system(size: size * 0.13, weight: .bold))
+                    .frame(width: size * 0.28, height: size * 0.28)
+                    .background(Color.maeusSurface, in: Circle())
+                    .overlay(Circle().stroke(Color.maeusInk, lineWidth: 2))
+                    .offset(x: size * 0.35, y: size * 0.35)
+            }
+            .foregroundStyle(Color.maeusInk)
+            .scaleEffect(active ? 1 : 0.95)
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: level)
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.20), value: endpoint)
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.20), value: active)
+        }
+        .frame(width: size, height: size)
+        .padding(7)
+        .accessibilityHidden(true)
     }
 }
 

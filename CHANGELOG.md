@@ -2,6 +2,13 @@
 
 This file records user-facing changes to Mäuse. App Store and GitHub release notes should be based on the matching version section.
 
+## 1.5.0 (52) — internal TestFlight candidate, 2026-10-04
+
+- Apple's microphone now breathes when capture is actually ready, reacts to microphone audio with a waveform, and shows the real speech-pause timer as a ring. New audio or revised recognition resets that ring and the processing timer together.
+- Processing shows a crossed-out microphone and progress arc. A pause/play badge makes the choice to resume afterward or remain paused visible. Actual listening resumption gets an optional soft haptic. Existing draft insertion and correction highlights remain the confirmation.
+- Reduce Motion removes ambient/rotating motion while preserving distinct static states; VoiceOver retains the microphone action and actual state. No explanatory paragraphs or new recording architecture were added, and OpenAI capture behavior is preserved.
+- Physical-device microphone noise, speech boundaries, and Apple model latency still need verification on an eligible iPhone.
+
 ## 1.5.0 (51) — internal TestFlight candidate, 2026-10-04
 
 - Apple Voice Mode now uses one central microphone control, the familiar draft cards, total, and Save. The transcript is available in the collapsed understanding detail; long instructions no longer occupy the capture screen.

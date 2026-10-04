@@ -5,6 +5,46 @@ import UIKit
 
 @MainActor
 final class LocalVoiceTests: XCTestCase {
+    func testEndpointIndicatorUsesActualTimerAndResetsForAudioAndTranscript() {
+        var endpoint = LocalSpeechEndpoint()
+        XCTAssertEqual(endpoint.progress(at: 100), 0)
+        endpoint.updateTranscript("Coffee four euros", at: 10)
+        XCTAssertEqual(endpoint.progress(at: 11.1), 0.5, accuracy: 0.001)
+        endpoint.observeLevel(0.2, at: 11.1)
+        XCTAssertEqual(endpoint.progress(at: 11.1), 0)
+        XCTAssertFalse(endpoint.shouldFinish(at: 12))
+        endpoint.updateTranscript("Coffee five euros", at: 12)
+        XCTAssertEqual(endpoint.progress(at: 12), 0)
+        XCTAssertEqual(endpoint.progress(at: 14.3), 1)
+        XCTAssertTrue(endpoint.shouldFinish(at: 14.3))
+        endpoint.updateTranscript("Flowers and", at: 15)
+        XCTAssertEqual(endpoint.progress(at: 17.25), 0.5, accuracy: 0.001)
+        XCTAssertFalse(endpoint.shouldFinish(at: 17.25))
+    }
+
+    func testEndpointFeedbackClearsWhenCaptureStopsAndCloudIgnoresIt() {
+        let vm = VoiceModeViewModel()
+        vm.open(provider: .appleLocal)
+        vm.handleVoiceEvent(.microphoneStarted)
+        vm.handleVoiceEvent(.localEndpointProgress(0.6))
+        XCTAssertEqual(vm.localEndpointProgress, 0.6)
+        vm.handleVoiceEvent(.microphoneStopped)
+        vm.handleVoiceEvent(.localEndpointProgress(0.9))
+        XCTAssertEqual(vm.localEndpointProgress, 0)
+        vm.handleVoiceEvent(.microphoneStarted)
+        vm.handleVoiceEvent(.localEndpointProgress(.nan))
+        XCTAssertEqual(vm.localEndpointProgress, 0)
+        vm.handleVoiceEvent(.localEndpointProgress(0.8))
+        vm.suspendLocalRecording()
+        XCTAssertEqual(vm.localEndpointProgress, 0)
+        XCTAssertFalse(vm.microphoneIsActive)
+        vm.open(provider: .openAI)
+        vm.handleVoiceEvent(.microphoneStarted)
+        vm.handleVoiceEvent(.localEndpointProgress(0.7))
+        XCTAssertEqual(vm.localEndpointProgress, 0)
+        vm.cancelSession()
+    }
+
     func testAutomaticEndpointWaitsForQuietAndStableTranscript() {
         var endpoint = LocalSpeechEndpoint()
         XCTAssertFalse(endpoint.shouldFinish(at: 100))

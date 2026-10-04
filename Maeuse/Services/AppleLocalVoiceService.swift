@@ -123,6 +123,7 @@ final class AppleLocalVoiceService: VoiceSessionService {
                 if let text {
                     self.transcript = text
                     self.endpoint.updateTranscript(text, at: ProcessInfo.processInfo.systemUptime)
+                    self.onEvent?(.localEndpointProgress(self.endpoint.progress(at: ProcessInfo.processInfo.systemUptime)))
                     self.onEvent?(.localTranscript(text))
                 }
                 if final || (failed && self.finishing && !self.transcript.isEmpty) {
@@ -145,6 +146,7 @@ final class AppleLocalVoiceService: VoiceSessionService {
                 guard let self, self.identity == id, !self.finishing, !self.generating else { return }
                 self.onEvent?(.microphoneLevel(level))
                 self.endpoint.observeLevel(level, at: ProcessInfo.processInfo.systemUptime)
+                if level >= 0.10 { self.onEvent?(.localEndpointProgress(0)) }
             }
         }
         engine.prepare()
@@ -170,6 +172,7 @@ final class AppleLocalVoiceService: VoiceSessionService {
                 try? await Task.sleep(for: .milliseconds(200))
                 guard !Task.isCancelled, let self, self.identity == id else { return }
                 let now = ProcessInfo.processInfo.systemUptime
+                self.onEvent?(.localEndpointProgress(self.endpoint.progress(at: now)))
                 if self.endpoint.shouldFinish(at: now) || now - started >= 50 {
                     self.finishTurn()
                     return
@@ -291,12 +294,16 @@ struct LocalSpeechEndpoint {
     }
 
     func shouldFinish(at time: TimeInterval) -> Bool {
-        guard !text.isEmpty else { return false }
+        progress(at: time) >= 1
+    }
+
+    func progress(at time: TimeInterval) -> Double {
+        guard !text.isEmpty else { return 0 }
         let lastWord = text.lowercased().split(whereSeparator: { !$0.isLetter }).last.map(String.init) ?? ""
         // A conjunction or preposition often precedes another item/value. Give
         // these sentence pauses more room without waiting indefinitely.
         let grace: TimeInterval = ["and", "und", "for", "für", "with", "mit", "of", "von", "was", "war"].contains(lastWord) ? 4.5 : 2.2
-        return time - max(changedAt, speechAt) >= grace
+        return min(1, max(0, (time - max(changedAt, speechAt)) / grace))
     }
 }
 

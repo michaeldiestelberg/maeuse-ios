@@ -31,6 +31,7 @@ final class VoiceModeViewModel {
     private(set) var provider: VoiceProvider = .openAI
     private(set) var localTranscript = ""
     private(set) var localShouldListen = false
+    private(set) var localEndpointProgress: Double = 0
     private var service: (any VoiceSessionService)?
     private let serviceFactory: (VoiceProvider) -> any VoiceSessionService
     private var sessionID = UUID()
@@ -112,6 +113,8 @@ final class VoiceModeViewModel {
         provider = .appleLocal
         let arguments = ProcessInfo.processInfo.arguments
         localShouldListen = !arguments.contains("--local-paused")
+        if arguments.contains("--local-endpoint") { localEndpointProgress = 0.75; microphoneLevel = 0 }
+        if arguments.contains("--local-speaking") { microphoneLevel = 0.65 }
         localTranscript = LanguageManager.shared.activeLanguageCode == "de" ? "Kaffee vier Euro fünfzig" : "Coffee four euros fifty"
         if arguments.contains("--local-processing") {
             microphoneIsActive = false
@@ -390,6 +393,7 @@ final class VoiceModeViewModel {
         didSignalListeningReady = false
         localTranscript = ""
         localShouldListen = false
+        localEndpointProgress = 0
     }
 
     /// The microphone finishes the current phrase and pauses. During generation
@@ -420,6 +424,7 @@ final class VoiceModeViewModel {
 
     private func startNextLocalTurn() {
         guard isPresented, provider == .appleLocal, localShouldListen else { return }
+        localEndpointProgress = 0
         sessionID = UUID()
         service?.onEvent = nil
         service?.disconnect()
@@ -439,6 +444,7 @@ final class VoiceModeViewModel {
 
     func suspendLocalRecording() {
         guard provider == .appleLocal, isPresented else { return }
+        localEndpointProgress = 0
         localShouldListen = false
         guard microphoneIsActive || isProcessingRequest || phase == .connecting else { return }
         connectionTask?.cancel()
@@ -595,6 +601,9 @@ extension VoiceModeViewModel: RealtimeVoiceServiceDelegate {
             if localShouldListen { startNextLocalTurn() }
         case .localTranscript(let text):
             localTranscript = text
+        case .localEndpointProgress(let value):
+            guard provider == .appleLocal, microphoneIsActive, !isProcessingRequest else { return }
+            localEndpointProgress = value.isFinite ? min(1, max(0, value)) : 0
         case .connected:
             phase = microphoneIsActive ? .listening : .connecting
         case .disconnected:
@@ -608,13 +617,17 @@ extension VoiceModeViewModel: RealtimeVoiceServiceDelegate {
         case .microphoneReady:
             break
         case .microphoneStarted:
+            localEndpointProgress = 0
             microphoneIsActive = true
             if phase != .error && phase != .finalizing { phase = .listening }
-            if !didSignalListeningReady {
+            if provider == .appleLocal {
+                playVoiceHaptic(.soft)
+            } else if !didSignalListeningReady {
                 didSignalListeningReady = true
                 playVoiceHaptic(.rigid)
             }
         case .microphoneStopped:
+            localEndpointProgress = 0
             isUserSpeaking = false
             microphoneIsActive = false
             microphoneLevel = 0
@@ -640,6 +653,7 @@ extension VoiceModeViewModel: RealtimeVoiceServiceDelegate {
             // Incidental model narration must not race the structured draft update.
             break
         case .error(let message):
+            localEndpointProgress = 0
             if provider == .appleLocal { localShouldListen = false }
             microphoneIsActive = false
             microphoneLevel = 0
