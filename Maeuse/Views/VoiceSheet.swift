@@ -9,18 +9,18 @@ struct VoiceSheet: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         VStack(spacing: 0) {
             topBar
                 .padding(.horizontal, 20)
                 .padding(.vertical, 10)
-            if !dynamicTypeSize.isAccessibilitySize { listeningHero }
+            if viewModel.provider == .appleLocal {
+                localControls
+            } else if !dynamicTypeSize.isAccessibilitySize { listeningHero }
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
-                    if viewModel.provider == .appleLocal {
-                        localControls
-                    }
                     Text(loc("VoiceYourDrafts"))
                         .font(.system(.headline, design: .rounded, weight: .heavy))
 
@@ -40,7 +40,8 @@ struct VoiceSheet: View {
                             .background(Color.maeusInputBackground, in: RoundedRectangle(cornerRadius: 16))
                             .accessibilityIdentifier("voice-clarification")
                     }
-                    if !viewModel.understandingHistory.isEmpty {
+                    if !viewModel.understandingHistory.isEmpty ||
+                        (viewModel.provider == .appleLocal && !viewModel.localTranscript.isEmpty) {
                         understandingDetail
                     }
                     if viewModel.phase == .error {
@@ -50,9 +51,11 @@ struct VoiceSheet: View {
                             .padding(14)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .background(Color.maeusDestructive.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
-                        Button(loc("VoiceResumeListening")) { viewModel.restartSession() }
-                            .buttonStyle(GlassSecondaryButtonStyle())
-                            .accessibilityIdentifier("voice-restart")
+                        if viewModel.provider != .appleLocal {
+                            Button(loc("VoiceResumeListening")) { viewModel.restartSession() }
+                                .buttonStyle(GlassSecondaryButtonStyle())
+                                .accessibilityIdentifier("voice-restart")
+                        }
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -68,31 +71,49 @@ struct VoiceSheet: View {
         .background(Color.maeusBackground.ignoresSafeArea())
         .interactiveDismissDisabled(true)
         .task { viewModel.startSession() }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .background { viewModel.suspendLocalRecording() }
+        }
     }
 
     private var localControls: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Label(loc("VoiceAppleTitle"), systemImage: "iphone")
-                .font(.subheadline.weight(.heavy))
-            Text(loc(viewModel.microphoneIsActive ? "LocalRecordingHint" :
-                (viewModel.isProcessingRequest ? "LocalProcessingHint" : "LocalReadyHint")))
-                .font(.footnote).foregroundStyle(Color.maeusTextSecondary)
-            if !viewModel.localTranscript.isEmpty {
-                Text(viewModel.localTranscript).font(.callout)
-                    .accessibilityIdentifier("local-transcript")
-            }
-            if viewModel.phase != .error {
-                Button(loc(viewModel.microphoneIsActive ? "LocalFinishPhrase" : "LocalRecordMore")) {
-                    viewModel.toggleLocalRecording()
+        VStack(spacing: 8) {
+            Button { viewModel.toggleLocalRecording() } label: {
+                ZStack {
+                    Circle().fill(Color.maeusCheese)
+                    Circle().stroke(Color.maeusInk, lineWidth: 3)
+                    if viewModel.isProcessingRequest {
+                        ProgressView().tint(Color.maeusInk).scaleEffect(1.3)
+                    } else {
+                        Image(systemName: viewModel.microphoneIsActive ? "mic.fill" : "mic.slash.fill")
+                            .font(.system(size: dynamicTypeSize.isAccessibilitySize ? 28 : 38, weight: .bold))
+                            .foregroundStyle(Color.maeusInk)
+                    }
                 }
-                .buttonStyle(GlassSecondaryButtonStyle())
-                .disabled(!viewModel.microphoneIsActive && viewModel.phase != .idle)
-                .accessibilityIdentifier("local-record")
+                .frame(width: dynamicTypeSize.isAccessibilitySize ? 68 : 94,
+                       height: dynamicTypeSize.isAccessibilitySize ? 68 : 94)
             }
+            .buttonStyle(.plain)
+            .accessibilityLabel(localControlLabel)
+            .accessibilityValue(viewModel.stateLabel)
+            .accessibilityIdentifier("local-record")
+            Text(viewModel.stateLabel)
+                .font(.system(.subheadline, design: .rounded, weight: .bold))
+                .accessibilityIdentifier("local-record-state")
+            Text(loc(viewModel.isProcessingRequest ?
+                (viewModel.localShouldListen ? "LocalWillResume" : "LocalWillPause") : "VoiceAppleTitle"))
+                .font(.caption).foregroundStyle(Color.maeusTextSecondary)
         }
-        .padding(14)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.maeusInputBackground, in: RoundedRectangle(cornerRadius: 16))
+        .padding(.vertical, 10)
+        .frame(maxWidth: .infinity, alignment: .center)
+    }
+
+    private var localControlLabel: String {
+        if viewModel.phase == .error { return loc("VoiceResumeListening") }
+        if viewModel.isProcessingRequest {
+            return loc(viewModel.localShouldListen ? "LocalPauseAfterProcessing" : "LocalResumeAfterProcessing")
+        }
+        return loc(viewModel.microphoneIsActive || viewModel.phase == .connecting ? "LocalPause" : "VoiceResumeListening")
     }
 
     private var topBar: some View {
@@ -109,7 +130,7 @@ struct VoiceSheet: View {
             .accessibilityLabel(loc("Close"))
 
             Spacer(minLength: 0)
-            if dynamicTypeSize.isAccessibilitySize {
+            if dynamicTypeSize.isAccessibilitySize && viewModel.provider != .appleLocal {
                 connectionEmblem.frame(width: 44, height: 44)
             }
             Spacer(minLength: 0)
@@ -125,12 +146,16 @@ struct VoiceSheet: View {
                 cornerRadius: 20, borderColor: .maeusInk, shadow: 2.5))
             .opacity(canSave ? 1 : 0.4)
             .disabled(!canSave)
+            .accessibilityHint(viewModel.provider == .appleLocal && viewModel.microphoneIsActive ? loc("LocalSaveReviewHint") : "")
             .accessibilityIdentifier("voice-save")
         }
         .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
     }
 
-    private var canSave: Bool { viewModel.canSaveDrafts && viewModel.canEndSession }
+    private var canSave: Bool {
+        viewModel.canSaveDrafts && (viewModel.canEndSession ||
+            (viewModel.provider == .appleLocal && viewModel.microphoneIsActive && !viewModel.isProcessingRequest))
+    }
 
     private var connectionEmblem: some View {
         Group {
@@ -161,6 +186,13 @@ struct VoiceSheet: View {
     private var understandingDetail: some View {
         DisclosureGroup(isExpanded: $showsUnderstanding) {
             VStack(alignment: .leading, spacing: 0) {
+                if viewModel.provider == .appleLocal && !viewModel.localTranscript.isEmpty {
+                    Text(viewModel.localTranscript)
+                        .font(.callout)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.bottom, 12)
+                        .accessibilityIdentifier("local-transcript")
+                }
                 ForEach(viewModel.understandingHistory) { entry in
                     HStack(alignment: .top, spacing: 12) {
                         Text(entry.text)
@@ -215,6 +247,10 @@ struct VoiceSheet: View {
 
     private func endAndSave() {
         guard canSave else { return }
+        if viewModel.provider == .appleLocal && viewModel.microphoneIsActive {
+            viewModel.pauseLocalForReview()
+            return
+        }
         viewModel.phase = .finalizing
         for expense in viewModel.expensesForSaving() { modelContext.insert(expense) }
         do { try modelContext.save() }

@@ -2,6 +2,15 @@
 
 This file records user-facing changes to Mäuse. App Store and GitHub release notes should be based on the matching version section.
 
+## 1.5.0 (51) — internal TestFlight candidate, 2026-10-04
+
+- Apple Voice Mode now uses one central microphone control, the familiar draft cards, total, and Save. The transcript is available in the collapsed understanding detail; long instructions no longer occupy the capture screen.
+- A quiet pause with stable recognition automatically processes the phrase. The microphone is visibly paused during Apple processing, then listening resumes unless you requested a pause. Tap the microphone to finish a phrase and review, or to change whether listening resumes after processing.
+- Save during recording finishes the current phrase for review first; tap Save again after reviewing the resulting drafts. Empty turns do not invoke the model. Backgrounding, interruptions, closing, and the 10-draft limit prevent automatic resumption.
+- Existing OpenAI voice behavior is preserved. All processing in Apple mode remains on device with no cloud fallback. The build 50 audio-notification fix is retained.
+- Speech endpoint timing and real Apple inference require testing on an eligible physical iPhone; simulator tests cover endpoint decisions, pause/resume intent, repeated turns, cancellation, stale callbacks, and draft preservation.
+- Verified on the Mac mini with Xcode 27: all 91 iOS 27 simulator tests passed; the local Release build and static analysis succeeded without compiler warnings. Listening, processing, and paused screen layouts were visually checked in German and English.
+
 ## 1.5.0 (50) — internal TestFlight candidate, 2026-10-03
 
 - Apple on-device recording ignores normal microphone category changes and interruption-end notifications instead of immediately showing “Recording was interrupted.” Audio-engine notifications are scoped to the active recorder.

@@ -30,6 +30,7 @@ final class VoiceModeViewModel {
 
     private(set) var provider: VoiceProvider = .openAI
     private(set) var localTranscript = ""
+    private(set) var localShouldListen = false
     private var service: (any VoiceSessionService)?
     private let serviceFactory: (VoiceProvider) -> any VoiceSessionService
     private var sessionID = UUID()
@@ -61,6 +62,10 @@ final class VoiceModeViewModel {
     }
 
     var stateLabel: String {
+        if provider == .appleLocal {
+            if isProcessingRequest { return loc("LocalProcessingState") }
+            if phase == .idle { return loc("LocalPausedState") }
+        }
         switch phase {
         case .idle: return loc("StateReady")
         case .connecting: return loc("StateConnecting")
@@ -98,14 +103,23 @@ final class VoiceModeViewModel {
     func open(provider: VoiceProvider = .openAI) {
         resetWorkspace()
         self.provider = provider
+        localShouldListen = provider == .appleLocal
         isPresented = true
     }
 
     #if targetEnvironment(simulator)
     func setLocalScreenshotProvider() {
         provider = .appleLocal
-        microphoneIsActive = false
-        phase = .idle
+        let arguments = ProcessInfo.processInfo.arguments
+        localShouldListen = !arguments.contains("--local-paused")
+        localTranscript = LanguageManager.shared.activeLanguageCode == "de" ? "Kaffee vier Euro fünfzig" : "Coffee four euros fifty"
+        if arguments.contains("--local-processing") {
+            microphoneIsActive = false
+            handleVoiceEvent(.responseStarted(id: "local-preview", isAppGenerated: false))
+        } else if arguments.contains("--local-paused") {
+            microphoneIsActive = false
+            phase = .idle
+        }
     }
 
     func openScreenshotPreview() {
@@ -287,6 +301,7 @@ final class VoiceModeViewModel {
                 try await selectedService.connect(workspaceContext: workspaceContext)
             } catch {
                 guard !Task.isCancelled, sessionID == id, phase != .error else { return }
+                if provider == .appleLocal { localShouldListen = false }
                 phase = .error
                 errorMessage = error.localizedDescription
             }
@@ -295,6 +310,7 @@ final class VoiceModeViewModel {
 
     func restartSession() {
         guard isPresented, phase == .error else { return }
+        if provider == .appleLocal { localShouldListen = true; localTranscript = "" }
         connectionTask?.cancel()
         sessionID = UUID()
         service?.onEvent = nil
@@ -373,23 +389,69 @@ final class VoiceModeViewModel {
         hasStartedSession = false
         didSignalListeningReady = false
         localTranscript = ""
+        localShouldListen = false
     }
 
-    /// Local capture is deliberately turn based; never record while the model works.
+    /// The microphone finishes the current phrase and pauses. During generation
+    /// it changes only the user's resume intent, never cancels a pending expense.
     func toggleLocalRecording() {
         guard provider == .appleLocal else { return }
+        if phase == .error { restartSession(); return }
         if microphoneIsActive {
+            localShouldListen = false
             service?.finishTurn()
+        } else if isProcessingRequest {
+            localShouldListen.toggle()
         } else if phase == .idle {
+            localShouldListen = true
+            startNextLocalTurn()
+        } else if phase == .connecting {
+            localShouldListen = false
             connectionTask?.cancel()
             sessionID = UUID()
             service?.onEvent = nil
             service?.disconnect()
             service = nil
             hasStartedSession = false
-            localTranscript = ""
-            startSession()
+            microphoneIsActive = false
+            phase = .idle
         }
+    }
+
+    private func startNextLocalTurn() {
+        guard isPresented, provider == .appleLocal, localShouldListen else { return }
+        sessionID = UUID()
+        service?.onEvent = nil
+        service?.disconnect()
+        service = nil
+        hasStartedSession = false
+        localTranscript = ""
+        startSession()
+    }
+
+    /// Save first ends an active phrase for review. It never saves unheard or
+    /// still-processing changes. A second explicit Save commits reviewed cards.
+    func pauseLocalForReview() {
+        guard provider == .appleLocal else { return }
+        localShouldListen = false
+        if microphoneIsActive { service?.finishTurn() }
+    }
+
+    func suspendLocalRecording() {
+        guard provider == .appleLocal, isPresented else { return }
+        localShouldListen = false
+        guard microphoneIsActive || isProcessingRequest || phase == .connecting else { return }
+        connectionTask?.cancel()
+        sessionID = UUID()
+        service?.onEvent = nil
+        service?.disconnect()
+        service = nil
+        hasStartedSession = false
+        microphoneIsActive = false
+        microphoneLevel = 0
+        clearProcessingState()
+        phase = .error
+        errorMessage = loc("VoiceAudioInterrupted")
     }
 
     static func todayISOString() -> String {
@@ -524,10 +586,13 @@ extension VoiceModeViewModel: RealtimeVoiceServiceDelegate {
         guard isPresented else { return }
         switch event {
         case .localTurnReady:
+            guard provider == .appleLocal, !microphoneIsActive, phase != .connecting else { return }
             clearProcessingState()
             microphoneIsActive = false
             microphoneLevel = 0
             phase = .idle
+            if drafts.count >= 10 { localShouldListen = false }
+            if localShouldListen { startNextLocalTurn() }
         case .localTranscript(let text):
             localTranscript = text
         case .connected:
@@ -575,6 +640,7 @@ extension VoiceModeViewModel: RealtimeVoiceServiceDelegate {
             // Incidental model narration must not race the structured draft update.
             break
         case .error(let message):
+            if provider == .appleLocal { localShouldListen = false }
             microphoneIsActive = false
             microphoneLevel = 0
             clearProcessingState()

@@ -63,6 +63,7 @@ final class AppleLocalVoiceService: VoiceSessionService {
     private var finishing = false
     private var generating = false
     private var ownsAudioSession = false
+    private var endpoint = LocalSpeechEndpoint()
 
     func connect(workspaceContext: String?) async throws {
         disconnect()
@@ -121,6 +122,7 @@ final class AppleLocalVoiceService: VoiceSessionService {
                 guard let self, self.identity == id, !self.generating else { return }
                 if let text {
                     self.transcript = text
+                    self.endpoint.updateTranscript(text, at: ProcessInfo.processInfo.systemUptime)
                     self.onEvent?(.localTranscript(text))
                 }
                 if final || (failed && self.finishing && !self.transcript.isEmpty) {
@@ -142,6 +144,7 @@ final class AppleLocalVoiceService: VoiceSessionService {
             Task { @MainActor [weak self] in
                 guard let self, self.identity == id, !self.finishing, !self.generating else { return }
                 self.onEvent?(.microphoneLevel(level))
+                self.endpoint.observeLevel(level, at: ProcessInfo.processInfo.systemUptime)
             }
         }
         engine.prepare()
@@ -162,9 +165,16 @@ final class AppleLocalVoiceService: VoiceSessionService {
         }
         onEvent?(.microphoneStarted)
         timer = Task { [weak self] in
-            try? await Task.sleep(for: .seconds(50))
-            guard !Task.isCancelled, let self, self.identity == id else { return }
-            self.finishTurn()
+            let started = ProcessInfo.processInfo.systemUptime
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .milliseconds(200))
+                guard !Task.isCancelled, let self, self.identity == id else { return }
+                let now = ProcessInfo.processInfo.systemUptime
+                if self.endpoint.shouldFinish(at: now) || now - started >= 50 {
+                    self.finishTurn()
+                    return
+                }
+            }
         }
     }
 
@@ -185,7 +195,7 @@ final class AppleLocalVoiceService: VoiceSessionService {
     }
 
     private func processTurn(id: UUID) {
-        guard !generating else { return }
+        guard identity == id, !generating else { return }
         generating = true
         timer?.cancel()
         stopMicrophone()
@@ -193,7 +203,9 @@ final class AppleLocalVoiceService: VoiceSessionService {
         recognition = nil
         request = nil
         let text = transcript.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !text.isEmpty else { fail(loc("LocalNoSpeech")); return }
+        // Silence is normal. Finish the empty turn without invoking the model
+        // or presenting an error; the view model preserves the user's pause intent.
+        guard !text.isEmpty else { onEvent?(.localTurnReady); return }
         guard text.count <= 1_500, (context?.count ?? 0) <= 7_000 else {
             fail(loc("LocalTooMuchContext")); return
         }
@@ -254,11 +266,38 @@ final class AppleLocalVoiceService: VoiceSessionService {
         context = nil
         finishing = false
         generating = false
+        endpoint = LocalSpeechEndpoint()
     }
 
     // Each new turn receives the current app workspace. Deletions during generation
     // are filtered by the view model's tombstones before any drafts are displayed.
     func sendWorkspaceNote(_ text: String) {}
+}
+
+/// Requires both quiet audio and stable recognition. Partial results replace the
+/// same phrase; they are never independently submitted to the expense model.
+struct LocalSpeechEndpoint {
+    private var text = ""
+    private var changedAt: TimeInterval = 0
+    private var speechAt: TimeInterval = 0
+
+    mutating func updateTranscript(_ value: String, at time: TimeInterval) {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed != text { text = trimmed; changedAt = time }
+    }
+
+    mutating func observeLevel(_ level: Double, at time: TimeInterval) {
+        if level >= 0.10 { speechAt = time }
+    }
+
+    func shouldFinish(at time: TimeInterval) -> Bool {
+        guard !text.isEmpty else { return false }
+        let lastWord = text.lowercased().split(whereSeparator: { !$0.isLetter }).last.map(String.init) ?? ""
+        // A conjunction or preposition often precedes another item/value. Give
+        // these sentence pauses more room without waiting indefinitely.
+        let grace: TimeInterval = ["and", "und", "for", "für", "with", "mit", "of", "von", "was", "war"].contains(lastWord) ? 4.5 : 2.2
+        return time - max(changedAt, speechAt) >= grace
+    }
 }
 
 /// Category changes are expected when activating/deactivating our microphone.

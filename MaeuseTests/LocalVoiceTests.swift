@@ -5,6 +5,149 @@ import UIKit
 
 @MainActor
 final class LocalVoiceTests: XCTestCase {
+    func testAutomaticEndpointWaitsForQuietAndStableTranscript() {
+        var endpoint = LocalSpeechEndpoint()
+        XCTAssertFalse(endpoint.shouldFinish(at: 100))
+        endpoint.updateTranscript("Coffee four euros", at: 10)
+        XCTAssertFalse(endpoint.shouldFinish(at: 12))
+        endpoint.observeLevel(0.3, at: 12)
+        XCTAssertFalse(endpoint.shouldFinish(at: 14))
+        endpoint.updateTranscript("Coffee four euros fifty", at: 14)
+        XCTAssertFalse(endpoint.shouldFinish(at: 16))
+        XCTAssertTrue(endpoint.shouldFinish(at: 16.3))
+        endpoint.updateTranscript("Coffee four euros fifty", at: 16.4)
+        XCTAssertTrue(endpoint.shouldFinish(at: 16.5), "Identical partial callbacks must not keep postponing the endpoint")
+        endpoint.updateTranscript("  ", at: 17)
+        XCTAssertFalse(endpoint.shouldFinish(at: 30))
+    }
+
+    func testEndpointAllowsSentencePausesAndContinuationsInBothLanguages() {
+        for text in ["Coffee four euros and", "Kaffee vier Euro und", "Blumen für", "Flowers for"] {
+            var endpoint = LocalSpeechEndpoint()
+            endpoint.updateTranscript(text, at: 10)
+            XCTAssertFalse(endpoint.shouldFinish(at: 13), text)
+            XCTAssertTrue(endpoint.shouldFinish(at: 14.6), text)
+            endpoint.updateTranscript(text + " twelve", at: 14)
+            XCTAssertFalse(endpoint.shouldFinish(at: 15), text)
+            XCTAssertTrue(endpoint.shouldFinish(at: 16.3), text)
+        }
+    }
+
+    func testAutomaticTurnResumesExactlyOnceWithCurrentWorkspace() async {
+        var services: [StubVoiceService] = []
+        let vm = VoiceModeViewModel(serviceFactory: { _ in
+            let service = StubVoiceService(); services.append(service); return service
+        })
+        vm.open(provider: .appleLocal)
+        vm.drafts = [draft("coffee", "Coffee", 4)]
+        vm.startSession()
+        for _ in 0..<20 { await Task.yield() }
+        for _ in 0..<3 {
+            let current = services.last!
+            let oldCallback = current.onEvent
+            current.onEvent?(.localTranscript("Coffee five euros"))
+            current.finishTurn()
+            XCTAssertFalse(vm.microphoneIsActive)
+            XCTAssertEqual(vm.phase, .thinking)
+            XCTAssertTrue(vm.localShouldListen)
+            current.onEvent?(.localTurnReady)
+            oldCallback?(.localTurnReady)
+            oldCallback?(.error("Old turn failed"))
+            for _ in 0..<20 { await Task.yield() }
+            XCTAssertTrue(vm.microphoneIsActive)
+            XCTAssertTrue(vm.localTranscript.isEmpty)
+            XCTAssertEqual(vm.drafts.map(\.id), ["coffee"])
+            XCTAssertTrue(services.last?.workspaceContext?.contains("coffee") == true)
+        }
+        XCTAssertEqual(services.count, 4)
+        vm.cancelSession()
+        services.last?.onEvent?(.localTurnReady)
+        XCTAssertFalse(vm.isPresented)
+        XCTAssertFalse(vm.microphoneIsActive)
+    }
+
+    func testPauseDuringProcessingControlsAutomaticResumeAndReview() async {
+        let service = StubVoiceService()
+        let vm = VoiceModeViewModel(serviceFactory: { _ in service })
+        vm.open(provider: .appleLocal)
+        vm.drafts = [draft("coffee", "Coffee", 4)]
+        vm.startSession()
+        for _ in 0..<20 { await Task.yield() }
+        service.finishTurn()
+        vm.toggleLocalRecording()
+        XCTAssertFalse(vm.localShouldListen)
+        service.onEvent?(.localTurnReady)
+        XCTAssertEqual(vm.phase, .idle)
+        XCTAssertFalse(vm.microphoneIsActive)
+        XCTAssertTrue(vm.canEndSession)
+        vm.toggleLocalRecording()
+        for _ in 0..<20 { await Task.yield() }
+        vm.pauseLocalForReview()
+        XCTAssertFalse(vm.localShouldListen)
+        service.onEvent?(.localTurnReady)
+        XCTAssertTrue(vm.canSaveDrafts)
+        XCTAssertTrue(vm.canEndSession)
+        XCTAssertFalse(vm.microphoneIsActive)
+        vm.cancelSession()
+    }
+
+    func testBackgroundDuringProcessingAndDraftLimitPreventAutomaticResume() async {
+        var services: [StubVoiceService] = []
+        let vm = VoiceModeViewModel(serviceFactory: { _ in
+            let service = StubVoiceService(); services.append(service); return service
+        })
+        vm.open(provider: .appleLocal)
+        vm.drafts = [draft("coffee", "Coffee", 4)]
+        vm.startSession()
+        for _ in 0..<20 { await Task.yield() }
+        let old = services.last!.onEvent
+        services.last!.finishTurn()
+        vm.suspendLocalRecording()
+        old?(.localTurnReady)
+        XCTAssertEqual(vm.phase, .error)
+        XCTAssertFalse(vm.localShouldListen)
+        XCTAssertEqual(services.count, 1)
+        XCTAssertEqual(vm.drafts.map(\.id), ["coffee"])
+        vm.restartSession()
+        for _ in 0..<20 { await Task.yield() }
+        vm.drafts = (0..<10).map { draft("\($0)", "Coffee", 4) }
+        services.last!.finishTurn()
+        services.last!.onEvent?(.localTurnReady)
+        XCTAssertEqual(vm.phase, .idle)
+        XCTAssertFalse(vm.localShouldListen)
+        XCTAssertEqual(services.count, 2)
+        vm.cancelSession()
+    }
+
+    func testEmptyFinishedTurnAndResumeChoiceDuringProcessing() async {
+        var services: [StubVoiceService] = []
+        let vm = VoiceModeViewModel(serviceFactory: { _ in
+            let service = StubVoiceService(); services.append(service); return service
+        })
+        vm.open(provider: .appleLocal)
+        vm.startSession()
+        for _ in 0..<20 { await Task.yield() }
+        XCTAssertTrue(vm.localTranscript.isEmpty)
+        services.last!.finishTurn()
+        vm.toggleLocalRecording()
+        XCTAssertFalse(vm.localShouldListen)
+        vm.toggleLocalRecording()
+        XCTAssertTrue(vm.localShouldListen)
+        services.last!.onEvent?(.localTurnReady)
+        for _ in 0..<20 { await Task.yield() }
+        XCTAssertEqual(services.count, 2)
+        XCTAssertTrue(vm.microphoneIsActive)
+        XCTAssertTrue(vm.drafts.isEmpty)
+        XCTAssertTrue(vm.errorMessage.isEmpty)
+        vm.toggleLocalRecording()
+        services.last!.onEvent?(.localTurnReady)
+        XCTAssertEqual(vm.phase, .idle)
+        XCTAssertFalse(vm.localShouldListen)
+        vm.suspendLocalRecording()
+        XCTAssertEqual(vm.phase, .idle, "An already paused session stays paused in the background")
+        vm.cancelSession()
+    }
+
     func testRecordingIgnoresStartupCategoryChangesAndInterruptionEnd() {
         for reason in [AVAudioSession.RouteChangeReason.categoryChange, .override, .wakeFromSleep, .unknown] {
             XCTAssertFalse(LocalRecordingLifecycle.shouldInterrupt(Notification(
@@ -312,7 +455,9 @@ private final class StubVoiceService: VoiceSessionService {
     var onEvent: ((RealtimeVoiceServiceEvent) -> Void)?
     var connectError: Error?
     var finishedTurns = 0
+    var workspaceContext: String?
     func connect(workspaceContext: String?) async throws {
+        self.workspaceContext = workspaceContext
         if let connectError { throw connectError }
         onEvent?(.microphoneStarted)
     }

@@ -182,7 +182,7 @@
 // Apple on-device voice capture
 "VoiceAppleTitle" = "Apple · Auf dem Gerät";
 "VoiceCloudTitle" = "OpenAI · Cloud";
-"VoiceAppleSummary" = "Kostenlos, ohne API-Schlüssel. Audio und Verarbeitung bleiben auf deinem iPhone. Diktiere kurz und tippe auf „Verarbeiten“. Ideal für einfache Ausgaben; komplexe Korrekturen brauchen eventuell einen zweiten Versuch.";
+"VoiceAppleSummary" = "Kostenlos, ohne API-Schlüssel. Audio und Verarbeitung bleiben auf deinem iPhone. Sprechpausen werden automatisch verarbeitet; währenddessen pausiert das Mikrofon kurz. Ideal für einfache Ausgaben.";
 "VoiceCloudSummary" = "Fortlaufende Aufnahme mit automatischer Pausenerkennung und flexibleren Anfragen. Sendet Audio und Ausgabenkontext an OpenAI. Benötigt Internet und deinen API-Schlüssel; OpenAI berechnet die Nutzung über dein API-Konto.";
 "LocalAvailable" = "Lokale Spracherfassung ist auf diesem iPhone verfügbar.";
 "LocalNeedsOS" = "Erfordert iOS 26 oder neuer. Du kannst Ausgaben weiterhin manuell erfassen oder OpenAI wählen.";
@@ -196,8 +196,8 @@
 "LocalPrivacyIntro" = "Erfasse Ausgaben mit Apples Foundation Models vollständig auf deinem iPhone.";
 "LocalPrivacyDataTitle" = "Deine Stimme bleibt hier";
 "LocalPrivacyDataBody" = "Spracherkennung und Auswertung laufen auf diesem Gerät. Dieser Modus ruft weder OpenAI auf noch wechselt er zu einem Cloud-Modell. Mäuse speichert kein Audio. Text und Entwürfe bleiben bis zum Schließen der Sitzung im Arbeitsspeicher; nur gespeicherte Ausgaben kommen in deine Übersicht.";
-"LocalPrivacyExperienceTitle" = "Ein Diktat nach dem anderen";
-"LocalPrivacyExperienceBody" = "Sprich in der App-Sprache und tippe auf „Verarbeiten“. Die Aufnahme pausiert, während Entwürfe entstehen. Mit „Weiter diktieren“ kannst du Ausgaben ergänzen oder korrigieren. Kurze, klare Angaben funktionieren am besten. Prüfe jeden Betrag vor dem Speichern. Eine Aufnahme dauert maximal 50 Sekunden; speichere nach 10 Entwürfen, um neu zu starten.";
+"LocalPrivacyExperienceTitle" = "Sprechen, pausieren, prüfen";
+"LocalPrivacyExperienceBody" = "Sprich in der App-Sprache. Nach einer kurzen Sprechpause entstehen Entwürfe; während der Verarbeitung ist das Mikrofon pausiert. Danach hört die App automatisch wieder zu. Tippe auf das Mikrofon, um zu pausieren und deine Entwürfe zu prüfen. Speichern beendet zuerst eine laufende Aufnahme; prüfe neue Entwürfe und tippe erneut auf Speichern. Kurze, klare Angaben funktionieren am besten. Eine Aufnahme dauert maximal 50 Sekunden; nach 10 Entwürfen pausiert die App zur Prüfung.";
 "LocalPrivacyCostTitle" = "Keine Nutzungsgebühren";
 "LocalPrivacyCostBody" = "Kein API-Schlüssel, Abo oder Preis pro Anfrage. Apple muss eventuell zuerst Sprachressourcen laden. Sobald alles bereit ist, funktioniert dieser Modus ohne Internet. Ist er nicht verfügbar, stoppt er und erklärt den Grund.";
 "LocalSpeechPermission" = "Erlaube Spracherkennung für Mäuse unter iPhone-Einstellungen → Datenschutz & Sicherheit → Spracherkennung. Setze dann die Aufnahme fort. Der lokale Modus verwendet nur Spracherkennung auf dem Gerät.";
@@ -213,3 +213,12 @@
 "LocalFinishPhrase" = "Verarbeiten";
 "LocalRecordMore" = "Weiter diktieren";
 "LocalAmbiguousCorrection" = "Bitte korrigiere oder entferne jeweils eine namentlich genannte Ausgabe. Deine vorhandenen Entwürfe bleiben unverändert.";
+
+"LocalProcessingState" = "Verarbeitung · Mikrofon pausiert";
+"LocalPausedState" = "Pausiert · Entwürfe prüfen";
+"LocalWillResume" = "Danach wieder zuhören";
+"LocalWillPause" = "Danach pausiert bleiben";
+"LocalPause" = "Aufnahme pausieren und verarbeiten";
+"LocalPauseAfterProcessing" = "Nach der Verarbeitung pausieren";
+"LocalResumeAfterProcessing" = "Nach der Verarbeitung wieder zuhören";
+"LocalSaveReviewHint" = "Beendet zuerst die Aufnahme zur Prüfung. Speichere geprüfte Entwürfe anschließend mit einem weiteren Tippen.";

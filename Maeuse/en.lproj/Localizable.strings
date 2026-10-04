@@ -182,7 +182,7 @@
 // Apple on-device voice capture
 "VoiceAppleTitle" = "Apple · On device";
 "VoiceCloudTitle" = "OpenAI · Cloud";
-"VoiceAppleSummary" = "Free, no API key. Audio and expense processing stay on your iPhone. Dictate a short phrase, then tap Process phrase. Best for simple expenses; complex corrections may need another try.";
+"VoiceAppleSummary" = "Free, without an API key. Audio and processing stay on your iPhone. Speech pauses are processed automatically; the microphone briefly pauses during processing. Best for simple expenses.";
 "VoiceCloudSummary" = "Continuous capture with automatic pauses and more flexible requests. Sends audio and expense context to OpenAI. Requires internet and your own API key; OpenAI charges your API account for usage.";
 "LocalAvailable" = "Ready for local voice capture on this iPhone.";
 "LocalNeedsOS" = "Requires iOS 26 or later. You can still enter expenses manually or choose OpenAI.";
@@ -196,8 +196,8 @@
 "LocalPrivacyIntro" = "Use Apple’s Foundation Models to capture expenses entirely on your iPhone.";
 "LocalPrivacyDataTitle" = "Your voice stays here";
 "LocalPrivacyDataBody" = "Speech recognition and expense interpretation run on this device. This mode never calls OpenAI or falls back to a cloud model. Audio is not saved by Mäuse. Text and drafts stay in memory until you close the session; only expenses you save enter your ledger.";
-"LocalPrivacyExperienceTitle" = "One phrase at a time";
-"LocalPrivacyExperienceBody" = "Speak in the app’s language, then tap Process phrase. Recording pauses while drafts are created. Tap Record more to add or correct expenses. Short, clear requests work best. Review every amount before saving. Each recording lasts up to 50 seconds; save after 10 drafts to start fresh.";
+"LocalPrivacyExperienceTitle" = "Speak, pause, review";
+"LocalPrivacyExperienceBody" = "Speak in the app’s language. A short speech pause creates drafts; the microphone is paused during processing. Listening resumes automatically afterward. Tap the microphone to pause and review your drafts. Save first ends an active recording; review new drafts and tap Save again. Short, clear requests work best. Each recording lasts up to 50 seconds; after 10 drafts, the app pauses for review.";
 "LocalPrivacyCostTitle" = "No usage fees";
 "LocalPrivacyCostBody" = "No API key, subscription, or per-request charge. Apple may need to download language resources first. Once ready, this mode works without an internet connection. If unavailable, it stops and explains why.";
 "LocalSpeechPermission" = "Allow Speech Recognition for Mäuse in iPhone Settings → Privacy & Security → Speech Recognition, then resume. Local mode only uses on-device recognition.";
@@ -213,3 +213,12 @@
 "LocalFinishPhrase" = "Process phrase";
 "LocalRecordMore" = "Record more";
 "LocalAmbiguousCorrection" = "Please correct or remove one named expense at a time. Your existing drafts are unchanged.";
+
+"LocalProcessingState" = "Processing · microphone paused";
+"LocalPausedState" = "Paused · review drafts";
+"LocalWillResume" = "Listening resumes afterward";
+"LocalWillPause" = "Staying paused afterward";
+"LocalPause" = "Pause and process recording";
+"LocalPauseAfterProcessing" = "Stay paused after processing";
+"LocalResumeAfterProcessing" = "Resume listening after processing";
+"LocalSaveReviewHint" = "Ends recording for review first. Tap again to save reviewed drafts.";
