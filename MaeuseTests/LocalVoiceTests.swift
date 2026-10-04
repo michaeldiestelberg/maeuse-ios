@@ -5,6 +5,33 @@ import UIKit
 
 @MainActor
 final class LocalVoiceTests: XCTestCase {
+    func testIntentionalRecognitionFinishDoesNotConvertSilenceToFailure() {
+        XCTAssertEqual(LocalRecognitionCompletion.action(final: false, failed: true, finishing: true), .complete)
+        XCTAssertEqual(LocalRecognitionCompletion.action(final: false, failed: true, finishing: false), .fail)
+        XCTAssertEqual(LocalRecognitionCompletion.action(final: true, failed: false, finishing: false), .complete)
+        XCTAssertEqual(LocalRecognitionCompletion.action(final: false, failed: false, finishing: true), .wait)
+    }
+
+    func testCountdownSettlesAndFadesWithoutBackwardResetAcrossRepeatedPhrases() {
+        var endpoint = LocalSpeechEndpoint()
+        var indicator = LocalEndpointIndicator()
+        for start in [10.0, 20.0, 30.0] {
+            endpoint.updateTranscript("Coffee \(start)", at: start)
+            endpoint.observeLevel(0.2, at: start)
+            XCTAssertEqual(endpoint.indicatorProgress(at: start + 0.6), 0)
+            indicator.update(endpoint.indicatorProgress(at: start + 0.8))
+            XCTAssertTrue(indicator.isVisible)
+            XCTAssertEqual(indicator.progress, endpoint.progress(at: start + 0.8))
+            let heldArc = indicator.progress
+            endpoint.observeLevel(0.2, at: start + 0.9)
+            indicator.update(endpoint.indicatorProgress(at: start + 0.9))
+            XCTAssertFalse(indicator.isVisible)
+            XCTAssertEqual(indicator.progress, heldArc, "Hide the arc without rewinding it")
+            XCTAssertFalse(endpoint.shouldFinish(at: start + 3.0))
+            XCTAssertTrue(endpoint.shouldFinish(at: start + 3.2), "Visual settling must not delay capture completion")
+        }
+    }
+
     func testEndpointIndicatorUsesActualTimerAndResetsForAudioAndTranscript() {
         var endpoint = LocalSpeechEndpoint()
         XCTAssertEqual(endpoint.progress(at: 100), 0)

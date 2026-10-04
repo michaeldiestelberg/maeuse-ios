@@ -123,13 +123,15 @@ final class AppleLocalVoiceService: VoiceSessionService {
                 if let text {
                     self.transcript = text
                     self.endpoint.updateTranscript(text, at: ProcessInfo.processInfo.systemUptime)
-                    self.onEvent?(.localEndpointProgress(self.endpoint.progress(at: ProcessInfo.processInfo.systemUptime)))
+                    self.onEvent?(.localEndpointProgress(self.endpoint.indicatorProgress(at: ProcessInfo.processInfo.systemUptime)))
                     self.onEvent?(.localTranscript(text))
                 }
-                if final || (failed && self.finishing && !self.transcript.isEmpty) {
+                switch LocalRecognitionCompletion.action(final: final, failed: failed, finishing: self.finishing) {
+                case .complete:
                     self.processTurn(id: id)
-                } else if failed {
+                case .fail:
                     self.fail(loc("LocalRecognitionFailed"))
+                case .wait: break
                 }
             }
         }
@@ -172,7 +174,7 @@ final class AppleLocalVoiceService: VoiceSessionService {
                 try? await Task.sleep(for: .milliseconds(200))
                 guard !Task.isCancelled, let self, self.identity == id else { return }
                 let now = ProcessInfo.processInfo.systemUptime
-                self.onEvent?(.localEndpointProgress(self.endpoint.progress(at: now)))
+                self.onEvent?(.localEndpointProgress(self.endpoint.indicatorProgress(at: now)))
                 if self.endpoint.shouldFinish(at: now) || now - started >= 50 {
                     self.finishTurn()
                     return
@@ -297,6 +299,12 @@ struct LocalSpeechEndpoint {
         progress(at: time) >= 1
     }
 
+    // Presentation waits for a settled pause; the capture endpoint is unchanged.
+    func indicatorProgress(at time: TimeInterval) -> Double {
+        guard time - max(changedAt, speechAt) >= 0.65 else { return 0 }
+        return progress(at: time)
+    }
+
     func progress(at time: TimeInterval) -> Double {
         guard !text.isEmpty else { return 0 }
         let lastWord = text.lowercased().split(whereSeparator: { !$0.isLetter }).last.map(String.init) ?? ""
@@ -313,5 +321,26 @@ enum LocalRecordingLifecycle {
     static func shouldInterrupt(_ notification: Notification) -> Bool {
         notification.name == UIApplication.didEnterBackgroundNotification ||
             VoiceAudioLifecycleEvent(notification: notification) != nil
+    }
+}
+
+/// endAudio can return an error instead of a final result, especially for silence.
+/// Only an intentional finish consumes that callback as normal completion.
+enum LocalRecognitionCompletion {
+    enum Action: Equatable { case wait, complete, fail }
+    static func action(final: Bool, failed: Bool, finishing: Bool) -> Action {
+        if final || (failed && finishing) { return .complete }
+        return failed ? .fail : .wait
+    }
+}
+
+/// Keep the last arc while it fades; never animate a timer reset backwards.
+struct LocalEndpointIndicator {
+    private(set) var progress: Double = 0
+    private(set) var isVisible = false
+    mutating func update(_ value: Double) {
+        guard value.isFinite, value > 0 else { isVisible = false; return }
+        progress = min(1, value)
+        isVisible = true
     }
 }

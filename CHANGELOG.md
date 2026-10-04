@@ -1,3 +1,8 @@
+## 1.5.0 (53)
+- Intentional microphone stops now finish empty speech normally when recognition reports an end-of-audio error; genuine recording failures remain visible.
+- Endpoint ring appears after a settled pause and fades out with its last position when speech resumes, without backward reset animation. Actual endpoint and processing timing are unchanged.
+- 95 simulator regression tests, Release build and analyzer validation; physical Apple speech/model remains a device check.
+
 # Changelog
 
 This file records user-facing changes to Mäuse. App Store and GitHub release notes should be based on the matching version section.

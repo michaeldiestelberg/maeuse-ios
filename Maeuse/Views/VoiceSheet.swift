@@ -272,6 +272,7 @@ private struct LocalVoiceMicrophoneMotion: View {
     @Environment(\.accessibilityReduceMotion) private var systemReduceMotion
     @Environment(\.scenePhase) private var scenePhase
     @State private var started = Date.now
+    @State private var countdown = LocalEndpointIndicator()
 
     private var reduceMotion: Bool {
         #if targetEnvironment(simulator)
@@ -292,9 +293,11 @@ private struct LocalVoiceMicrophoneMotion: View {
                 if active {
                     Circle().stroke(Color.maeusInk.opacity(speaking ? 0.45 : 0.20), lineWidth: 2)
                         .scaleEffect(reduceMotion ? 1.08 : 1.08 + (speaking ? min(1, level) * 0.05 : sin(elapsed * .pi * 2 / 2.8) * 0.025))
-                    Circle().trim(from: 0, to: endpoint)
+                    Circle().trim(from: 0, to: countdown.progress)
                         .stroke(Color.maeusInk, style: StrokeStyle(lineWidth: 5, lineCap: .round))
                         .rotationEffect(.degrees(-90)).padding(-5)
+                        .opacity(countdown.isVisible ? 1 : 0)
+                        .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: countdown.isVisible)
                     if speaking {
                         HStack(spacing: 4) {
                             ForEach(0..<5) { index in
@@ -325,8 +328,12 @@ private struct LocalVoiceMicrophoneMotion: View {
             .foregroundStyle(Color.maeusInk)
             .scaleEffect(active ? 1 : 0.95)
             .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: level)
-            .animation(reduceMotion ? nil : .easeOut(duration: 0.20), value: endpoint)
+
             .animation(reduceMotion ? nil : .easeOut(duration: 0.20), value: active)
+        }
+        .onChange(of: endpoint, initial: true) { _, value in
+            // New pauses reveal the current clock position; resets only fade out.
+            countdown.update(value)
         }
         .frame(width: size, height: size)
         .padding(7)
