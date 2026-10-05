@@ -80,10 +80,9 @@ struct VoiceSheet: View {
         VStack(spacing: 8) {
             Button { viewModel.toggleLocalRecording() } label: {
                 LocalVoiceMicrophoneMotion(
-                    active: viewModel.microphoneIsActive,
+                    active: viewModel.localCaptureIsActive,
                     processing: viewModel.isProcessingRequest,
                     connecting: viewModel.phase == .connecting,
-                    level: viewModel.microphoneLevel,
                     endpoint: viewModel.localEndpointProgress,
                     willResume: viewModel.localShouldListen,
                     size: dynamicTypeSize.isAccessibilitySize ? 68 : 94)
@@ -265,12 +264,12 @@ private struct LocalVoiceMicrophoneMotion: View {
     let active: Bool
     let processing: Bool
     let connecting: Bool
-    let level: Double
     let endpoint: Double
     let willResume: Bool
     let size: CGFloat
     @Environment(\.accessibilityReduceMotion) private var systemReduceMotion
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.colorScheme) private var colorScheme
     @State private var started = Date.now
     @State private var countdown = LocalEndpointIndicator()
 
@@ -286,32 +285,25 @@ private struct LocalVoiceMicrophoneMotion: View {
         TimelineView(.animation(minimumInterval: 1.0 / 20,
             paused: reduceMotion || scenePhase != .active || !(active || processing || connecting))) { timeline in
             let elapsed = timeline.date.timeIntervalSince(started)
-            let speaking = active && level >= 0.10
+            let breath = reduceMotion ? 0 : sin(elapsed * .pi * 2 / 6)
             ZStack {
+                Circle().fill(Color.maeusCheese)
+                    .scaleEffect(1.16 + breath * 0.025)
+                    .blur(radius: size * 0.075)
+                    .opacity(active ? 0.30 + breath * 0.04 : 0)
+                    .animation(reduceMotion ? nil : .easeOut(duration: 0.35), value: active)
                 Circle().fill(Color.maeusCheese)
                 Circle().stroke(Color.maeusInk, lineWidth: 3)
                 if active {
-                    Circle().stroke(Color.maeusInk.opacity(speaking ? 0.45 : 0.20), lineWidth: 2)
-                        .scaleEffect(reduceMotion ? 1.08 : 1.08 + (speaking ? min(1, level) * 0.05 : sin(elapsed * .pi * 2 / 2.8) * 0.025))
                     Circle().trim(from: 0, to: countdown.progress)
-                        .stroke(Color.maeusInk, style: StrokeStyle(lineWidth: 5, lineCap: .round))
+                        .stroke(colorScheme == .dark ? Color.maeusCheese : Color.maeusInk, style: StrokeStyle(lineWidth: 3, lineCap: .round))
                         .rotationEffect(.degrees(-90)).padding(-5)
                         .opacity(countdown.isVisible ? 1 : 0)
                         .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: countdown.isVisible)
-                    if speaking {
-                        HStack(spacing: 4) {
-                            ForEach(0..<5) { index in
-                                Capsule().fill(Color.maeusInk)
-                                    .frame(width: size * 0.055,
-                                        height: size * (0.14 + min(1, level) * (index == 2 ? 0.38 : index % 2 == 0 ? 0.22 : 0.30)))
-                            }
-                        }
-                    } else {
-                        Image(systemName: "mic.fill").font(.system(size: size * 0.40, weight: .bold))
-                    }
+                    Image(systemName: "mic.fill").font(.system(size: size * 0.40, weight: .bold))
                 } else if processing || connecting {
                     Circle().trim(from: 0, to: 0.24)
-                        .stroke(Color.maeusInk, style: StrokeStyle(lineWidth: 5, lineCap: .round))
+                        .stroke(colorScheme == .dark ? Color.maeusCheese : Color.maeusInk, style: StrokeStyle(lineWidth: 5, lineCap: .round))
                         .rotationEffect(.degrees(reduceMotion ? -90 : elapsed * 200)).padding(-5)
                     Image(systemName: processing ? "mic.slash.fill" : "hourglass")
                         .font(.system(size: size * 0.34, weight: .bold))
@@ -321,13 +313,12 @@ private struct LocalVoiceMicrophoneMotion: View {
                 Image(systemName: active || connecting || (processing && willResume) ? "pause.fill" : "play.fill")
                     .font(.system(size: size * 0.13, weight: .bold))
                     .frame(width: size * 0.28, height: size * 0.28)
-                    .background(Color.maeusSurface, in: Circle())
+                    .background(colorScheme == .dark ? Color.maeusCheese : Color.maeusSurface, in: Circle())
                     .overlay(Circle().stroke(Color.maeusInk, lineWidth: 2))
                     .offset(x: size * 0.35, y: size * 0.35)
             }
             .foregroundStyle(Color.maeusInk)
             .scaleEffect(active ? 1 : 0.95)
-            .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: level)
 
             .animation(reduceMotion ? nil : .easeOut(duration: 0.20), value: active)
         }

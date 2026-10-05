@@ -5,6 +5,41 @@ import UIKit
 
 @MainActor
 final class LocalVoiceTests: XCTestCase {
+    func testListeningFeedbackFollowsActualCaptureNotResumeIntentOrAudio() {
+        let vm = VoiceModeViewModel()
+        vm.open(provider: .appleLocal)
+        XCTAssertTrue(vm.localShouldListen)
+        XCTAssertFalse(vm.localCaptureIsActive, "Opening intent must not light the halo")
+        for _ in 0..<3 {
+            vm.handleVoiceEvent(.microphoneStarted)
+            XCTAssertTrue(vm.localCaptureIsActive)
+            for level in [0.0, 0.05, 0.8, 0.0] {
+                vm.handleVoiceEvent(.microphoneLevel(level))
+                XCTAssertTrue(vm.localCaptureIsActive, "Audio must not drive the halo or glyph")
+            }
+            vm.handleVoiceEvent(.microphoneStopped)
+            vm.handleVoiceEvent(.responseStarted(id: "turn", isAppGenerated: false))
+            XCTAssertFalse(vm.localCaptureIsActive)
+            XCTAssertTrue(vm.localShouldListen)
+            vm.toggleLocalRecording()
+            XCTAssertFalse(vm.localShouldListen)
+            XCTAssertFalse(vm.localCaptureIsActive)
+            vm.toggleLocalRecording()
+            XCTAssertTrue(vm.localShouldListen)
+            XCTAssertFalse(vm.localCaptureIsActive, "Resume intent during inference is not capture")
+            vm.handleVoiceEvent(.responseFinished(id: "turn"))
+        }
+        vm.suspendLocalRecording()
+        XCTAssertFalse(vm.localCaptureIsActive)
+        vm.handleVoiceEvent(.error("Interrupted"))
+        XCTAssertFalse(vm.localCaptureIsActive)
+        vm.cancelSession()
+        vm.open(provider: .openAI)
+        vm.handleVoiceEvent(.microphoneStarted)
+        XCTAssertFalse(vm.localCaptureIsActive)
+        vm.cancelSession()
+    }
+
     func testIntentionalRecognitionFinishDoesNotConvertSilenceToFailure() {
         XCTAssertEqual(LocalRecognitionCompletion.action(final: false, failed: true, finishing: true), .complete)
         XCTAssertEqual(LocalRecognitionCompletion.action(final: false, failed: true, finishing: false), .fail)

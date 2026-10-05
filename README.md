@@ -13,7 +13,7 @@
 
 | | |
 | --- | --- |
-| Version | 1.5.0 (build 53) |
+| Version | 1.5.0 (build 54) |
 | Platform | iPhone · iOS 17 or later |
 | Status | Internal TestFlight candidate; 1.4.0 (48) remains in App Review |
 | Languages | English and German |
@@ -21,6 +21,8 @@
 Version 1.5.0 adds **Apple · On device** to Voice Mode: local Apple speech recognition and Foundation Models, with no API key, usage fees, or cloud fallback. Choose a provider in Settings before enabling Voice Mode. Apple mode requires iOS 26+, a compatible iPhone, enabled Apple Intelligence, and downloaded model/language resources.
 
 Build 51 gives Apple mode one microphone control and automatically processes phrases after quiet speech pauses. The microphone visibly pauses during processing and resumes afterward unless you chose to pause. Draft cards, total, and Save stay familiar; transcript details are collapsed. Save during recording first finishes the phrase for review, then a second Save commits reviewed drafts. The build 50 false-interruption fix is retained. Offline speech, endpoint timing, and Apple model inference still need verification on an eligible physical iPhone.
+
+Build 54 replaces the Apple waveform with a stable microphone and slow accent halo during actual capture. Reduced Motion keeps the halo steady; paused/processing states remain distinct.
 
 Build 53 refines intentional microphone stops and settles the endpoint ring before showing it; resumed speech fades the ring rather than rewinding it.
 

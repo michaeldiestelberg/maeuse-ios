@@ -1,3 +1,8 @@
+## 1.5.0 (54)
+- Apple listening keeps a stable microphone with a soft accent halo, breathing slowly only during actual capture; quiet and speech share the same clear state.
+- Pause/inference extinguish the halo and show a crossed microphone. Resume intent alone never lights it. Reduce Motion uses a steady halo.
+- Endpoint countdown, speech timing and manual-stop fix retained; no new text or display meter changes.
+
 ## 1.5.0 (53)
 - Intentional microphone stops now finish empty speech normally when recognition reports an end-of-audio error; genuine recording failures remain visible.
 - Endpoint ring appears after a settled pause and fades out with its last position when speech resumes, without backward reset animation. Actual endpoint and processing timing are unchanged.

@@ -24,6 +24,12 @@ final class VoiceModeViewModel {
     var isProcessingRequest: Bool {
         awaitingSpokenResponse || !processingResponseIDs.isEmpty
     }
+    /// Listening feedback follows capture, never the user's future resume intent.
+    var localCaptureIsActive: Bool {
+        provider == .appleLocal && microphoneIsActive && !isProcessingRequest &&
+            phase != .error && phase != .connecting
+    }
+
     var microphoneIsActive: Bool = false
     var microphoneLevel: Double = 0
     var isSaving: Bool = false
