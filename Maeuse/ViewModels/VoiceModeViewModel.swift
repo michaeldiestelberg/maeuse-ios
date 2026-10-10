@@ -35,6 +35,11 @@ final class VoiceModeViewModel {
     var isSaving: Bool = false
 
     private(set) var provider: VoiceProvider = .openAI
+    private(set) var localDiagnostic: LocalVoiceDiagnostic?
+    private(set) var completedLocalDiagnostic: LocalVoiceDiagnostic?
+    var displayedLocalDiagnostic: LocalVoiceDiagnostic? {
+        isProcessingRequest ? localDiagnostic : completedLocalDiagnostic ?? localDiagnostic
+    }
     private(set) var localTranscript = ""
     private(set) var localShouldListen = false
     private(set) var localEndpointProgress: Double = 0
@@ -180,6 +185,15 @@ final class VoiceModeViewModel {
                     handleVoiceEvent(.workspaceSync(payload))
                 }
             }
+        }
+        if ProcessInfo.processInfo.arguments.contains("--voice-local-diagnostic") {
+            provider = .appleLocal
+            let trace = LocalVoiceTrace(language: german ? "de-DE" : "en-US", modelVariant: "simulator-fixture", availability: "fixture-only", referenceDate: Self.todayISOString())
+            trace.captureEnded("manualStop+recognitionFallback3s")
+            trace.begin("LocalGroundedPrice")
+            trace.failed(.init(.timeout, reason: "processing-deadline"))
+            handleVoiceEvent(.localDiagnostic(trace.snapshot))
+            handleVoiceEvent(.error(loc("LocalModelTimeout")))
         }
         // Simulator-only fixtures exercise the production event handler and layout.
         if ProcessInfo.processInfo.arguments.contains("--voice-meter-audio") {
@@ -422,6 +436,8 @@ final class VoiceModeViewModel {
         isSaving = false
         hasStartedSession = false
         didSignalListeningReady = false
+        localDiagnostic = nil
+        completedLocalDiagnostic = nil
         localTranscript = ""
         localShouldListen = false
         localEndpointProgress = 0
@@ -461,6 +477,8 @@ final class VoiceModeViewModel {
         service?.disconnect()
         service = nil
         hasStartedSession = false
+        localDiagnostic = nil
+        completedLocalDiagnostic = nil
         localTranscript = ""
         startSession()
     }
@@ -607,6 +625,10 @@ extension VoiceModeViewModel: RealtimeVoiceServiceDelegate {
     func handleVoiceEvent(_ event: RealtimeVoiceServiceEvent) {
         guard isPresented else { return }
         switch event {
+        case .localDiagnostic(let diagnostic):
+            guard provider == .appleLocal else { return }
+            localDiagnostic = diagnostic
+            if diagnostic.isTerminal { completedLocalDiagnostic = diagnostic }
         case .localTurnReady:
             guard provider == .appleLocal, !microphoneIsActive, phase != .connecting else { return }
             clearProcessingState()

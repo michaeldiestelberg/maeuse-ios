@@ -9,7 +9,7 @@ export DEVELOPER_DIR="${DEVELOPER_DIR:-/Applications/Xcode.app/Contents/Develope
 xcrun swiftc -D MODEL_EVALUATION -parse-as-library -module-cache-path "$check_dir/module-cache" \
   -sdk "$(xcrun --sdk macosx --show-sdk-path)" \
   -plugin-path "$DEVELOPER_DIR/Platforms/MacOSX.platform/Developer/usr/lib/swift/host/plugins" \
-  Maeuse/Services/AppleExpenseInterpreter.swift \
+  Maeuse/Services/AppleExpenseInterpreter.swift Maeuse/Services/LocalVoiceDiagnostics.swift \
   Maeuse/Models/Expense.swift Maeuse/Models/VoiceWorkspace.swift \
   scripts/check-apple-model.swift -o "$check_dir/check-apple-model"
 "$check_dir/check-apple-model"

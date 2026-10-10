@@ -51,6 +51,7 @@
 		A15000000000000000000102 /* AppleLocalVoiceService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A15000000000000000000002 /* AppleLocalVoiceService.swift */; };
 		A15000000000000000000103 /* AppleExpenseInterpreter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A15000000000000000000003 /* AppleExpenseInterpreter.swift */; };
 		A15000000000000000000104 /* LocalVoiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A15000000000000000000004 /* LocalVoiceTests.swift */; };
+		A16000000000000000000104 /* LocalVoiceDiagnostics.swift in Sources */ = {isa = PBXBuildFile; fileRef = A16000000000000000000004 /* LocalVoiceDiagnostics.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -121,6 +122,7 @@
 		A15000000000000000000002 /* AppleLocalVoiceService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleLocalVoiceService.swift; sourceTree = "<group>"; };
 		A15000000000000000000003 /* AppleExpenseInterpreter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleExpenseInterpreter.swift; sourceTree = "<group>"; };
 		A15000000000000000000004 /* LocalVoiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalVoiceTests.swift; sourceTree = "<group>"; };
+		A16000000000000000000004 /* LocalVoiceDiagnostics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalVoiceDiagnostics.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -221,6 +223,7 @@
 				A15000000000000000000001 /* VoiceSessionService.swift */,
 				A15000000000000000000002 /* AppleLocalVoiceService.swift */,
 				A15000000000000000000003 /* AppleExpenseInterpreter.swift */,
+				A16000000000000000000004 /* LocalVoiceDiagnostics.swift */,
 				9B9EE9E2C221463465E8CF5D /* RealtimeVoiceService.swift */,
 				518A727AF36446A9804ED8FD /* BackupService.swift */,
 			);
@@ -481,6 +484,7 @@
 				A15000000000000000000101 /* VoiceSessionService.swift in Sources */,
 				A15000000000000000000102 /* AppleLocalVoiceService.swift in Sources */,
 				A15000000000000000000103 /* AppleExpenseInterpreter.swift in Sources */,
+				A16000000000000000000104 /* LocalVoiceDiagnostics.swift in Sources */,
 				4DFA6DE22598D7AD0137D6F9 /* RealtimeVoiceService.swift in Sources */,
 				8101D7BEB7394DE59ADE3CD3 /* BackupService.swift in Sources */,
 				C20000000000000000000001 /* CaptureLaunchRouter.swift in Sources */,
@@ -536,7 +540,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 55;
+				CURRENT_PROJECT_VERSION = 56;
 				DEVELOPMENT_TEAM = L8534DYY8S;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Maeuse/Info.plist;
@@ -563,7 +567,7 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 55;
+				CURRENT_PROJECT_VERSION = 56;
 				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundlePackageType = BNDL;
@@ -589,7 +593,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 55;
+				CURRENT_PROJECT_VERSION = 56;
 				DEVELOPMENT_TEAM = L8534DYY8S;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Maeuse/Info.plist;
@@ -736,7 +740,7 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 55;
+				CURRENT_PROJECT_VERSION = 56;
 				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundlePackageType = BNDL;
@@ -762,7 +766,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 55;
+				CURRENT_PROJECT_VERSION = 56;
 				DEVELOPMENT_TEAM = L8534DYY8S;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = MaeuseControls/Info.plist;
@@ -789,7 +793,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 55;
+				CURRENT_PROJECT_VERSION = 56;
 				DEVELOPMENT_TEAM = L8534DYY8S;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = MaeuseControls/Info.plist;

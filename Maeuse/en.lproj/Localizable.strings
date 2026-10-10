@@ -228,3 +228,11 @@
 "VoiceUnassignedRatio" = "%@/%@ – assignment needed";
 "VoiceUserFixedPending" = "I pay €%@ – total needed";
 "VoiceUnassignedFixed" = "€%@ – assignment needed";
+
+"LocalModelTimeout" = "Local processing took too long. Your drafts remain available. The diagnosis shows the last processing step.";
+"LocalModelBlocked" = "Apple declined this request. Your drafts remain available. Try a different wording.";
+"LocalModelBusy" = "Apple’s model is currently busy. Your drafts remain available. Try again.";
+"LocalModelInvalidPlan" = "The local response could not be applied safely. Your drafts remain available. The diagnosis shows the reason.";
+"LocalDiagnosis" = "Local diagnosis";
+"LocalShareDiagnosis" = "Share diagnosis";
+"LocalDiagnosisPrivacy" = "Contains technical information only: no transcript, amounts or audio. Shared only when you choose to.";

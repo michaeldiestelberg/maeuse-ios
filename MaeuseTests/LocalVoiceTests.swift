@@ -1,6 +1,7 @@
 import XCTest
 import AVFoundation
 import UIKit
+import FoundationModels
 @testable import Maeuse
 
 @MainActor
@@ -757,6 +758,154 @@ final class LocalVoiceTests: XCTestCase {
             XCTAssertFalse(result.expenses[0].draft.isReadyForSaving)
             XCTAssertTrue(result.expenses[0].missingFields.contains(.split))
         }
+    }
+
+    @available(iOS 26.0, *)
+    func testPriceWitnessCannotReuseRatioOrInventCurrency() {
+        let text = "Charging 73 €; split 7030"
+        XCTAssertNil(AppleExpenseInterpreter.validatedMoneyQuote(.init(priceText: "7030", currencyText: "€"), in: text))
+        XCTAssertNil(AppleExpenseInterpreter.validatedMoneyQuote(.init(priceText: "7030 €", currencyText: "€"), in: text))
+        XCTAssertEqual(AppleExpenseInterpreter.validatedMoneyQuote(.init(priceText: "73 €", currencyText: "€"), in: text), "73 €")
+        XCTAssertNil(AppleExpenseInterpreter.purchaseQuote("30 €", in: "7030 €"))
+        XCTAssertNil(AppleExpenseInterpreter.purchaseQuote("40 €", in: "82,40 €"))
+        XCTAssertEqual(AppleExpenseInterpreter.literalMoney("7030")?.euros, 7030)
+        XCTAssertEqual(AppleExpenseInterpreter.literalMoney("7030")?.cents, 0)
+        XCTAssertEqual(AppleExpenseInterpreter.literalMoney("82,40")?.euros, 82)
+        XCTAssertEqual(AppleExpenseInterpreter.literalMoney("82,40")?.cents, 40)
+        XCTAssertNil(AppleExpenseInterpreter.literalMoney("7.030"), "Ambiguous grouping is never silently a decimal amount")
+        XCTAssertNil(AppleExpenseInterpreter.literalMoney("-73"))
+        XCTAssertEqual(VoiceWorkspaceDomain.literalNumericTokens(in: "73 €; 7030 teilen."), ["73", "7030"])
+        XCTAssertEqual(VoiceWorkspaceDomain.literalNumericTokens(in: "82,40 € und 19.80 Euro"), ["82,40", "19.80"])
+        XCTAssertEqual(VoiceWorkspaceDomain.literalNumericTokens(in: "-70 zu 30"), ["-70", "30"])
+    }
+
+    @available(iOS 26.0, *)
+    func testUnclassifiedConcreteShareCannotBecomeEqualDefault() throws {
+        let share = AppleExpenseInterpreter.unresolvedShare("7030 teilen", recognizedIntent: true)
+        XCTAssertEqual(share.kind, .unresolved)
+        let row = try AppleExpenseInterpreter.applyPlan(.init(actions: [.add(.init(title: "Charging", amount: .init(euros: 73, cents: 0), date: .relativeDays(-3), share: share))]), to: [], transcript: "", today: "2026-10-10", timeZone: .current).expenses[0]
+        XCTAssertEqual(row.amount, 73); XCTAssertEqual(row.dateISO, "2026-10-07")
+        XCTAssertNotEqual(row.splitValue, 50); XCTAssertFalse(row.draft.isReadyForSaving)
+        let absent = AppleExpenseInterpreter.unresolvedShare("not sure about splitting", recognizedIntent: false)
+        XCTAssertEqual(absent.kind, .notMentioned)
+    }
+
+    @available(iOS 26.0, *)
+    func testUnsupportedExplicitPriceCorrectionRetainsOldAmountButBlocksSave() throws {
+        let result = try AppleExpenseInterpreter.applyPlan(.init(actions: [.edit(.init(expenseNumber: 1, title: nil, amount: .init(euros: 0, cents: 0), date: .notMentioned, share: .notMentioned))]), to: [draft("coffee", "Coffee", 4).payload], transcript: "", today: "2026-10-10", timeZone: .current)
+        XCTAssertEqual(result.expenses[0].amount, 4)
+        XCTAssertTrue(result.expenses[0].missingFields.contains(.amount))
+        XCTAssertFalse(result.expenses[0].draft.isReadyForSaving)
+    }
+
+    @available(iOS 26.0, *)
+    func testLiteralRatioWitnessCannotTreatPricesAsShares() {
+        XCTAssertTrue(AppleExpenseInterpreter.hasLiteralRatioWitness("7030 teilen"))
+        XCTAssertTrue(AppleExpenseInterpreter.hasLiteralRatioWitness("60 zu 40"))
+        XCTAssertFalse(AppleExpenseInterpreter.hasLiteralRatioWitness("milk 1.90 euros"))
+        XCTAssertFalse(AppleExpenseInterpreter.hasLiteralRatioWitness("73 €"))
+        XCTAssertFalse(AppleExpenseInterpreter.hasLiteralRatioWitness("991"))
+    }
+
+    @available(iOS 26.0, *)
+    func testDiagnosisExcludesProviderDescriptionsAndPrivateFinancialData() {
+        var now = 10.0
+        let trace = LocalVoiceTrace(language: "de-DE", modelVariant: "test-variant", availability: "available", referenceDate: "2026-10-10", clock: { now })
+        trace.begin("LocalMoneySource"); now = 10.250; trace.endStep()
+        let error = NSError(domain: "com.apple.FoundationModels", code: 1032,
+            userInfo: [NSLocalizedDescriptionKey: "PRIVATE_TRANSCRIPT €73 Tesla"])
+        trace.failed(LocalVoiceIssue.classify(error))
+        XCTAssertEqual(trace.snapshot.elapsedMilliseconds, 250)
+        XCTAssertTrue(trace.snapshot.exportText.contains("1032"))
+        XCTAssertTrue(trace.snapshot.exportText.contains("test-variant"))
+        XCTAssertFalse(trace.snapshot.exportText.contains("PRIVATE_TRANSCRIPT"))
+        XCTAssertFalse(trace.snapshot.exportText.contains("Tesla"))
+        XCTAssertFalse(trace.snapshot.exportText.contains("€73"))
+        XCTAssertTrue(trace.snapshot.isTerminal)
+    }
+
+    @available(iOS 27.0, *)
+    func testSDKTypedFailuresHaveSpecificCategoriesWithoutPrivateDescriptions() {
+        let privateText = "PRIVATE €73 Tesla"
+        let errors: [(Error, LocalVoiceIssue.Category)] = [
+            (LanguageModelError.timeout(.init(debugDescription: privateText)), .timeout),
+            (LanguageModelError.guardrailViolation(.init(debugDescription: privateText)), .guardrail),
+            (LanguageModelError.rateLimited(.init(resetDate: nil, debugDescription: privateText)), .rateLimited),
+            (LanguageModelError.contextSizeExceeded(.init(contextSize: 4096, tokenCount: 5000, debugDescription: privateText)), .context),
+            (LanguageModelSession.Error.concurrentRequests, .busy)
+        ]
+        for (error, expected) in errors {
+            let issue = LocalVoiceIssue.classify(error)
+            XCTAssertEqual(issue.category, expected)
+            let trace = LocalVoiceTrace(language: "de-DE", modelVariant: "test", availability: "available", referenceDate: "2026-10-10")
+            trace.failed(issue)
+            XCTAssertFalse(trace.snapshot.exportText.contains(privateText))
+        }
+    }
+
+    func testLastCompletedDiagnosisSurvivesAutomaticNextTurnAndClearsOnClose() {
+        let vm = VoiceModeViewModel(); vm.open(provider: .appleLocal)
+        let trace = LocalVoiceTrace(language: "de-DE", modelVariant: "test", availability: "available", referenceDate: "2026-10-10")
+        trace.completed(); vm.handleVoiceEvent(.localDiagnostic(trace.snapshot))
+        let previousID = trace.snapshot.turnID
+        let next = LocalVoiceTrace(language: "de-DE", modelVariant: "test", availability: "available", referenceDate: "2026-10-10")
+        vm.handleVoiceEvent(.localDiagnostic(next.snapshot))
+        XCTAssertEqual(vm.displayedLocalDiagnostic?.turnID, previousID)
+        vm.cancelSession(); XCTAssertNil(vm.localDiagnostic); XCTAssertNil(vm.completedLocalDiagnostic)
+    }
+
+    func testProductionProcessingBoundaryTimeoutPreservesDraftAndLastStage() async {
+        let vm = VoiceModeViewModel(); vm.open(provider: .appleLocal); vm.suspendLocalRecording()
+        vm.drafts = [draft("existing", "Existing", 12)]
+        let failed = expectation(description: "production processing deadline")
+        let service = AppleLocalVoiceService(processingTimeout: .milliseconds(20)) { _, _, trace in
+            trace?.begin("LocalMoneySource")
+            try await Task.sleep(for: .seconds(2))
+            return VoiceWorkspaceSyncPayload(userUnderstanding: "", clarificationQuestion: "", expenses: [], changedExpenseIDs: [], removedExpenseIDs: [])
+        }
+        service.onEvent = { event in
+            vm.handleVoiceEvent(event)
+            if case .error = event { failed.fulfill() }
+        }
+        service.processRecognizedText("PRIVATE_TRANSCRIPT", workspaceContext: vm.resumeWorkspaceContext(), completion: "quiet-endpoint/recognition-fallback")
+        await fulfillment(of: [failed], timeout: 2)
+        XCTAssertEqual(vm.phase, .error); XCTAssertEqual(vm.drafts.map(\.id), ["existing"])
+        XCTAssertEqual(vm.errorMessage, loc("LocalModelTimeout"))
+        XCTAssertEqual(vm.displayedLocalDiagnostic?.stage, "LocalMoneySource")
+        XCTAssertEqual(vm.displayedLocalDiagnostic?.issue?.category, .timeout)
+        XCTAssertEqual(vm.displayedLocalDiagnostic?.captureEnd, "quiet-endpoint/recognition-fallback")
+        XCTAssertFalse(vm.displayedLocalDiagnostic?.exportText.contains("PRIVATE_TRANSCRIPT") ?? true)
+        service.disconnect(); vm.cancelSession()
+    }
+
+    func testProductionProcessingBoundaryRecoveryAndCancellationIgnoreLateResult() async {
+        var calls = 0
+        var published: [Double] = []
+        let completed = expectation(description: "three recovered production turns"); completed.expectedFulfillmentCount = 3
+        let service = AppleLocalVoiceService { _, _, _ in
+            calls += 1
+            if calls == 1 {
+                // Deliberately non-cooperative processor verifies identity checking too.
+                try? await Task.sleep(for: .milliseconds(60))
+            }
+            return VoiceWorkspaceSyncPayload(userUnderstanding: "", clarificationQuestion: "", expenses: [self.draft("same", "Coffee", Double(calls)).payload], changedExpenseIDs: ["same"], removedExpenseIDs: [])
+        }
+        service.onEvent = { event in
+            if case .workspaceSync(let value) = event { published.append(value.expenses[0].amount!) }
+            if case .localTurnReady = event { completed.fulfill() }
+        }
+        service.processRecognizedText("stale", workspaceContext: nil)
+        for _ in 0..<10 { await Task.yield() }
+        service.disconnect()
+        for index in 0..<3 {
+            if index > 0 { service.disconnect() }
+            service.processRecognizedText("next", workspaceContext: nil)
+            for _ in 0..<30 { await Task.yield() }
+        }
+        await fulfillment(of: [completed], timeout: 2)
+        XCTAssertEqual(published.count, 3)
+        XCTAssertFalse(published.contains(1), "Canceled old processing must never publish")
+        service.disconnect()
     }
 
     private func draft(_ id: String, _ title: String, _ amount: Double) -> VoiceExpenseDraft {

@@ -44,17 +44,22 @@ private struct LocalWorkspaceIntent {
 @Generable
 private struct LocalSourcePurchase {
     @Guide(description: "Short purchase/merchant name, without price/date/share.") var title: String
-    @Guide(description: "Exact quote of the TOTAL purchase price; empty if missing. Personal contributions are not total prices.") var priceText: String
+    @Guide(description: "Exact quote of the total purchase price, including currency and original number words; empty if missing. No personal contribution or ratio.") var priceText: String
 }
 @available(iOS 26.0, *) @Generable private struct LocalSourcePlan {
     @Guide(description: "Only explicitly mentioned new purchases, in spoken order.", .count(0...10)) var purchases: [LocalSourcePurchase]
+}
+@available(iOS 26.0, *) @Generable struct LocalMoneySource {
+    @Guide(description: "Copy source bytes exactly: digits stay digits, punctuation stays unchanged, number words stay words. Continuous total purchase price quote with currency; empty if absent.") var priceText: String
+    @Guide(description: "Exact currency word/symbol attached to that copied purchase total; empty if absent.") var currencyText: String
 }
 @available(iOS 26.0, *) @Generable private struct LocalDatePresence {
     @Guide(description: "True ONLY for an explicitly stated calendar date or relative-day expression. Prices/numbers and purchase names are not dates.") var hasDate: Bool
 }
 @available(iOS 26.0, *) @Generable private struct LocalSharePresence {
+    @Guide(description: "Minimal exact continuous source clause for the personal contribution or requested sharing ratio. Empty if absent. Preserve words and digits; exclude dates and purchase-total placeholders.") var quote: String
     @Generable enum Kind { case absent, contribution, ratio }
-    @Guide(description: "absent for purchase prices alone or vague uncertainty; contribution for explicitly personal money/percentage; ratio for a concrete requested numeric sharing ratio, including concatenated digits without person assignment.") var kind: Kind
+    @Guide(description: "absent if no concrete numeric share is stated; contribution for personal money/percentage; ratio for two sharing values including concatenated digits.") var kind: Kind
 }
 @available(iOS 26.0, *) @Generable private struct LocalDateSource {
     var expenseNumber: Int
@@ -80,7 +85,11 @@ private struct LocalSourcePurchase {
     @Generable enum Kind { case relative, calendar, unclear }
     var kind: Kind
 }
-@available(iOS 26.0, *) @Generable private struct LocalOffsetPlan { var days: Int }
+@available(iOS 26.0, *) @Generable private struct LocalOffsetPlan {
+    @Guide(description: "Number of calendar days between today and the stated day, ignoring direction.", .range(0...36_600)) var distance: Int
+    @Generable enum Direction { case past, today, future }
+    var direction: Direction
+}
 @available(iOS 26.0, *) @Generable private struct LocalCalendarPlan { var year: Int; var month: Int; var day: Int }
 @available(iOS 26.0, *) @Generable private struct LocalUnitPlan {
     @Generable enum Unit { case none, euros, percent, ratio }
@@ -107,9 +116,7 @@ private struct LocalSourcePurchase {
 @available(iOS 26.0, *) @Generable private struct LocalQuotePlan {
     @Guide(description: "Minimal exact substring satisfying the requested extraction. Exclude unrelated values/clauses. Empty if absent. Never copy the whole input unless it contains only the requested fragment.") var fragment: String
 }
-@available(iOS 26.0, *) @Generable private struct LocalNumericTokensPlan {
-    @Guide(description: "Copy only literal numeric tokens exactly as written, without splitting a concatenated digit token or inventing numbers. Empty for numbers written only as words.", .count(0...4)) var tokens: [String]
-}
+
 
 @available(iOS 26.0, *)
 struct LocalTurnPlan {
@@ -193,7 +200,11 @@ enum AppleExpenseInterpreter {
         let last_request: String?
     }
 
-    static func interpret(_ text: String, context: String?) async throws -> VoiceWorkspaceSyncPayload {
+    static func interpret(_ text: String, context: String?, trace: LocalVoiceTrace? = nil) async throws -> VoiceWorkspaceSyncPayload {
+        try await LocalVoiceTraceScope.$current.withValue(trace) { try await interpretTurn(text, context: context) }
+    }
+
+    private static func interpretTurn(_ text: String, context: String?) async throws -> VoiceWorkspaceSyncPayload {
         guard LocalVoiceAvailability.current == .available else {
             throw LocalVoiceError(message: LocalVoiceAvailability.current.message)
         }
@@ -204,17 +215,15 @@ enum AppleExpenseInterpreter {
         let inventory = rows.enumerated().map { index, row in "\(index + 1): \(row.title) [needs \((row.missing_fields ?? []).map(\.rawValue).joined(separator: ","))]" }.joined(separator: "\n")
         var intent = LocalWorkspaceIntent(action: .add, expenseNumber: 0)
         if !rows.isEmpty {
-            let router = LanguageModelSession(model: SystemLanguageModel.default, instructions: """
-                Classify the current expense request: add for a new purchase; totalPrice for its total purchase cost; share for a person's contribution/percentage/ratio; date for changing date; multiple for several changed fields; rename for changing title; remove for deletion; clarify for an unclear request. A person paying one euro is share, not totalPrice.
-                Existing expenses are numbered. Return the ONE matching number for every edit/removal action. Zero only means unclear target or add.
-                """)
-            intent = try await router.respond(to: """
+            intent = try await generate(LocalWorkspaceIntent.self, quote: """
                 Inventory: \(inventory)
                 Pending question: \(state?.clarification_question ?? "")
                 Previous request: \(state?.last_request ?? "")
                 Latest request: \(text)
-                """, generating: LocalWorkspaceIntent.self,
-                options: GenerationOptions(samplingMode: .greedy, maximumResponseTokens: 150)).content
+                """, instructions: """
+                Classify the current expense request: add for a new purchase; totalPrice for its total purchase cost; share for a person's contribution/percentage/ratio; date for changing date; multiple for several changed fields; rename for changing title; remove for deletion; clarify for an unclear request. A person paying one euro is share, not totalPrice.
+                Existing expenses are numbered. Return the ONE matching number for every edit/removal action. Zero only means unclear target or add.
+                """)
             try Task.checkCancellation()
         }
         #if MODEL_EVALUATION
@@ -228,37 +237,54 @@ enum AppleExpenseInterpreter {
         switch intent.action {
         case .add:
             let source = try await generate(LocalSourcePlan.self, quote: text, instructions: """
-                Extract the new purchases into a source plan. Copy each total price EXACTLY from this request, without interpreting numbers. Empty price means absent. Do not interpret dates or shares in this step. Personal contributions are not separate purchases or total prices. Add partial purchases even without price. Do not add old expenses or default shares.
+                Extract the new purchases in spoken order. Copy each total purchase price EXACTLY with original number words and currency; empty if absent. Dates and personal contributions are not purchases or total prices. Include partial purchases. Do not add old expenses or defaults.
                 Reference date \(today), zone \(timeZone.identifier), locale \(LanguageManager.shared.activeLocale.identifier). Speaker is I/ich; partner is the other person; no names/order are known.
                 """)
             let names = source.purchases.enumerated().map { "\($0.offset + 1): \($0.element.title)" }.joined(separator: "\n")
             var priceQuotes: [String] = []
+
             var shareContext = text
             for purchase in source.purchases {
-                let price = try await repairQuote(purchase.priceText, in: text, field: "total price", title: purchase.title)
+                var price = purchaseQuote(purchase.priceText, in: text) ?? ""
+                if price.isEmpty && !purchase.priceText.isEmpty {
+                    price = try await extractGroundedPrice(text, title: purchase.title)
+                }
                 priceQuotes.append(price)
                 if !price.isEmpty, let range = shareContext.range(of: price, options: .caseInsensitive) {
                     shareContext.replaceSubrange(range, with: "[purchase total]")
                 }
             }
             let hasDate = try await generate(LocalDatePresence.self, quote: text, instructions: "Decide only whether an explicit date expression occurs in the request. Relative days count. Prices never count. Do not compute a date.").hasDate
-            let hasShare = try await generate(LocalSharePresence.self, quote: shareContext, instructions: "Classify the explicitly requested split. Purchase totals were replaced with [purchase total]; that placeholder is never a personal contribution. No other concrete amount/percentage/ratio or vague uncertainty means absent. Explicit personal contributions are contribution. Requested numeric sharing ratios are ratio, including one uninterrupted digit token.").kind != .absent
+            let shareEvidence = try await generate(LocalSharePresence.self, quote: shareContext,
+                instructions: "Extract only the requested split or personal contribution as an exact quote. Ignore purchase-total placeholders and dates. Classify the quote; absent/vague splitting has no concrete value. Never invent numbers or people.")
+            let shareQuote = groundedQuote(shareEvidence.quote, in: shareContext).flatMap { groundedQuote($0, in: text) } ?? ""
+            let hasResidualContribution = priceQuotes.allSatisfy { !$0.isEmpty } &&
+                currencyEvidence(in: shareQuote) != nil && VoiceWorkspaceDomain.literalNumericTokens(in: shareQuote).count == 1
+            let hasShare = shareEvidence.kind != .absent || hasLiteralRatioWitness(shareQuote) || hasResidualContribution
             let dated = hasDate ? try await generate(LocalDateSources.self, quote: "Purchase context: \(names)\nLATEST REQUEST: \(text)",
-                instructions: "Extract only explicitly stated date expressions as exact source quotes. Apply a shared date to every affected purchase number. No date means an empty updates array. Monetary amounts and purchase numbers are not dates. Do not calculate dates.") : LocalDateSources(updates: [])
-            let shared = hasShare ? try await generate(LocalShareSources.self, quote: "Purchase context: \(names)\nLATEST REQUEST: \(text)",
-                instructions: "Extract only explicitly stated concrete contributions/ratios as exact source quotes including named persons. Use purchase numbers only to associate entries. Total costs are not contributions. Missing/vague splits mean an empty updates array; never generate defaults or infer people from order.") : LocalShareSources(updates: [])
+                instructions: LanguageManager.shared.activeLanguageCode == "de" ? "Kopiere ausschließlich ausdrücklich genannte Datumsformulierungen exakt, als zusammenhängendes Zitat mit originalen Zahlwörtern. Nicht umformulieren, nicht rechnen. Ordne jedes Zitat den betroffenen Kaufnummern zu; ein gemeinsames Datum gilt für alle genannten Käufe. Keine Preise oder Aufteilungen kopieren." : "Copy only explicit date expressions as exact continuous quotes with original number words. Do not paraphrase or calculate. Apply shared dates to every affected purchase number. Never copy monetary values or shares.") : LocalDateSources(updates: [])
+            let shared: LocalShareSources
+            if hasShare && source.purchases.count == 1 && !shareQuote.isEmpty {
+                shared = .init(updates: [.init(expenseNumber: 1, shareText: shareQuote)])
+            } else { shared = hasShare ? try await generate(LocalShareSources.self, quote: "Purchase context: \(names)\nLATEST REQUEST: \(text)",
+                instructions: LanguageManager.shared.activeLanguageCode == "de" ? "Kopiere die ausdrücklich genannten persönlichen Anteile oder Aufteilungsverhältnisse wortgetreu als minimale zusammenhängende Zitate, inklusive zugehöriger Personenwörter. Originale Wortreihenfolge und Zahlwörter beibehalten. Ordne sie den Kaufnummern zu. Kaufpreise sind keine Anteile. Keine Standardwerte und keine Zuordnung aus Zahlenreihenfolge erfinden." : "Copy only concrete personal contributions/ratios as exact continuous source quotes including named persons. Keep original word order and number words. Associate by purchase number. Total costs are not contributions. No default shares or guessed people.") : LocalShareSources(updates: [])
+            }
             guard dated.updates.allSatisfy({ source.purchases.indices.contains($0.expenseNumber - 1) }),
-                  shared.updates.allSatisfy({ source.purchases.indices.contains($0.expenseNumber - 1) }),
-                  Set(dated.updates.map(\.expenseNumber)).count == dated.updates.count,
-                  Set(shared.updates.map(\.expenseNumber)).count == shared.updates.count else { throw invalidOutput }
+                  shared.updates.allSatisfy({ source.purchases.indices.contains($0.expenseNumber - 1) }) else {
+                throw LocalVoiceFailure(issue: .init(.invalidPlan, reason: "source-target-out-of-range"))
+            }
+            guard Set(dated.updates.map(\.expenseNumber)).count == dated.updates.count,
+                  Set(shared.updates.map(\.expenseNumber)).count == shared.updates.count else {
+                throw LocalVoiceFailure(issue: .init(.invalidPlan, reason: "duplicate-source-field"))
+            }
             var actions: [LocalPlanAction] = []
             var dateCache: [String: LocalPlanDate] = [:]
             for (index, purchase) in source.purchases.enumerated() {
                 let priceQuote = priceQuotes[index]
                 let dateSource = dated.updates.first(where: { $0.expenseNumber == index + 1 })
                 let shareSource = shared.updates.first(where: { $0.expenseNumber == index + 1 })
-                let dateQuote = try await repairQuote(dateSource?.dateText ?? "", in: text, field: "date", title: purchase.title)
-                let shareQuote = try await repairQuote(shareSource?.shareText ?? "", in: text, field: "concrete contribution or ratio", title: purchase.title)
+                let dateQuote = try await repairQuote(dateSource?.dateText ?? "", in: text, field: "date", title: purchase.title, excluding: priceQuotes + shared.updates.map(\.shareText))
+                let shareQuote = try await repairQuote(shareSource?.shareText ?? "", in: text, field: "concrete contribution or ratio", title: purchase.title, excluding: priceQuotes)
                 let amount = try await interpretMoney(priceQuote)
                 let date: LocalPlanDate
                 if dateQuote.isEmpty && (dateSource != nil || (hasDate && dated.updates.isEmpty)) { date = .unclear }
@@ -267,7 +293,7 @@ enum AppleExpenseInterpreter {
                 let share: LocalPlanShare
                 if shareQuote.isEmpty && (shareSource != nil || (hasShare && shared.updates.isEmpty)) {
                     share = .init(kind: .unresolved, value: 0, secondValue: 0, intent: shareSource?.shareText ?? text)
-                } else { share = try await interpretShare(shareQuote, context: text) }
+                } else { share = try await interpretShare(shareQuote, context: text, recognizedIntent: hasShare, recognizedRatio: shareEvidence.kind == .ratio) }
                 actions.append(.add(.init(title: purchase.title, amount: amount, date: date, share: share)))
             }
             plan = .init(actions: actions)
@@ -299,19 +325,33 @@ enum AppleExpenseInterpreter {
         #if MODEL_EVALUATION
         print("APP PLAN:", plan)
         #endif
-        return try applyPlan(plan, to: rows.map(\.payload), transcript: text, today: today, timeZone: timeZone)
+        LocalVoiceTraceScope.current?.begin("validatePlan")
+        let result = try applyPlan(plan, to: rows.map(\.payload), transcript: text, today: today, timeZone: timeZone)
+        LocalVoiceTraceScope.current?.endStep()
+        return result
     }
 
     private static func generate<T: Generable>(_ type: T.Type, quote: String, instructions: String) async throws -> T {
         try Task.checkCancellation()
-        let session = LanguageModelSession(model: SystemLanguageModel.default, instructions: instructions)
-        let response = try await session.respond(to: quote, generating: type,
-            options: GenerationOptions(samplingMode: .greedy, maximumResponseTokens: 800))
-        try Task.checkCancellation()
-        #if MODEL_EVALUATION
-        print("RAW", String(describing: type), "INPUT:", quote, "OUTPUT:", response.content.generatedContent.jsonString)
-        #endif
-        return response.content
+        let trace = LocalVoiceTraceScope.current
+        trace?.begin(String(describing: type))
+        do {
+            let locale = LanguageManager.shared.activeLanguageCode == "de" ? "de_DE" : "en_US"
+            let session = LanguageModelSession(model: SystemLanguageModel.default, instructions: "The person's locale is \(locale).\n\(instructions)")
+            let response = try await session.respond(to: quote, generating: type,
+                options: GenerationOptions(samplingMode: .greedy, maximumResponseTokens: 800))
+            try Task.checkCancellation()
+            trace?.endStep()
+            #if MODEL_EVALUATION
+            print("RAW", String(describing: type), "INPUT:", quote, "OUTPUT:", response.content.generatedContent.jsonString)
+            #endif
+            return response.content
+        } catch {
+            try Task.checkCancellation()
+            let issue = LocalVoiceIssue.classify(error)
+            trace?.record(issue)
+            throw LocalVoiceFailure(issue: issue)
+        }
     }
 
     private static func groundedQuote(_ quote: String, in text: String) -> String? {
@@ -320,18 +360,155 @@ enum AppleExpenseInterpreter {
         return trimmed
     }
 
-    private static func repairQuote(_ quote: String, in text: String, field: String, title: String) async throws -> String {
+    private static func repairQuote(_ quote: String, in text: String, field: String, title: String, excluding: [String] = []) async throws -> String {
         if quote.isEmpty { return "" }
         if let grounded = groundedQuote(quote, in: text) { return grounded }
-        let instruction = field.contains("contribution") && LanguageManager.shared.activeLanguageCode == "de"
-            ? "Kopiere den ausdrücklich genannten persönlichen Anteil oder das Aufteilungsverhältnis für \(title) wortgetreu aus dem Text, einschließlich der zugehörigen Personenwörter. Der Kaufpreis ist kein persönlicher Anteil. Behalte die originale Wortreihenfolge bei. Nicht rechnen. Falls kein Anteil genannt wird, leere Zeichenfolge."
-            : "Copy a continuous exact substring of the stated \(field) for purchase \(title). Keep original word order. If absent, return an empty string, never a placeholder. Do not interpret numbers or add new text."
-        let repaired = try await generate(LocalQuotePlan.self, quote: text, instructions: instruction).fragment
-        return groundedQuote(repaired, in: text) ?? ""
+        if field.contains("date") || field.contains("contribution") {
+            var isolated = text
+            for fragment in excluding where !fragment.isEmpty {
+                isolated = isolated.replacingOccurrences(of: fragment, with: "[other field]", options: .caseInsensitive)
+            }
+            let instruction: String
+            if field.contains("contribution") {
+                instruction = LanguageManager.shared.activeLanguageCode == "de"
+                    ? "Kopiere ausschließlich den persönlichen Anteil oder das Aufteilungsverhältnis wortgetreu aus dem Text, einschließlich der zugehörigen Personenwörter. Minimales zusammenhängendes Zitat mit originaler Wortreihenfolge und Zahlwörtern. Platzhalter sind keine Anteile. Nicht rechnen. Falls kein Anteil genannt ist, leere Zeichenfolge."
+                    : "Copy only the minimal exact continuous personal contribution/ratio quote, including associated person words. Preserve word order and number words. Placeholders are not contributions. No calculation. Empty if absent."
+            } else { instruction = LanguageManager.shared.activeLanguageCode == "de"
+                ? "Kopiere ausschließlich die Datumsformulierung wortgetreu aus dem Text. Minimales zusammenhängendes Zitat, originale Zahlwörter. Nicht umformulieren oder rechnen. Platzhalter sind keine Datumsangaben. Wenn kein Datum enthalten ist, leere Zeichenfolge."
+                : "Copy only the minimal exact continuous date phrase from this text. Keep original number words. Never paraphrase or calculate. Placeholders are not dates. Empty if absent."
+            }
+            let repaired = try await generate(LocalQuotePlan.self, quote: isolated, instructions: instruction).fragment
+            if let grounded = groundedQuote(repaired, in: isolated), groundedQuote(grounded, in: text) != nil { return grounded }
+        }
+        LocalVoiceTraceScope.current?.record(.init(.invalidPlan, reason: field.contains("date") ? "unverified-date-source" : field.contains("contribution") ? "unverified-share-source" : "unverified-price-source"))
+        return ""
+    }
+
+    private static func extractGroundedPrice(_ text: String, title: String) async throws -> String {
+        // Runtime guided choices contain only actual numeric/currency source spans.
+        // The model associates a purchase with a quote; it cannot rewrite the number.
+        let candidates = Array(Set(VoiceWorkspaceDomain.literalNumericTokens(in: text)
+            .compactMap { purchaseQuote($0, in: text) })).sorted()
+        if !candidates.isEmpty && candidates.count <= 32 {
+            let trace = LocalVoiceTraceScope.current
+            trace?.begin("LocalGroundedPrice")
+            do {
+                let schema = try GenerationSchema(root: DynamicGenerationSchema(name: "GroundedPrice", properties: [
+                    .init(name: "quote", description: "Select the TOTAL purchase price for the named purchase, never a personal contribution. Empty if absent.",
+                          schema: DynamicGenerationSchema(name: "PriceQuote", anyOf: [""] + candidates))
+                ]), dependencies: [])
+                let locale = LanguageManager.shared.activeLanguageCode == "de" ? "de_DE" : "en_US"
+                let session = LanguageModelSession(model: SystemLanguageModel.default,
+                    instructions: "The person's locale is \(locale). Select only the source price belonging to the named purchase. Do not calculate or invent values.")
+                let response = try await session.respond(to: "Purchase: \(title)\nRequest: \(text)", schema: schema,
+                    options: GenerationOptions(samplingMode: .greedy, maximumResponseTokens: 100))
+                try Task.checkCancellation()
+                let quote = try response.content.value(String.self, forProperty: "quote")
+                trace?.endStep()
+                guard candidates.contains(quote) || quote.isEmpty else { throw invalidOutput }
+                #if MODEL_EVALUATION
+                print("RAW LocalGroundedPrice INPUT:", text, "PURCHASE:", title, "OUTPUT:", quote)
+                #endif
+                return quote
+            } catch {
+                try Task.checkCancellation()
+                let issue = LocalVoiceIssue.classify(error)
+                trace?.record(issue)
+                throw LocalVoiceFailure(issue: issue)
+            }
+        }
+        let source = try await extractMoneySource(text, title: title)
+        return validatedMoneyQuote(source, in: text) ?? ""
+    }
+
+    private static func extractMoneySource(_ text: String, title: String) async throws -> LocalMoneySource {
+        let instructions = LanguageManager.shared.activeLanguageCode == "de"
+            ? "Extrahiere ausschließlich den gesamten Kaufpreis für \(title), nicht den persönlichen Anteil oder die Aufteilung. Kopiere das minimale zusammenhängende Preiszitat samt Währung exakt aus der Anfrage. Zahlwörter unverändert. Eine Aufteilungszahl ist kein Preis. Fehlende Angaben bleiben leer. Nicht rechnen."
+            : "Extract only the total purchase price for \(title), excluding personal contributions and sharing ratios. Copy the minimal exact continuous price quotation with its currency. Preserve number words. Missing fields are empty. Do not calculate."
+        return try await generate(LocalMoneySource.self, quote: text, instructions: instructions)
+    }
+
+    static func validatedMoneyQuote(_ source: LocalMoneySource, in text: String) -> String? {
+        guard let quote = purchaseQuote(source.priceText, in: text),
+              isCurrencyEvidence(source.currencyText, in: quote) else {
+            LocalVoiceTraceScope.current?.record(.init(.invalidPlan, reason: "unverified-price-currency")); return nil
+        }
+        return quote
+    }
+
+    static func purchaseQuote(_ fragment: String, in source: String) -> String? {
+        guard let quote = groundedQuote(fragment, in: source),
+              let sourceRange = source.range(of: quote, options: .caseInsensitive) else { return nil }
+        // A copied numeric fragment must not begin/end inside another numeric token.
+        let numericBoundary: (Character) -> Bool = { $0.isASCII && ($0.isNumber || $0 == "." || $0 == ",") }
+        if let first = quote.first, numericBoundary(first), sourceRange.lowerBound > source.startIndex,
+           numericBoundary(source[source.index(before: sourceRange.lowerBound)]) { return nil }
+        if let last = quote.last, numericBoundary(last), sourceRange.upperBound < source.endIndex,
+           numericBoundary(source[sourceRange.upperBound]) { return nil }
+        if currencyEvidence(in: quote) != nil { return quote }
+        // Join only adjacent literal currency bytes, never a distant unit or invented text.
+        guard let range = source.range(of: quote, options: .caseInsensitive) else { return nil }
+        var next = range.upperBound
+        while next < source.endIndex && source[next].isWhitespace { next = source.index(after: next) }
+        for unit in ["€", "euros", "euro", "eur"] {
+            if let match = source.range(of: unit, options: [.caseInsensitive, .anchored], range: next..<source.endIndex),
+               match.upperBound == source.endIndex || !source[match.upperBound].isLetter {
+                return String(source[range.lowerBound..<match.upperBound])
+            }
+        }
+        return nil
+    }
+
+    static func hasLiteralRatioWitness(_ quote: String) -> Bool {
+        guard currencyEvidence(in: quote) == nil, !quote.contains("%") else { return false }
+        let tokens = VoiceWorkspaceDomain.literalNumericTokens(in: quote)
+        if tokens.count == 1 { return VoiceWorkspaceDomain.concatenatedPercentages(tokens[0]) != nil }
+        return tokens.count == 2 && tokens.allSatisfy { token in
+            guard let value = Double(token.replacingOccurrences(of: ",", with: ".")) else { return false }
+            return value >= 0 && value <= 100
+        }
+    }
+
+    static func literalMoney(_ token: String) -> LocalPlanMoney? {
+        guard !token.isEmpty, token.allSatisfy({ $0.isASCII && ($0.isNumber || $0 == "." || $0 == ",") }) else { return nil }
+        let pieces = token.split(whereSeparator: { $0 == "." || $0 == "," })
+        guard pieces.count <= 2, pieces.count == 1 || (1...2).contains(pieces[1].count),
+              token.filter({ $0 == "." || $0 == "," }).count == pieces.count - 1,
+              let value = Double(token.replacingOccurrences(of: ",", with: ".")), value > 0,
+              value <= ExpenseValidation.maximumAmount else { return nil }
+        let cents = Int((value * 100).rounded())
+        return .init(euros: cents / 100, cents: cents % 100)
+    }
+
+    private static func currencyEvidence(in quote: String) -> String? {
+        // Closed literal EUR witness validation, not a spoken-number parser.
+        for token in ["€", "euros", "euro", "eur"] {
+            var remainder = quote.startIndex..<quote.endIndex
+            while let range = quote.range(of: token, options: .caseInsensitive, range: remainder) {
+                let left = range.lowerBound == quote.startIndex || !quote[quote.index(before: range.lowerBound)].isLetter
+                let right = range.upperBound == quote.endIndex || !quote[range.upperBound].isLetter
+                if token == "€" || (left && right) { return String(quote[range]) }
+                guard range.upperBound < quote.endIndex else { break }
+                remainder = range.upperBound..<quote.endIndex
+            }
+        }
+        return nil
+    }
+
+    private static func isCurrencyEvidence(_ token: String, in quote: String) -> Bool {
+        ["€", "eur", "euro", "euros"].contains(token.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()) && groundedQuote(token, in: quote) != nil
     }
 
     private static func interpretMoney(_ quote: String) async throws -> LocalPlanMoney {
         if quote.isEmpty { return .init(euros: 0, cents: 0) }
+        if quote.contains(where: { $0.isASCII && $0.isNumber }) {
+            let tokens = VoiceWorkspaceDomain.literalNumericTokens(in: quote)
+            guard tokens.count == 1, let money = literalMoney(tokens[0]) else {
+                LocalVoiceTraceScope.current?.record(.init(.invalidPlan, reason: "unverified-money-number"))
+                return .init(euros: 0, cents: 0)
+            }
+            return money
+        }
         return try await generate(LocalPlanMoney.self, quote: quote,
             instructions: "Extract the literal currency amount into whole euros and cents. In a correction extract the new value. Missing value is zero euros and cents.")
     }
@@ -342,11 +519,12 @@ enum AppleExpenseInterpreter {
             instructions: "Classify this date expression: relative for days relative to now, calendar for a named calendar day/month/year, unclear when it cannot be understood. Do not calculate any date.").kind
         switch kind {
         case .relative:
-            let instruction = LanguageManager.shared.activeLanguageCode == "de"
-                ? "Erkenne die Bedeutung dieses relativen Datumsausdrucks. Gib den Abstand in Kalendertagen zu heute als ganze Zahl zurück: Vergangenheit negativ, Zukunft positiv, heute null. Berechne kein kalendarisches Datum."
-                : "Interpret this relative date expression as a signed calendar-day count from today. Past negative, future positive, today zero. Do not calculate a calendar date."
-            let offset = try await generate(LocalOffsetPlan.self, quote: quote, instructions: instruction)
-            return .relativeDays(offset.days)
+            let offset = try await generate(LocalOffsetPlan.self, quote: quote,
+                instructions: LanguageManager.shared.activeLanguageCode == "de"
+                    ? "Bestimme getrennt den Abstand in ganzen Kalendertagen und die Zeitrichtung des genannten Tages relativ zu heute. Vergangene Tage haben die Richtung past, kommende future, heute today. Keine absoluten Datumsberechnungen."
+                    : "Extract separately the distance in whole calendar days and its direction relative to today. Past days are past; upcoming days future; today today. Do not calculate an absolute date.")
+            if offset.direction == .today && offset.distance != 0 { return .unclear }
+            return .relativeDays(offset.direction == .past ? -offset.distance : offset.direction == .future ? offset.distance : 0)
         case .calendar:
             let date = try await generate(LocalCalendarPlan.self, quote: quote,
                 instructions: "Copy the literal calendar year, month and day. Missing year uses the year of reference date \(today). Keep impossible days unchanged for app validation. Gregorian calendar, zone \(timeZone.identifier). Do not reinterpret it as a relative offset.")
@@ -355,11 +533,16 @@ enum AppleExpenseInterpreter {
         }
     }
 
-    private static func interpretShare(_ quote: String, context: String) async throws -> LocalPlanShare {
+    static func unresolvedShare(_ quote: String, recognizedIntent: Bool) -> LocalPlanShare {
+        recognizedIntent ? .init(kind: .unresolved, value: 0, secondValue: 0, intent: quote) : .notMentioned
+    }
+
+    private static func interpretShare(_ quote: String, context: String, recognizedIntent: Bool = false, recognizedRatio: Bool = false) async throws -> LocalPlanShare {
         if quote.isEmpty { return .notMentioned }
         do {
             let descriptor = try await generate(LocalUnitPlan.self, quote: quote, instructions: "Extract only the literal unit of the QUOTED split. Currency requires an explicit currency unit. Numeric ratios, including concatenated ratio numbers from speech, are ratio. Total prices or vague sharing with no concrete split are none. Do not infer a unit from defaults.")
             var unit = descriptor.unit
+            if recognizedRatio && unit == .none { unit = .ratio }
             if unit == .euros {
                 // Validate a model-supplied closed EUR unit token, not spoken-value language.
                 let token = descriptor.unitEvidence.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
@@ -368,19 +551,21 @@ enum AppleExpenseInterpreter {
                     let intent = try await generate(LocalRatioIntentPlan.self, quote: quote, instructions: "Identify a concrete numeric split ratio, including concatenated speech transcription. Vague splitting with no different concrete intent is vague. Other unsupported expressions are unknown. Do not invent currency or people.").kind
                     switch intent {
                     case .ratio: unit = .ratio
-                    case .vague: return .notMentioned
+                    case .vague: return recognizedIntent ? .init(kind: .unresolved, value: 0, secondValue: 0, intent: quote) : .notMentioned
                     case .unknown: return .init(kind: .unresolved, value: 0, secondValue: 0, intent: quote)
                     }
                 }
             }
+            if unit == .none && recognizedIntent {
+                let intent = try await generate(LocalRatioIntentPlan.self, quote: quote,
+                    instructions: "A concrete split was already recognized. Identify whether this source expresses a numeric ratio. Do not erase the recognized split if uncertain.").kind
+                if intent == .ratio { unit = .ratio }
+                else { return unresolvedShare(quote, recognizedIntent: true) }
+            }
             if unit == .none { return .notMentioned }
             if unit == .ratio {
-                let literal = try await generate(LocalNumericTokensPlan.self, quote: quote,
-                    instructions: "Copy literal numeric tokens from this ratio exactly. Do not calculate or split concatenated tokens. Do not add a default number.").tokens
+                let literal = VoiceWorkspaceDomain.literalNumericTokens(in: quote)
                 if !literal.isEmpty {
-                    guard literal.allSatisfy({ VoiceWorkspaceDomain.numericToken($0, occursIn: quote) }) else {
-                        return .init(kind: .unresolved, value: 0, secondValue: 0, intent: quote)
-                    }
                     if literal.count == 1, let pair = VoiceWorkspaceDomain.concatenatedPercentages(literal[0]) {
                         return .init(kind: .unassignedRatio, value: pair.0, secondValue: pair.1)
                     }
@@ -431,7 +616,7 @@ enum AppleExpenseInterpreter {
             case .edit(let edit):
                 guard rows.indices.contains(edit.expenseNumber - 1) else { throw invalidOutput }
                 change = .init(existingID: rows[edit.expenseNumber - 1].id, remove: false, title: edit.title,
-                    amount: try edit.amount.flatMap { try normalizedMoney($0) }.map { .value($0) } ?? .unchanged)
+                    amount: try edit.amount.map { try normalizedMoney($0).map { .value($0) } ?? .unresolved } ?? .unchanged)
                 change.date = domainDate(edit.date)
                 change.share = domainShare(edit.share, total: try edit.amount.flatMap { try normalizedMoney($0) } ?? rows[edit.expenseNumber - 1].amount)
             case .remove(let number):
@@ -541,5 +726,5 @@ enum AppleExpenseInterpreter {
         return result
     }
 
-    private static var invalidOutput: LocalVoiceError { LocalVoiceError(message: loc("LocalGenerationFailed")) }
+    private static var invalidOutput: LocalVoiceFailure { LocalVoiceFailure(issue: .init(.invalidPlan, reason: "invalid-value-or-target")) }
 }

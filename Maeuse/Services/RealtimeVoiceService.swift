@@ -8,6 +8,7 @@ protocol RealtimeVoiceServiceDelegate: AnyObject {
 }
 
 enum RealtimeVoiceServiceEvent {
+    case localDiagnostic(LocalVoiceDiagnostic)
     case localTurnReady
     case localTranscript(String)
     case localEndpointProgress(Double)

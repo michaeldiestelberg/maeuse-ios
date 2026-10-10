@@ -5,6 +5,7 @@ import SwiftData
 struct VoiceSheet: View {
     @Bindable var viewModel: VoiceModeViewModel
     @State private var showsUnderstanding = false
+    @State private var showsLocalDiagnostic = false
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
@@ -43,6 +44,21 @@ struct VoiceSheet: View {
                     if !viewModel.understandingHistory.isEmpty ||
                         (viewModel.provider == .appleLocal && !viewModel.localTranscript.isEmpty) {
                         understandingDetail
+                    }
+                    if viewModel.provider == .appleLocal, let diagnostic = viewModel.displayedLocalDiagnostic {
+                        DisclosureGroup(isExpanded: $showsLocalDiagnostic) {
+                            Text(diagnostic.exportText).font(.caption.monospaced()).textSelection(.enabled)
+                                .accessibilityIdentifier("local-diagnostic-details")
+                            ShareLink(item: diagnostic.exportText) {
+                                Label(loc("LocalShareDiagnosis"), systemImage: "square.and.arrow.up")
+                            }
+                            .accessibilityIdentifier("local-diagnostic-share")
+                            Text(loc("LocalDiagnosisPrivacy")).font(.caption).foregroundStyle(Color.maeusTextSecondary)
+                        } label: { Text(loc("LocalDiagnosis")) }
+                        #if targetEnvironment(simulator)
+                        .onAppear { if ProcessInfo.processInfo.arguments.contains("--voice-local-diagnostic") { showsLocalDiagnostic = true } }
+                        #endif
+                        .accessibilityIdentifier("local-diagnostic")
                     }
                     if viewModel.phase == .error {
                         Label(viewModel.errorMessage, systemImage: "exclamationmark.triangle.fill")

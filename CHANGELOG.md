@@ -1,3 +1,9 @@
+## 1.5.0 (56) — internal TestFlight candidate, 2026-10-10
+- Apple Voice Mode validates original price/currency evidence before computing amounts. Guided source choices prevent numeric prices from being rewritten; recognized sharing intent stays open rather than silently becoming 50/50.
+- Relative dates use separate distance/direction fields. The reported Tesla request retains €73, the date three days earlier and an unassigned 70/30 ratio until clarified.
+- Private local diagnostics show app/OS/model variant, capture completion, processing stages/timing and specific error categories. Sharing is explicit; diagnostic exports contain no audio, transcript or financial values.
+- 119 iOS simulator tests and Release/static analysis passed; two actual Apple-model runs passed 31/31 checks each. Real iPhone speech and its model variant remain a device verification step.
+
 ## 1.5.0 (55) — internal TestFlight candidate, 2026-10-10
 - Apple Voice Mode uses a structured action plan instead of free model tool calls. Multiple purchases retain their prices and dates; unspecified shares default to 50/50 in the app.
 - Relative dates, money rounding, speaker/partner contributions and draft identities are computed or validated by shared app rules. Unassigned ratios remain open until the people are clarified; invalid dates/shares cannot be saved.

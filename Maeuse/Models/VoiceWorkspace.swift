@@ -285,7 +285,7 @@ struct VoiceSettings: Codable {
 /// Provider-independent draft changes. Speech understanding belongs to the model;
 /// identity, calendar/money arithmetic, defaults and save safety belong here.
 struct VoiceExpenseChange {
-    enum Amount { case unchanged, value(Double), uncertain }
+    enum Amount { case unchanged, value(Double), uncertain, unresolved }
     enum DateValue { case unchanged, absolute(String), relativeDays(Int), uncertain }
     enum Share {
         case unchanged, equalDefault, partnerPercent(Double), userPercent(Double)
@@ -301,6 +301,25 @@ struct VoiceExpenseChange {
 
 enum VoiceWorkspaceDomain {
     enum InvalidChange: Error { case invalidIdentity, invalidValue, tooManyDrafts }
+
+    /// Lex literal numeric bytes in an already-grounded field quote. No word parsing.
+    static func literalNumericTokens(in quote: String) -> [String] {
+        let characters = Array(quote)
+        var tokens: [String] = []
+        var index = 0
+        func digit(_ c: Character) -> Bool { c.isASCII && c.isNumber }
+        while index < characters.count {
+            let sign = (characters[index] == "-" || characters[index] == "+") && index + 1 < characters.count && digit(characters[index + 1])
+            guard digit(characters[index]) || sign else { index += 1; continue }
+            let start = index
+            index += 1
+            while index < characters.count && (digit(characters[index]) || characters[index] == "." || characters[index] == ",") { index += 1 }
+            var end = index
+            while end > start && (characters[end - 1] == "." || characters[end - 1] == ",") { end -= 1 }
+            tokens.append(String(characters[start..<end]))
+        }
+        return tokens
+    }
 
     /// Check a model-provided literal numeric token's boundaries; no spoken-language parsing.
     static func numericToken(_ token: String, occursIn source: String) -> Bool {
@@ -404,6 +423,7 @@ enum VoiceWorkspaceDomain {
                 draft.amount = value.roundedMoney
                 clear(.amount, in: &draft)
             case .uncertain: draft.amount = nil; mark(.amount, in: &draft)
+            case .unresolved: mark(.amount, in: &draft)
             }
             switch change.date {
             case .unchanged: break

@@ -13,7 +13,7 @@
 
 | | |
 | --- | --- |
-| Version | 1.5.0 (build 55) |
+| Version | 1.5.0 (build 56) |
 | Platform | iPhone · iOS 17 or later |
 | Status | Internal TestFlight candidate; 1.4.0 (48) remains in App Review |
 | Languages | English and German |
@@ -21,6 +21,8 @@
 Version 1.5.0 adds **Apple · On device** to Voice Mode: local Apple speech recognition and Foundation Models, with no API key, usage fees, or cloud fallback. Choose a provider in Settings before enabling Voice Mode. Apple mode requires iOS 26+, a compatible iPhone, enabled Apple Intelligence, and downloaded model/language resources.
 
 Build 51 gives Apple mode one microphone control and automatically processes phrases after quiet speech pauses. The microphone visibly pauses during processing and resumes afterward unless you chose to pause. Draft cards, total, and Save stay familiar; transcript details are collapsed. Save during recording first finishes the phrase for review, then a second Save commits reviewed drafts. The build 50 false-interruption fix is retained. Offline speech, endpoint timing, and Apple model inference still need verification on an eligible physical iPhone.
+
+Build 56 validates literal price/currency sources and preserves explicit sharing intent across model stages. Private local diagnostics show the installed app/OS/model variant, capture completion, processing timing and specific failure category; the user chooses whether to share the metadata-only export. Actual Mac model and simulator checks supplement the required physical iPhone speech/model check.
 
 Build 55 replaces free Apple model tool calls with a structured action plan. The app owns dates, money arithmetic, identities and 50/50 defaults; recognized unassigned ratios require clarification. Two real Apple-model runs passed all 26 checks, and 110 simulator tests passed. Physical iPhone audio/model behavior remains the final tester check.
 
@@ -108,7 +110,7 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
 The Xcode project is the source of truth for both version values:
 
 - `MARKETING_VERSION` is the user-facing version (`1.5.0`).
-- `CURRENT_PROJECT_VERSION` is the App Store Connect build number (`49`).
+- `CURRENT_PROJECT_VERSION` is the App Store Connect build number (`56`).
 
 Use `scripts/bump-version.sh` before creating a new archive. See [RELEASING.md](RELEASING.md) for the full release workflow and [CHANGELOG.md](CHANGELOG.md) for user-facing release notes.
 

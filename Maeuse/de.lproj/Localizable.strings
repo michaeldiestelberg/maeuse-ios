@@ -228,3 +228,11 @@
 "VoiceUnassignedRatio" = "%@/%@ – Zuordnung offen";
 "VoiceUserFixedPending" = "Ich zahle %@ € – Gesamtbetrag offen";
 "VoiceUnassignedFixed" = "%@ € – Zuordnung offen";
+
+"LocalModelTimeout" = "Die lokale Verarbeitung hat zu lange gedauert. Deine Entwürfe bleiben erhalten. Die Diagnose zeigt die letzte Verarbeitungsstufe.";
+"LocalModelBlocked" = "Apple hat diese Anfrage abgelehnt. Deine Entwürfe bleiben erhalten. Versuche eine andere Formulierung.";
+"LocalModelBusy" = "Apples Modell ist gerade beschäftigt. Deine Entwürfe bleiben erhalten. Versuche es erneut.";
+"LocalModelInvalidPlan" = "Die lokale Antwort konnte nicht sicher übernommen werden. Deine Entwürfe bleiben erhalten. Die Diagnose zeigt den Grund.";
+"LocalDiagnosis" = "Lokale Diagnose";
+"LocalShareDiagnosis" = "Diagnose teilen";
+"LocalDiagnosisPrivacy" = "Enthält nur technische Angaben, keinen Sprachtext, keine Beträge und keine Audiodaten. Wird erst durch deine Auswahl geteilt.";

@@ -64,26 +64,56 @@ final class AppleLocalVoiceService: VoiceSessionService {
     private var generating = false
     private var ownsAudioSession = false
     private var endpoint = LocalSpeechEndpoint()
+    private var trace: LocalVoiceTrace?
+    private var captureEndReason = "asr-final"
+    private let processingTimeout: Duration
+    private let processor: @MainActor (String, String?, LocalVoiceTrace?) async throws -> VoiceWorkspaceSyncPayload
+
+    init(processingTimeout: Duration = .seconds(60),
+         processor: @escaping @MainActor (String, String?, LocalVoiceTrace?) async throws -> VoiceWorkspaceSyncPayload = { text, context, trace in
+             guard #available(iOS 26.0, *) else { throw LocalVoiceError(message: loc("LocalNeedsOS")) }
+             return try await AppleExpenseInterpreter.interpret(text, context: context, trace: trace)
+         }) {
+        self.processingTimeout = processingTimeout; self.processor = processor
+    }
+
+    private func createTrace(id: UUID) -> LocalVoiceTrace {
+        var variant = "OS26 system model"
+        if #available(iOS 27.0, *) { variant = SystemLanguageModel.default.variant.displayName }
+        let trace = LocalVoiceTrace(language: Self.locale.identifier, modelVariant: variant,
+            availability: String(describing: LocalVoiceAvailability.current), referenceDate: VoiceModeViewModel.todayISOString())
+        trace.onUpdate = { [weak self] value in
+            guard let self, self.identity == id else { return }
+            self.onEvent?(.localDiagnostic(value))
+        }
+        return trace
+    }
+
 
     func connect(workspaceContext: String?) async throws {
         disconnect()
         let id = identity
         context = workspaceContext
+        trace = createTrace(id: id)
+        trace?.begin("availability")
         guard LocalVoiceAvailability.current == .available else {
+            trace?.failed(.init(.unavailable, reason: "model-availability"))
             throw LocalVoiceError(message: LocalVoiceAvailability.current.message)
         }
+        trace?.begin("speech-permission")
         let speechPermission = await withCheckedContinuation { continuation in
             SFSpeechRecognizer.requestAuthorization { continuation.resume(returning: $0) }
         }
         try checkIdentity(id)
-        guard speechPermission == .authorized else { throw LocalVoiceError(message: loc("LocalSpeechPermission")) }
+        guard speechPermission == .authorized else { trace?.failed(.init(.speech, reason: "speech-permission")); throw LocalVoiceError(message: loc("LocalSpeechPermission")) }
+        trace?.begin("microphone-permission")
         let micPermission = await withCheckedContinuation { continuation in
             AVAudioApplication.requestRecordPermission { continuation.resume(returning: $0) }
         }
         try checkIdentity(id)
-        guard micPermission else { throw LocalVoiceError(message: loc("LocalMicPermission")) }
+        guard micPermission else { trace?.failed(.init(.speech, reason: "microphone-permission")); throw LocalVoiceError(message: loc("LocalMicPermission")) }
         do { try startRecording(id: id) }
-        catch { disconnect(); throw error }
+        catch { trace?.failed(.init(.speech, reason: "capture-start")); disconnect(); throw error }
     }
 
     private func checkIdentity(_ id: UUID) throws {
@@ -96,6 +126,7 @@ final class AppleLocalVoiceService: VoiceSessionService {
               recognizer.supportsOnDeviceRecognition else {
             throw LocalVoiceError(message: loc("LocalSpeechUnavailable"))
         }
+        trace?.begin("speech")
         self.recognizer = recognizer
         let request = SFSpeechAudioBufferRecognitionRequest()
         // Apple only honors this flag after supportsOnDeviceRecognition was checked.
@@ -128,9 +159,9 @@ final class AppleLocalVoiceService: VoiceSessionService {
                 }
                 switch LocalRecognitionCompletion.action(final: final, failed: failed, finishing: self.finishing) {
                 case .complete:
-                    self.processTurn(id: id)
+                    self.processTurn(id: id, completion: final ? "asr-final" : "finishing-recognition-error")
                 case .fail:
-                    self.fail(loc("LocalRecognitionFailed"))
+                    self.fail(loc("LocalRecognitionFailed"), issue: .init(.speech))
                 case .wait: break
                 }
             }
@@ -163,7 +194,7 @@ final class AppleLocalVoiceService: VoiceSessionService {
                 let shouldInterrupt = LocalRecordingLifecycle.shouldInterrupt(notification)
                 Task { @MainActor [weak self] in
                     guard shouldInterrupt, let self, self.identity == id, self.engine != nil else { return }
-                    self.fail(loc("VoiceAudioInterrupted"))
+                    self.fail(loc("VoiceAudioInterrupted"), issue: .init(.interrupted))
                 }
             })
         }
@@ -176,14 +207,17 @@ final class AppleLocalVoiceService: VoiceSessionService {
                 let now = ProcessInfo.processInfo.systemUptime
                 self.onEvent?(.localEndpointProgress(self.endpoint.indicatorProgress(at: now)))
                 if self.endpoint.shouldFinish(at: now) || now - started >= 50 {
-                    self.finishTurn()
+                    self.finishTurn(reason: now - started >= 50 ? "recording-limit" : "quiet-endpoint")
                     return
                 }
             }
         }
     }
 
-    func finishTurn() {
+    func finishTurn() { finishTurn(reason: "manual-stop") }
+
+    private func finishTurn(reason: String) {
+        captureEndReason = reason
         guard engine != nil, !finishing, !generating else { return }
         finishing = true
         timer?.cancel()
@@ -195,47 +229,57 @@ final class AppleLocalVoiceService: VoiceSessionService {
         timer = Task { [weak self] in
             try? await Task.sleep(for: .seconds(3))
             guard !Task.isCancelled, let self, self.identity == id else { return }
-            self.processTurn(id: id)
+            self.processTurn(id: id, completion: "recognition-fallback")
         }
     }
 
-    private func processTurn(id: UUID) {
+    private func processTurn(id: UUID, completion: String) {
         guard identity == id, !generating else { return }
+        stopMicrophone()
+        recognition?.cancel(); recognition = nil; request = nil
+        processRecognizedText(transcript, workspaceContext: context,
+            completion: finishing ? "\(captureEndReason)/\(completion)" : completion)
+    }
+
+    /// Production ASR boundary. Also exercised without a microphone in service tests.
+    func processRecognizedText(_ transcript: String, workspaceContext: String?, completion: String = "asr-final") {
+        guard !generating else { return }
+        let id = identity
         generating = true
         timer?.cancel()
-        stopMicrophone()
-        recognition?.cancel()
-        recognition = nil
-        request = nil
+        if trace == nil { trace = createTrace(id: id) }
+        trace?.captureEnded(completion)
         let text = transcript.trimmingCharacters(in: .whitespacesAndNewlines)
-        // Silence is normal. Finish the empty turn without invoking the model
-        // or presenting an error; the view model preserves the user's pause intent.
-        guard !text.isEmpty else { onEvent?(.localTurnReady); return }
-        guard text.count <= 1_500, (context?.count ?? 0) <= 7_000 else {
-            fail(loc("LocalTooMuchContext")); return
+        guard !text.isEmpty else { trace?.completed(); onEvent?(.localTurnReady); return }
+        guard text.count <= 1_500, (workspaceContext?.count ?? 0) <= 7_000 else {
+            fail(loc("LocalTooMuchContext"), issue: .init(.context, reason: "app-input-limit")); return
         }
         onEvent?(.responseStarted(id: id.uuidString, isAppGenerated: false))
+        let currentTrace = trace
         generation = Task { [weak self] in
             guard let self else { return }
             do {
-                guard #available(iOS 26.0, *) else { throw LocalVoiceError(message: loc("LocalNeedsOS")) }
-                let payload = try await AppleExpenseInterpreter.interpret(text, context: self.context)
+                let payload = try await self.processor(text, workspaceContext, currentTrace)
                 try self.checkIdentity(id)
                 self.timer?.cancel()
-                var result = payload
-                result.responseID = id.uuidString
+                currentTrace?.completed()
+                var result = payload; result.responseID = id.uuidString
                 self.onEvent?(.workspaceSync(result))
                 self.onEvent?(.responseFinished(id: id.uuidString))
                 self.onEvent?(.localTurnReady)
             } catch {
                 guard !Task.isCancelled, self.identity == id else { return }
-                self.fail((error as? LocalVoiceError)?.message ?? loc("LocalGenerationFailed"))
+                let issue: LocalVoiceIssue
+                if #available(iOS 26.0, *) { issue = LocalVoiceIssue.classify(error) }
+                else { issue = .init(.unavailable) }
+                self.fail((error as? LocalVoiceError)?.message ?? issue.category.message, issue: issue)
             }
         }
         timer = Task { [weak self] in
-            try? await Task.sleep(for: .seconds(60))
-            guard !Task.isCancelled, let self, self.identity == id else { return }
-            self.fail(loc("LocalGenerationFailed"))
+            guard let self else { return }
+            try? await Task.sleep(for: self.processingTimeout)
+            guard !Task.isCancelled, self.identity == id else { return }
+            self.fail(loc("LocalModelTimeout"), issue: .init(.timeout, reason: "processing-deadline"))
         }
     }
 
@@ -254,7 +298,8 @@ final class AppleLocalVoiceService: VoiceSessionService {
         onEvent?(.microphoneStopped)
     }
 
-    private func fail(_ message: String) {
+    private func fail(_ message: String, issue: LocalVoiceIssue? = nil) {
+        trace?.failed(issue ?? .init(.unknown, reason: "capture-or-permission"))
         disconnect()
         onEvent?(.error(message))
     }
@@ -269,6 +314,7 @@ final class AppleLocalVoiceService: VoiceSessionService {
         recognizer = nil
         transcript = ""
         context = nil
+        trace = nil; captureEndReason = "asr-final"
         finishing = false
         generating = false
         endpoint = LocalSpeechEndpoint()

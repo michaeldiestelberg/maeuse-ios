@@ -14,7 +14,7 @@ func loc(_ text: String, _ args: CVarArg...) -> String {
     let formats = ["VoiceUnassignedRatio": "%@/%@ – assignment needed", "VoiceUserFixedPending": "I pay €%@ – total needed"]
     return args.isEmpty ? text : String(format: formats[text] ?? text, arguments: args)
 }
-enum VoiceModeViewModel { static func todayISOString() -> String { "2026-09-27" } }
+enum VoiceModeViewModel { static var referenceDate = "2026-09-27"; static func todayISOString() -> String { referenceDate } }
 enum LocalVoiceAvailability {
     case available, unavailable
     static var current: Self { SystemLanguageModel.default.availability == .available ? .available : .unavailable }
@@ -26,6 +26,7 @@ struct LocalVoiceError: LocalizedError { let message: String; var errorDescripti
     @MainActor static func main() async {
         setbuf(stdout, nil)
         print("OS: \(ProcessInfo.processInfo.operatingSystemVersionString)")
+        if #available(macOS 27.0, *) { print("Model variant:", SystemLanguageModel.default.variant.displayName) }
         print("Model availability: \(SystemLanguageModel.default.availability)")
         guard LocalVoiceAvailability.current == .available else {
             print("Apple Intelligence must be enabled with the on-device model downloaded.")
@@ -52,6 +53,7 @@ struct LocalVoiceError: LocalizedError { let message: String; var errorDescripti
                 ("en", "Lunch cost seventeen euros fifty. I'm not sure about splitting it.", nil, [17.5], [50], ["2026-09-27"]),
                 ("de", "Der Kaffee hat vier Euro gekostet.", nil, [4], [50], ["2026-09-27"]),
                 ("en", "Bread 2.60 euros and milk 1.90 euros.", nil, [2.6, 1.9], [50,50], ["2026-09-27","2026-09-27"]),
+                ("en", "Bus 3.20 euros and coffee 2.40 euros.", nil, [3.2,2.4], [50,50], ["2026-09-27","2026-09-27"]),
                 ("en", "My share is 60 percent for the coffee.", context, [4], [40], ["2026-09-27"]),
                 ("en", "For the coffee I pay one euro.", context, [4], [3], ["2026-09-27"]),
                 ("de", "Buch für sechzehn Euro vorgestern.", nil, [16], [50], ["2026-09-25"]),
@@ -113,6 +115,31 @@ struct LocalVoiceError: LocalizedError { let message: String; var errorDescripti
             check("Explicit impossible date remains open", uncertainDate.expenses.count == 1 && uncertainDate.expenses[0].amount == 4 &&
                 !uncertainDate.expenses[0].draft.isReadyForSaving, uncertainDate)
         } catch { failed += 1; print("FAIL: semantic follow-ups: \(error)") }
+        // Exact real ASR regression and independent unseen charging/ratio formulations.
+        VoiceModeViewModel.referenceDate = "2026-10-10"
+        for (language, sentence, amount, date, ratio) in [
+            ("de", "Ich hab am Tesla Supercharger für 73 € geladen und das war bereits vor drei Tagen ich würde es gern 7030 teilen", 73.0, "2026-10-07", "70/30"),
+            ("de", "Am Supercharger habe ich 82,40 € bezahlt, gestern. Aufteilung 6040.", 82.4, "2026-10-09", "60/40"),
+            ("en", "Charging cost 19.80 euros two days ago; split 90 to 10.", 19.8, "2026-10-08", "90/10")
+        ] {
+            LanguageManager.shared.activeLanguageCode = language
+            do {
+                let trace = LocalVoiceTrace(language: language, modelVariant: SystemLanguageModel.default.variant.displayName,
+                    availability: "available", referenceDate: VoiceModeViewModel.referenceDate)
+                let result = try await AppleExpenseInterpreter.interpret(sentence, context: nil, trace: trace)
+                check("Exact ASR/independent variant: \(sentence)", result.expenses.count == 1 && result.expenses[0].amount == amount &&
+                      result.expenses[0].dateISO == date && result.expenses[0].splitIntent?.contains(ratio) == true &&
+                      !result.expenses[0].draft.isReadyForSaving, result)
+                print("DIAGNOSTIC", trace.snapshot.exportText)
+                if language == "de" && amount == 73 {
+                    let follow = try await AppleExpenseInterpreter.interpret("Ich übernehme 70 Prozent.", context: contextFor(result))
+                    check("Exact ASR follow-up keeps price/date and assigns partner30", follow.expenses.count == 1 &&
+                        follow.expenses[0].id == result.expenses[0].id && follow.expenses[0].amount == 73 &&
+                        follow.expenses[0].dateISO == "2026-10-07" && follow.expenses[0].splitValue == 30 &&
+                        follow.expenses[0].draft.isReadyForSaving, follow)
+                }
+            } catch { extraCount += 1; failed += 1; print("FAIL: Exact ASR/independent variant", String(reflecting: error)) }
+        }
         print("Integration checks: \(cases.count+extraCount-failed)/\(cases.count+extraCount) passed")
         if failed > 0 { exit(1) }
     }
