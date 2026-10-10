@@ -29,6 +29,8 @@ struct VoiceExpenseDraft: Identifiable, Equatable {
     var confidence: Double
     var missingFields: [VoiceExpenseMissingField]
     var lastChangedAt: Date
+    var splitIntent: String?
+    var pendingUserFixedShare: Double?
 
     init(
         id: String,
@@ -39,7 +41,9 @@ struct VoiceExpenseDraft: Identifiable, Equatable {
         splitValue: Double?,
         confidence: Double,
         missingFields: [VoiceExpenseMissingField],
-        lastChangedAt: Date = Date()
+        lastChangedAt: Date = Date(),
+        splitIntent: String? = nil,
+        pendingUserFixedShare: Double? = nil
     ) {
         self.id = id
         self.title = title
@@ -50,6 +54,8 @@ struct VoiceExpenseDraft: Identifiable, Equatable {
         self.confidence = confidence
         self.missingFields = missingFields
         self.lastChangedAt = lastChangedAt
+        self.splitIntent = splitIntent
+        self.pendingUserFixedShare = pendingUserFixedShare
     }
 
     func changedFields(comparedTo previous: VoiceExpenseDraft) -> Set<VoiceExpenseMissingField> {
@@ -57,7 +63,7 @@ struct VoiceExpenseDraft: Identifiable, Equatable {
         if title != previous.title { fields.insert(.title) }
         if amount != previous.amount { fields.insert(.amount) }
         if dateISO != previous.dateISO { fields.insert(.date) }
-        if splitMode != previous.splitMode || splitValue != previous.splitValue { fields.insert(.split) }
+        if splitMode != previous.splitMode || splitValue != previous.splitValue || splitIntent != previous.splitIntent || pendingUserFixedShare != previous.pendingUserFixedShare { fields.insert(.split) }
         return fields
     }
 
@@ -97,7 +103,8 @@ struct VoiceExpenseDraft: Identifiable, Equatable {
         }
 
         if let dateISO, Expense.dateFromISO(dateISO) == nil { return false }
-        guard !missingFields.contains(.title), !missingFields.contains(.amount) else { return false }
+        guard missingFields.isEmpty, splitIntent == nil, pendingUserFixedShare == nil else { return false }
+        if normalizedSplitMode == .fixed, let splitValue, splitValue > amount { return false }
         return ExpenseValidation.isValid(amount: amount, splitMode: normalizedSplitMode, splitValue: splitValue ?? 50)
     }
 
@@ -149,6 +156,8 @@ struct VoiceExpenseDraftPayload: Decodable, Equatable {
     let splitValue: Double?
     let confidence: Double
     let missingFields: [VoiceExpenseMissingField]
+    var splitIntent: String? = nil
+    var pendingUserFixedShare: Double? = nil
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -159,6 +168,8 @@ struct VoiceExpenseDraftPayload: Decodable, Equatable {
         case splitValue = "split_value"
         case confidence
         case missingFields = "missing_fields"
+        case splitIntent = "split_intent"
+        case pendingUserFixedShare = "pending_user_fixed_share"
     }
 
     var draft: VoiceExpenseDraft {
@@ -170,7 +181,9 @@ struct VoiceExpenseDraftPayload: Decodable, Equatable {
             splitMode: splitMode.flatMap(SplitMode.init(rawValue:)),
             splitValue: splitValue,
             confidence: min(max(confidence, 0), 1),
-            missingFields: missingFields
+            missingFields: missingFields,
+            splitIntent: splitIntent,
+            pendingUserFixedShare: pendingUserFixedShare
         )
     }
 }
@@ -266,5 +279,223 @@ struct VoiceSettings: Codable {
     var maskedAPIKey: String {
         guard let apiKeySuffix else { return "" }
         return "•••• \(apiKeySuffix)"
+    }
+}
+
+/// Provider-independent draft changes. Speech understanding belongs to the model;
+/// identity, calendar/money arithmetic, defaults and save safety belong here.
+struct VoiceExpenseChange {
+    enum Amount { case unchanged, value(Double), uncertain }
+    enum DateValue { case unchanged, absolute(String), relativeDays(Int), uncertain }
+    enum Share {
+        case unchanged, equalDefault, partnerPercent(Double), userPercent(Double)
+        case partnerFixed(Double), userFixed(Double), unassignedFixed(Double), unassignedRatio(Double, Double), unresolved(String)
+    }
+    let existingID: String?
+    let remove: Bool
+    var title: String? = nil
+    var amount: Amount = .unchanged
+    var date: DateValue = .unchanged
+    var share: Share = .unchanged
+}
+
+enum VoiceWorkspaceDomain {
+    enum InvalidChange: Error { case invalidIdentity, invalidValue, tooManyDrafts }
+
+    /// Check a model-provided literal numeric token's boundaries; no spoken-language parsing.
+    static func numericToken(_ token: String, occursIn source: String) -> Bool {
+        guard !token.isEmpty, token.allSatisfy({ $0.isASCII && ($0.isNumber || $0 == "." || $0 == ",") }),
+              Double(token.replacingOccurrences(of: ",", with: ".")) != nil else { return false }
+        var remaining = source.startIndex..<source.endIndex
+        while let range = source.range(of: token, range: remaining) {
+            func numeric(_ character: Character) -> Bool { character.isASCII && (character.isNumber || character == "." || character == ",") }
+            let left = range.lowerBound == source.startIndex || !numeric(source[source.index(before: range.lowerBound)])
+            let right = range.upperBound == source.endIndex || !numeric(source[range.upperBound])
+            if left && right { return true }
+            guard range.upperBound < source.endIndex else { return false }
+            remaining = range.upperBound..<source.endIndex
+        }
+        return false
+    }
+
+    /// Normalize a model-declared concatenated numeric percentage token, not spoken language.
+    /// Only a unique 0...100 pair summing to 100 is admissible; ambiguous tokens need clarification.
+    static func concatenatedPercentages(_ digits: String) -> (Double, Double)? {
+        guard (2...6).contains(digits.count), digits.allSatisfy({ $0.isASCII && $0.isNumber }) else { return nil }
+        let characters = Array(digits)
+        var candidates: [(Double, Double)] = []
+        for boundary in 1..<characters.count {
+            guard let first = Int(String(characters[..<boundary])), let second = Int(String(characters[boundary...])),
+                  (0...100).contains(first), (0...100).contains(second), first + second == 100 else { continue }
+            candidates.append((Double(first), Double(second)))
+        }
+        return candidates.count == 1 ? candidates[0] : nil
+    }
+
+    /// Defaults apply to absent/unspecified values, never an explicitly unresolved field.
+    static func normalized(_ draft: VoiceExpenseDraft, todayISO: String) -> VoiceExpenseDraft {
+        var result = draft
+        if result.dateISO == nil, !result.missingFields.contains(.date) { result.dateISO = todayISO }
+        if let ownShare = result.pendingUserFixedShare, let total = result.amount,
+           ownShare.isFinite, ownShare >= 0, total.isFinite, total >= ownShare {
+            result.splitMode = .fixed; result.splitValue = (total - ownShare).roundedMoney
+            result.pendingUserFixedShare = nil; result.splitIntent = nil; clear(.split, in: &result)
+        }
+        if result.splitIntent != nil || result.pendingUserFixedShare != nil { mark(.split, in: &result) }
+        if !result.missingFields.contains(.split) {
+            if result.splitMode == nil { result.splitMode = .percent }
+            if result.splitValue == nil { result.splitValue = 50 }
+        }
+        if result.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || result.title.count > 150 { mark(.title, in: &result) }
+        if let amount = result.amount {
+            if !amount.isFinite || amount <= 0 || amount > ExpenseValidation.maximumAmount { mark(.amount, in: &result) }
+        } else { mark(.amount, in: &result) }
+        if let date = result.dateISO, Expense.dateFromISO(date) == nil { mark(.date, in: &result) }
+        if let share = result.splitValue {
+            let mode = result.normalizedSplitMode
+            if !share.isFinite || share < 0 || (mode == .percent ? share > 100 : result.amount.map { share > $0 } ?? false) {
+                mark(.split, in: &result)
+            }
+        }
+        return result
+    }
+
+    static func clarification(for drafts: [VoiceExpenseDraft], proposed: String) -> String {
+        if !proposed.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return proposed }
+        if drafts.contains(where: { $0.missingFields.contains(.title) || $0.missingFields.contains(.amount) }) { return loc("LocalMissingDetails") }
+        if drafts.contains(where: { $0.missingFields.contains(.split) }) { return loc("VoiceClarifySplitQuestion") }
+        if drafts.contains(where: { $0.missingFields.contains(.date) }) { return loc("VoiceInvalidDateQuestion") }
+        if drafts.contains(where: { !$0.isReadyForSaving }) { return loc("LocalMissingDetails") }
+        return ""
+    }
+
+    /// Apply a bounded set of changes atomically, retaining every untouched card.
+    static func apply(_ changes: [VoiceExpenseChange], to existing: [VoiceExpenseDraftPayload],
+                      understanding: String, question: String, todayISO: String,
+                      timeZone: TimeZone = .current) throws -> VoiceWorkspaceSyncPayload {
+        var drafts = existing.map { normalized($0.draft, todayISO: todayISO) }
+        let knownIDs = Set(drafts.map(\.id))
+        guard knownIDs.count == drafts.count else { throw InvalidChange.invalidIdentity }
+        var changed = Set<String>()
+        var removed = Set<String>()
+        for change in changes {
+            if let id = change.existingID, !knownIDs.contains(id) { throw InvalidChange.invalidIdentity }
+            if change.remove {
+                guard let id = change.existingID, changed.insert(id).inserted else { throw InvalidChange.invalidIdentity }
+                removed.insert(id)
+                drafts.removeAll { $0.id == id }
+                continue
+            }
+            let id = change.existingID ?? UUID().uuidString
+            guard changed.insert(id).inserted else { throw InvalidChange.invalidIdentity }
+            let index = drafts.firstIndex { $0.id == id }
+            var draft = index.map { drafts[$0] } ?? VoiceExpenseDraft(id: id, title: "", amount: nil,
+                dateISO: nil, splitMode: nil, splitValue: nil, confidence: 1, missingFields: [])
+            if let title = change.title {
+                let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard trimmed.count <= 150 else { throw InvalidChange.invalidValue }
+                draft.title = trimmed
+                clear(.title, in: &draft)
+            }
+            switch change.amount {
+            case .unchanged: break
+            case .value(let value):
+                guard value.isFinite, value > 0, value <= ExpenseValidation.maximumAmount else { throw InvalidChange.invalidValue }
+                draft.amount = value.roundedMoney
+                clear(.amount, in: &draft)
+            case .uncertain: draft.amount = nil; mark(.amount, in: &draft)
+            }
+            switch change.date {
+            case .unchanged: break
+            case .absolute(let iso):
+                if Expense.dateFromISO(iso) != nil { draft.dateISO = iso; clear(.date, in: &draft) }
+                else { draft.dateISO = nil; mark(.date, in: &draft) }
+            case .relativeDays(let offset):
+                guard (-36_600...36_600).contains(offset) else { throw InvalidChange.invalidValue }
+                var calendar = Calendar(identifier: .gregorian)
+                calendar.timeZone = timeZone
+                let formatter = DateFormatter()
+                formatter.calendar = calendar
+                formatter.timeZone = timeZone
+                formatter.locale = Locale(identifier: "en_US_POSIX")
+                formatter.dateFormat = "yyyy-MM-dd"
+                formatter.isLenient = false
+                guard Expense.dateFromISO(todayISO) != nil, let reference = formatter.date(from: todayISO),
+                      let resolved = calendar.date(byAdding: .day, value: offset, to: reference) else { throw InvalidChange.invalidValue }
+                let iso = formatter.string(from: resolved)
+                if Expense.dateFromISO(iso) != nil { draft.dateISO = iso; clear(.date, in: &draft) }
+                else { draft.dateISO = nil; mark(.date, in: &draft) }
+            case .uncertain: draft.dateISO = nil; mark(.date, in: &draft)
+            }
+            func setShare(_ value: Double, mode: SplitMode) throws {
+                guard value.isFinite, value >= 0, mode != .percent || value <= 100 else { throw InvalidChange.invalidValue }
+                draft.splitMode = mode; draft.splitValue = value
+                draft.splitIntent = nil; draft.pendingUserFixedShare = nil; clear(.split, in: &draft)
+            }
+            switch change.share {
+            case .unchanged: break
+            case .unresolved(let intent):
+                if draft.splitIntent == nil { draft.splitIntent = intent }
+                mark(.split, in: &draft)
+            case .equalDefault:
+                // Unclear follow-up assignment cannot erase an already recognized
+                // different intent. Explicit equal splitting uses partnerPercent(50).
+                if draft.splitIntent == nil, draft.pendingUserFixedShare == nil { try setShare(50, mode: .percent) }
+            case .partnerPercent(let value): try setShare(value, mode: .percent)
+            case .userPercent(let value):
+                guard value.isFinite, (0...100).contains(value) else { throw InvalidChange.invalidValue }
+                try setShare(100 - value, mode: .percent)
+            case .partnerFixed(let value): try setShare(value.roundedMoney, mode: .fixed)
+            case .userFixed(let value):
+                guard value.isFinite, value >= 0 else { throw InvalidChange.invalidValue }
+                if let total = draft.amount {
+                    try setShare((total - value).roundedMoney, mode: .fixed)
+                } else {
+                    draft.splitIntent = loc("VoiceUserFixedPending", value.formatted(.number.precision(.fractionLength(0...2))))
+                    draft.pendingUserFixedShare = value
+                    draft.splitMode = .fixed; draft.splitValue = nil; mark(.split, in: &draft)
+                }
+            case .unassignedFixed(let value):
+                guard value.isFinite, value >= 0, value <= ExpenseValidation.maximumAmount else { throw InvalidChange.invalidValue }
+                draft.splitIntent = loc("VoiceUnassignedFixed", value.formatted(.number.precision(.fractionLength(0...2))))
+                draft.pendingUserFixedShare = nil
+                draft.splitMode = .fixed; draft.splitValue = nil; mark(.split, in: &draft)
+            case .unassignedRatio(let first, let second):
+                guard first.isFinite, second.isFinite, first >= 0, second >= 0,
+                      (first + second).isFinite, first + second > 0 else { throw InvalidChange.invalidValue }
+                if first == second { try setShare(50, mode: .percent) }
+                else {
+                    // Keep both recognized values; do not guess which person pays which.
+                    draft.splitIntent = loc("VoiceUnassignedRatio", first.formatted(.number.precision(.fractionLength(0...2))),
+                        second.formatted(.number.precision(.fractionLength(0...2))))
+                    draft.pendingUserFixedShare = nil
+                    draft.splitMode = .percent; draft.splitValue = nil; mark(.split, in: &draft)
+                }
+            }
+            draft = normalized(draft, todayISO: todayISO)
+            // A changed total may invalidate an existing fixed share. Keep the card
+            // and ask for a correction instead of losing the recognized total.
+            if let index { drafts[index] = draft } else { drafts.append(draft) }
+        }
+        guard drafts.count <= 10 else { throw InvalidChange.tooManyDrafts }
+        return VoiceWorkspaceSyncPayload(userUnderstanding: understanding,
+            clarificationQuestion: clarification(for: drafts, proposed: question),
+            expenses: drafts.map(\.payload), changedExpenseIDs: changed.subtracting(removed).sorted(),
+            removedExpenseIDs: removed.sorted())
+    }
+
+    private static func mark(_ field: VoiceExpenseMissingField, in draft: inout VoiceExpenseDraft) {
+        if !draft.missingFields.contains(field) { draft.missingFields.append(field) }
+    }
+    private static func clear(_ field: VoiceExpenseMissingField, in draft: inout VoiceExpenseDraft) {
+        draft.missingFields.removeAll { $0 == field }
+    }
+}
+
+extension VoiceExpenseDraft {
+    var payload: VoiceExpenseDraftPayload {
+        VoiceExpenseDraftPayload(id: id, title: title, amount: amount, dateISO: dateISO,
+            splitMode: splitMode?.rawValue, splitValue: splitValue, confidence: confidence,
+            missingFields: missingFields, splitIntent: splitIntent, pendingUserFixedShare: pendingUserFixedShare)
     }
 }

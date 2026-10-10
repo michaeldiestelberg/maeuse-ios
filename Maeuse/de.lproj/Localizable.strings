@@ -222,3 +222,9 @@
 "LocalPauseAfterProcessing" = "Nach der Verarbeitung pausieren";
 "LocalResumeAfterProcessing" = "Nach der Verarbeitung wieder zuhören";
 "LocalSaveReviewHint" = "Beendet zuerst die Aufnahme zur Prüfung. Speichere geprüfte Entwürfe anschließend mit einem weiteren Tippen.";
+
+"VoiceCheckSplit" = "Aufteilung prüfen";
+"VoiceClarifySplitQuestion" = "Wer übernimmt welchen Anteil? Bitte kläre die markierte Aufteilung.";
+"VoiceUnassignedRatio" = "%@/%@ – Zuordnung offen";
+"VoiceUserFixedPending" = "Ich zahle %@ € – Gesamtbetrag offen";
+"VoiceUnassignedFixed" = "%@ € – Zuordnung offen";

@@ -241,6 +241,8 @@ enum RealtimeSessionConfiguration {
 
         # Session Context
         - Current date: \(currentDateISO)
+        - Time zone: \(TimeZone.current.identifier); locale: \(Locale.current.identifier); currency: EUR.
+        - Known person roles: user is the speaker (ich/I/me); partner is the other person. No personal names or ordering of people are known.
         - Use the app-provided initial workspace when supplied; otherwise each session starts empty.
         - Capture one or more expenses from the conversation.
         - The user may correct, rename, split, date, or remove expenses by voice.
@@ -251,17 +253,19 @@ enum RealtimeSessionConfiguration {
         # Expense Fields
         - title: concise merchant, item, or purpose. Use null if not provided.
         - amount: total expense amount in euros. Use null if not provided.
-        - date_iso: YYYY-MM-DD if explicit or confidently relative to the current date. If not provided, use the current date.
+        - date_iso: YYYY-MM-DD if explicit or confidently relative to the current date. If not provided, use the current date. If an explicit date is unclear, use null and missing_fields date; never silently use today.
         - split_mode: percent or fixed. If not provided, use percent.
-        - split_value: percentage or fixed euro share for the partner. If split details are not provided, use 50 with split_mode percent.
+        - split_value: percentage or fixed euro share for the partner. If split details are not provided or no different intent can be understood, use 50 with split_mode percent. Preserve existing shares on unrelated corrections.
+        - An understood unequal split such as 70/30 (including recognition 7030 teilen) must not become 50/50. If person assignment is unclear, use null split_value, missing_fields split, preserve both values in split_intent and ask who pays which. An equal ratio needs no assignment question.
+        - split_intent: null normally; a concise description retaining the recognized split values when their person assignment remains unresolved. Keep it across unrelated corrections and clear it only when resolved.
         - confidence: 0 to 1 estimate for the expense draft.
-        - missing_fields: include title or amount when that field is missing or uncertain. Do not mark date or split missing just because the user did not say them.
+        - missing_fields: include title or amount when missing or uncertain; date for an explicitly unclear date, split for recognized unequal intent without person assignment. Do not mark date or split missing merely because they were not stated.
 
         # Defaults
         Fill workspace defaults immediately so the user sees the result they would save:
         - Missing date defaults to \(currentDateISO).
         - Missing split defaults to split_mode percent and split_value 50.
-        - Only leave title or amount null when missing.
+        - Leave explicitly unclear dates or recognized unassigned splits null and marked missing. Preserve recognized details and ask for clarification; these drafts cannot be saved yet.
 
         # Request Details
         - user_understanding is the latest spoken request, rendered naturally in the user's own voice as closely as you confidently understood it. Preserve their phrasing, first-person perspective, relative dates, amounts, split details, and correction words such as "actually" or "no" when heard.
@@ -332,6 +336,10 @@ enum RealtimeSessionConfiguration {
                                     "type": ["number", "null"],
                                     "description": "Percent value or fixed euro amount, matching split_mode. Use 50 when split details are absent."
                                 ],
+                                "split_intent": [
+                                    "type": ["string", "null"],
+                                    "description": "Recognized unequal split values whose person assignment remains unresolved. Null otherwise. Keep across unrelated corrections."
+                                ],
                                 "confidence": [
                                     "type": "number",
                                     "description": "Confidence from 0 to 1."
@@ -342,7 +350,7 @@ enum RealtimeSessionConfiguration {
                                         "type": "string",
                                         "enum": ["title", "amount", "split", "date"]
                                     ],
-                                    "description": "Fields that are missing or uncertain. Do not include date or split when applying the default date and 50 percent split."
+                                    "description": "Fields that need clarification. Include date for an explicitly unclear date and split for recognized unequal intent without person assignment; not for merely unstated defaults."
                                 ]
                             ],
                             "required": [
@@ -352,6 +360,7 @@ enum RealtimeSessionConfiguration {
                                 "date_iso",
                                 "split_mode",
                                 "split_value",
+                                "split_intent",
                                 "confidence",
                                 "missing_fields"
                             ]

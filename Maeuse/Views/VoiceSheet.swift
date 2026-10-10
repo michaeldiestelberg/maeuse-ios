@@ -604,8 +604,8 @@ private struct VoiceExpenseDraftCard: View {
             VStack(alignment: .leading, spacing: 6) { dateChip; splitChip }
         }
     }
-    private var dateChip: some View { chip(formatDate(draft.dateISO), field: .date) }
-    private var splitChip: some View { chip(loc("VoicePartnerShare", splitText), field: .split) }
+    private var dateChip: some View { chip(draft.missingFields.contains(.date) ? loc("VoiceInvalidDate") : formatDate(draft.dateISO), field: .date) }
+    private var splitChip: some View { chip(draft.missingFields.contains(.split) ? (draft.splitIntent ?? loc("VoiceCheckSplit")) : loc("VoicePartnerShare", splitText), field: .split) }
     private func chip(_ title: String, field: VoiceExpenseMissingField) -> some View {
         Text(title)
             .font(.system(.caption2, design: .rounded, weight: .semibold))

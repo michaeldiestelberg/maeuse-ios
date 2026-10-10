@@ -451,99 +451,312 @@ final class LocalVoiceTests: XCTestCase {
         vm.cancelSession()
     }
 
+    private struct LocalExpenseDate {
+        enum Kind { case notMentioned, relativeDays, absolute, uncertain }
+        let kind: Kind
+        let isoDate: String?
+        let dayOffset: Int?
+    }
+    @available(iOS 26.0, *)
+    private struct LocalExpenseShare {
+        let kind: LocalShareKind
+        let value: Double?
+        let otherValue: Double?
+    }
+    @available(iOS 26.0, *)
+    private func update(_ number: Int = 0, title: String? = nil, amount: Double? = nil,
+                        date: LocalExpenseDate = .init(kind: .notMentioned, isoDate: nil, dayOffset: nil),
+                        share: LocalExpenseShare = .init(kind: .notMentioned, value: nil, otherValue: nil)) -> LocalExpenseUpdate {
+        .init(action: number == 0 ? .add : .correct, expenseNumber: number, title: title, amount: amount,
+            dateISO: date.isoDate, dayOffset: date.dayOffset, dateUnclear: date.kind == .uncertain,
+            shareKind: share.kind, shareValue: share.value, secondShareValue: share.otherValue)
+    }
+
+    @available(iOS 26.0, *)
+    private func result(_ updates: [LocalExpenseUpdate], context: String? = nil,
+                        text: String = "Request", question: String = "", today: String = "2026-10-10") throws -> VoiceWorkspaceSyncPayload {
+        try AppleExpenseInterpreter.payload(.init(updates: updates,
+            clarificationQuestion: question), transcript: text, context: context, today: today,
+            timeZone: TimeZone(identifier: "Europe/Berlin")!)
+    }
+
     @available(iOS 26.0, *)
     func testLocalMergeAddsCorrectsAndPreservesUnchangedExpenses() throws {
         let vm = VoiceModeViewModel()
         vm.open(provider: .appleLocal)
         vm.drafts = [draft("coffee", "Coffee", 4), draft("flowers", "Flowers", 12)]
-        let output = LocalExpenseInterpretation(requestSummary: "", updates: [
-            LocalExpenseUpdate(existingID: "coffee", title: "Coffee", amountEvidence: "4.5", dateEvidence: "", splitEvidence: ""),
-            LocalExpenseUpdate(existingID: "", title: "Train", amountEvidence: "20", dateEvidence: "", splitEvidence: "partner 8 euros")
-        ], removedIDs: [], clarificationQuestion: "")
-        let payload = try AppleExpenseInterpreter.payload(output, transcript: "Coffee was 4.5 and train 20 partner 8 euros", context: vm.resumeWorkspaceContext())
+        let payload = try result([update(1, amount: 4.5), update(title: "Train", amount: 20,
+            share: .init(kind: .partnerFixed, value: 8, otherValue: nil))], context: vm.resumeWorkspaceContext())
         vm.handleVoiceEvent(.workspaceSync(payload))
         XCTAssertEqual(vm.drafts.map(\.title), ["Coffee", "Flowers", "Train"])
         XCTAssertEqual(vm.drafts.map(\.amount), [4.5, 12, 20])
         XCTAssertEqual(vm.drafts.last?.partnerShare, 8)
+        XCTAssertEqual(vm.drafts[1].dateISO, "2026-09-27")
         XCTAssertTrue(vm.canSaveDrafts)
         vm.cancelSession()
     }
 
     @available(iOS 26.0, *)
-    func testMissingAmountRequiresClarificationAndCannotSave() throws {
-        let output = LocalExpenseInterpretation(requestSummary: "", updates: [
-            LocalExpenseUpdate(existingID: "", title: "Coffee", amountEvidence: "", dateEvidence: "", splitEvidence: "")
-        ], removedIDs: [], clarificationQuestion: "")
-        let payload = try AppleExpenseInterpreter.payload(output, transcript: "Coffee", context: nil)
-        XCTAssertEqual(payload.expenses.first?.missingFields, [.amount])
+    func testTeslaStructuredInterpretationKeepsPriceDateAndUnassigned7030() throws {
+        let sentence = "Tesla Supercharger hat mich 73 € gekostet das war bereits vor drei Tagen und ich würde es gern 7030 teilen"
+        let payload = try result([update(title: "Tesla Supercharger", amount: 73,
+            date: .init(kind: .relativeDays, isoDate: nil, dayOffset: -3),
+            share: .init(kind: .unassignedRatio, value: 70, otherValue: 30))], text: sentence)
+        let vm = VoiceModeViewModel(); vm.open(provider: .appleLocal)
+        vm.handleVoiceEvent(.workspaceSync(payload))
+        XCTAssertEqual(vm.drafts.first?.amount, 73)
+        XCTAssertEqual(vm.drafts.first?.dateISO, "2026-10-07")
+        XCTAssertNil(vm.drafts.first?.splitValue)
+        XCTAssertTrue(vm.drafts.first?.splitIntent?.contains("70/30") == true)
+        XCTAssertEqual(vm.drafts.first?.missingFields, [.split])
+        XCTAssertFalse(vm.canSaveDrafts)
+        XCTAssertTrue(vm.expensesForSaving().isEmpty)
+        XCTAssertFalse(vm.clarificationQuestion.isEmpty)
+        let context = try XCTUnwrap(vm.resumeWorkspaceContext())
+        let jsonStart = try XCTUnwrap(context.firstIndex(of: "{"))
+        let decoded = try JSONDecoder().decode(AppleExpenseInterpreter.Context.self, from: Data(context[jsonStart...].utf8))
+        XCTAssertTrue(decoded.expenses[0].split_intent?.contains("70/30") == true)
+        XCTAssertEqual(decoded.last_request, sentence)
+        // Unrelated corrections must not erase the outstanding person assignment.
+        vm.handleVoiceEvent(.workspaceSync(try result([update(1, title: "Tesla charging", amount: 74)], context: context)))
+        XCTAssertFalse(vm.canSaveDrafts)
+        XCTAssertTrue(vm.drafts.first?.splitIntent?.contains("70/30") == true)
+        // Follow-up: "I pay 70" resolves the partner complement deterministically.
+        vm.handleVoiceEvent(.workspaceSync(try result([update(1,
+            share: .init(kind: .userPercent, value: 70, otherValue: nil))],
+            context: vm.resumeWorkspaceContext(), text: "Ich übernehme 70 Prozent")))
+        XCTAssertEqual(vm.drafts.first?.splitValue, 30)
+        XCTAssertNil(vm.drafts.first?.splitIntent)
+        XCTAssertEqual(vm.drafts.first?.amount, 74)
+        XCTAssertEqual(vm.drafts.first?.dateISO, "2026-10-07")
+        XCTAssertEqual(vm.expensesForSaving().first?.partnerShare, 22.2)
+        XCTAssertTrue(vm.canSaveDrafts)
+        vm.cancelSession()
+    }
+
+    @available(iOS 26.0, *)
+    func testMissingAndUncertainSharesUse5050ButUnequalIntentDoesNot() throws {
+        for kind in [LocalShareKind.notMentioned, .uncertain] {
+            let payload = try result([update(title: "Coffee", amount: 4,
+                share: .init(kind: kind, value: nil, otherValue: nil))])
+            XCTAssertEqual(payload.expenses.first?.splitValue, 50)
+            XCTAssertTrue(payload.expenses[0].draft.isReadyForSaving)
+            XCTAssertTrue(payload.clarificationQuestion.isEmpty)
+        }
+        let equal = try result([update(title: "Coffee", amount: 4,
+            share: .init(kind: .unassignedRatio, value: 50, otherValue: 50))])
+        XCTAssertEqual(equal.expenses[0].splitValue, 50)
+        XCTAssertTrue(equal.expenses[0].draft.isReadyForSaving)
+        for kind in [LocalShareKind.partnerPercent, .userPercent] {
+            let payload = try result([update(title: "Coffee", amount: 4,
+                share: .init(kind: kind, value: 70, otherValue: nil))])
+            XCTAssertEqual(payload.expenses.first?.splitValue, kind == .partnerPercent ? 70 : 30)
+            XCTAssertTrue(payload.expenses[0].draft.isReadyForSaving)
+        }
+    }
+
+    @available(iOS 26.0, *)
+    func testUnclearFollowUpCannotEraseRecognizedUnequalIntent() throws {
+        let vm = VoiceModeViewModel(); vm.open(provider: .appleLocal)
+        vm.handleVoiceEvent(.workspaceSync(try result([update(title: "Tesla", amount: 73,
+            share: .init(kind: .unassignedRatio, value: 70, otherValue: 30))])))
+        vm.handleVoiceEvent(.workspaceSync(try result([update(1,
+            share: .init(kind: .uncertain, value: nil, otherValue: nil))], context: vm.resumeWorkspaceContext())))
+        XCTAssertTrue(vm.drafts[0].splitIntent?.contains("70/30") == true)
+        XCTAssertNil(vm.drafts[0].splitValue); XCTAssertFalse(vm.canSaveDrafts)
+        vm.handleVoiceEvent(.workspaceSync(try result([update(1,
+            share: .init(kind: .partnerPercent, value: 50, otherValue: nil))], context: vm.resumeWorkspaceContext())))
+        XCTAssertEqual(vm.drafts[0].splitValue, 50); XCTAssertTrue(vm.canSaveDrafts)
+        vm.cancelSession()
+    }
+
+    @available(iOS 26.0, *)
+    func testExplicitUnclearDateRemainsOpenUntilCorrectedAcrossTurns() throws {
+        let vm = VoiceModeViewModel(); vm.open(provider: .appleLocal)
+        vm.handleVoiceEvent(.workspaceSync(try result([update(title: "Coffee", amount: 4,
+            date: .init(kind: .uncertain, isoDate: nil, dayOffset: nil))])))
+        XCTAssertNil(vm.drafts[0].dateISO)
+        XCTAssertEqual(vm.drafts[0].missingFields, [.date])
+        XCTAssertFalse(vm.canSaveDrafts)
+        vm.handleVoiceEvent(.workspaceSync(try result([update(1, amount: 5)], context: vm.resumeWorkspaceContext())))
+        XCTAssertNil(vm.drafts[0].dateISO); XCTAssertFalse(vm.canSaveDrafts)
+        vm.handleVoiceEvent(.workspaceSync(try result([update(1,
+            date: .init(kind: .absolute, isoDate: "2026-10-08", dayOffset: nil))], context: vm.resumeWorkspaceContext())))
+        XCTAssertEqual(vm.drafts[0].dateISO, "2026-10-08"); XCTAssertEqual(vm.drafts[0].amount, 5)
+        XCTAssertTrue(vm.canSaveDrafts)
+        vm.cancelSession()
+    }
+
+    @available(iOS 26.0, *)
+    func testPartialDraftFollowUpRenameAndMultiplePurchasesPreserveCards() throws {
+        let vm = VoiceModeViewModel(); vm.open(provider: .appleLocal)
+        vm.handleVoiceEvent(.workspaceSync(try result([update(title: "Coffee"), update(title: "Flowers", amount: 12)])))
+        XCTAssertEqual(vm.drafts.count, 2); XCTAssertFalse(vm.canSaveDrafts)
+        XCTAssertEqual(vm.drafts[0].missingFields, [.amount])
+        let id = vm.drafts[0].id
+        vm.handleVoiceEvent(.workspaceSync(try result([update(1, amount: 4.5)], context: vm.resumeWorkspaceContext(), text: "Vier fünfzig")))
+        XCTAssertEqual(vm.drafts[0].id, id); XCTAssertTrue(vm.canSaveDrafts)
+        vm.handleVoiceEvent(.workspaceSync(try result([update(1, title: "Espresso")], context: vm.resumeWorkspaceContext())))
+        XCTAssertEqual(vm.drafts.map(\.title), ["Espresso", "Flowers"])
+        XCTAssertEqual(vm.drafts.map(\.amount), [4.5, 12])
+        vm.cancelSession()
+    }
+
+    @available(iOS 26.0, *)
+    func testAmbiguousTargetAsksWithoutMutatingExistingCards() throws {
+        let vm = VoiceModeViewModel(); vm.open(provider: .appleLocal)
+        vm.drafts = [draft("coffee", "Coffee", 4), draft("flowers", "Flowers", 12)]
+        vm.handleVoiceEvent(.workspaceSync(try result([], context: vm.resumeWorkspaceContext(), question: "Welche Ausgabe?")))
+        XCTAssertEqual(vm.drafts.map(\.id), ["coffee", "flowers"])
+        XCTAssertEqual(vm.drafts.map(\.amount), [4,12])
+        XCTAssertEqual(vm.clarificationQuestion, "Welche Ausgabe?")
+        vm.cancelSession()
+    }
+
+    @available(iOS 26.0, *)
+    func testInvalidGeneratedValuesAndUnknownTargetsAreRejectedAtomically() {
+        for change in [update(title: "Coffee", amount: -4), update(title: "Coffee", amount: 1e12),
+                       update(title: "Coffee", amount: 4, share: .init(kind: .partnerPercent, value: 101, otherValue: nil)),
+                       update(1, title: "Unknown", amount: 4)] {
+            XCTAssertThrowsError(try result([update(title: "Valid", amount: 5), change]))
+        }
+        XCTAssertThrowsError(try result([update(title: "Coffee", amount: .infinity)]))
+    }
+
+    @available(iOS 26.0, *)
+    func testFixedShareArithmeticAndChangedPriceRequireValidDomainValues() throws {
+        let payload = try result([update(title: "Dinner", amount: 73,
+            share: .init(kind: .userFixed, value: 20, otherValue: nil))])
+        XCTAssertEqual(payload.expenses.first?.splitValue, 53)
+        let vm = VoiceModeViewModel(); vm.open(provider: .appleLocal)
+        vm.handleVoiceEvent(.workspaceSync(payload))
+        vm.handleVoiceEvent(.workspaceSync(try result([update(1, amount: 40)], context: vm.resumeWorkspaceContext())))
+        XCTAssertEqual(vm.drafts[0].amount, 40); XCTAssertFalse(vm.canSaveDrafts)
+        XCTAssertEqual(vm.drafts[0].missingFields, [.split])
+        vm.handleVoiceEvent(.workspaceSync(try result([update(1,
+            share: .init(kind: .partnerFixed, value: 10, otherValue: nil))], context: vm.resumeWorkspaceContext())))
+        XCTAssertTrue(vm.canSaveDrafts)
+        vm.cancelSession()
+    }
+
+    @available(iOS 26.0, *)
+    func testInvalidCalendarDateKeepsRecognizedPriceAndAsksForDate() throws {
+        let payload = try result([update(title: "Coffee", amount: 4,
+            date: .init(kind: .absolute, isoDate: "2026-02-30", dayOffset: nil))])
+        XCTAssertEqual(payload.expenses[0].amount, 4)
+        XCTAssertNil(payload.expenses[0].dateISO)
+        XCTAssertEqual(payload.expenses[0].missingFields, [.date])
         XCTAssertFalse(payload.expenses[0].draft.isReadyForSaving)
-        XCTAssertFalse(payload.clarificationQuestion.isEmpty)
     }
 
     @available(iOS 26.0, *)
-    func testInvalidGeneratedValuesAndUnknownIDsAreRejected() {
-        let invalid: [LocalExpenseUpdate] = [
-            .init(existingID: "", title: "Coffee", amountEvidence: "-4", dateEvidence: "", splitEvidence: ""),
-            .init(existingID: "", title: "Coffee", amountEvidence: "999999999999", dateEvidence: "", splitEvidence: ""),
-            .init(existingID: "", title: "Coffee", amountEvidence: "4", dateEvidence: "2026-02-30", splitEvidence: ""),
-            .init(existingID: "", title: "Coffee", amountEvidence: "4", dateEvidence: "", splitEvidence: "partner 101 percent"),
-            .init(existingID: "", title: "Coffee", amountEvidence: "4", dateEvidence: "", splitEvidence: "partner 5 euros"),
-            .init(existingID: "invented", title: "Coffee", amountEvidence: "4", dateEvidence: "", splitEvidence: "")
-        ]
-        for update in invalid {
-            let transcript = ["Coffee", update.amountEvidence, update.dateEvidence, update.splitEvidence].joined(separator: " ")
-            XCTAssertThrowsError(try AppleExpenseInterpreter.payload(
-                .init(requestSummary: "", updates: [update], removedIDs: [], clarificationQuestion: ""), transcript: transcript, context: nil))
-        }
-    }
-
-    func testSpokenMoneyAndDatesUseSourceValuesInsteadOfGeneratedArithmetic() {
-        for (phrase, expected) in [("four euros fifty", 4.5), ("vier Euro fünfzig", 4.5), ("twelve euros", 12.0),
-                                    ("zwölf Euro", 12.0), ("vier fünfzig", 4.5), ("84,30", 84.3), ("1,234.56", 1234.56),
-                                    ("1.234,56", 1234.56), ("1.234 Euro", 1234.0), ("1,234 euros", 1234.0), ("my partner owes 20 euros", 20.0), ("25 Prozent", 25.0)] {
-            XCTAssertEqual(LocalSpokenValue.amount(phrase), expected, phrase)
-        }
-        XCTAssertNil(LocalSpokenValue.amount("Coffee"))
-        XCTAssertEqual(LocalSpokenValue.date("yesterday", today: "2026-09-27"), "2026-09-26")
-        XCTAssertEqual(LocalSpokenValue.date("gestern", today: "2026-01-01"), "2025-12-31")
-        XCTAssertNil(LocalSpokenValue.date("2026-02-30", today: "2026-09-27"))
+    func testOwnFixedShareWithMissingTotalResolvesDeterministicallyOnFollowUp() throws {
+        let vm = VoiceModeViewModel(); vm.open(provider: .appleLocal)
+        vm.handleVoiceEvent(.workspaceSync(try result([update(title: "Dinner",
+            share: .init(kind: .userFixed, value: 20, otherValue: nil))])))
+        XCTAssertEqual(vm.drafts[0].pendingUserFixedShare, 20)
+        XCTAssertFalse(vm.canSaveDrafts)
+        vm.handleVoiceEvent(.workspaceSync(try result([update(1, amount: 73)], context: vm.resumeWorkspaceContext())))
+        XCTAssertEqual(vm.drafts[0].splitValue, 53)
+        XCTAssertNil(vm.drafts[0].pendingUserFixedShare)
+        XCTAssertNil(vm.drafts[0].splitIntent)
+        XCTAssertTrue(vm.canSaveDrafts)
+        vm.cancelSession()
     }
 
     @available(iOS 26.0, *)
-    func testExplicitHalfAndAllSharesAndUnsupportedShareDoNotSilentlyDefault() throws {
-        for (phrase, expected) in [("partner pays half", 50.0), ("Partner zahlt die Hälfte", 50.0), ("partner pays all", 100.0)] {
-            let result = try AppleExpenseInterpreter.payload(.init(requestSummary: "", updates: [
-                .init(existingID: "", title: "Coffee", amountEvidence: "4 euros", dateEvidence: "", splitEvidence: phrase)
-            ], removedIDs: [], clarificationQuestion: ""), transcript: "Coffee 4 euros \(phrase)", context: nil)
-            XCTAssertEqual(result.expenses.first?.splitValue, expected)
+    func testRelativeDatesUseCalendarAcrossLeapDayAndTimeZones() throws {
+        for zone in ["Europe/Berlin", "America/Los_Angeles", "Pacific/Kiritimati"] {
+            let value = try AppleExpenseInterpreter.payload(.init(updates: [
+                update(title: "Coffee", amount: 4, date: .init(kind: .relativeDays, isoDate: nil, dayOffset: -1))
+            ], clarificationQuestion: ""), transcript: "Yesterday", context: nil, today: "2024-03-01",
+                timeZone: TimeZone(identifier: zone)!)
+            XCTAssertEqual(value.expenses[0].dateISO, "2024-02-29", zone)
         }
-        XCTAssertThrowsError(try AppleExpenseInterpreter.payload(.init(requestSummary: "", updates: [
-            .init(existingID: "", title: "Coffee", amountEvidence: "4 euros", dateEvidence: "", splitEvidence: "partner pays most")
-        ], removedIDs: [], clarificationQuestion: ""), transcript: "Coffee 4 euros partner pays most", context: nil))
-    }
-
-    @available(iOS 26.0, *)
-    func testInventedPriceEvidenceCannotBecomeASavableExpense() throws {
-        let output = LocalExpenseInterpretation(requestSummary: "Coffee", updates: [
-            .init(existingID: "", title: "Coffee", amountEvidence: "four euros fifty", dateEvidence: "", splitEvidence: "")
-        ], removedIDs: [], clarificationQuestion: "")
-        let payload = try AppleExpenseInterpreter.payload(output, transcript: "Coffee", context: nil)
-        XCTAssertNil(payload.expenses[0].amount)
-        XCTAssertFalse(payload.expenses[0].draft.isReadyForSaving)
     }
 
     @available(iOS 26.0, *)
     func testSpokenRemovalAndInFlightManualRemovalAreRespected() throws {
-        let vm = VoiceModeViewModel()
-        vm.open(provider: .appleLocal)
+        let vm = VoiceModeViewModel(); vm.open(provider: .appleLocal)
         vm.drafts = [draft("coffee", "Coffee", 4), draft("flowers", "Flowers", 12)]
-        let context = vm.resumeWorkspaceContext()
-        let output = LocalExpenseInterpretation(requestSummary: "", updates: [], removedIDs: ["flowers"], clarificationQuestion: "")
-        let payload = try AppleExpenseInterpreter.payload(output, transcript: "Remove flowers", context: context)
-        vm.removeDraft(vm.drafts[0])
-        vm.handleVoiceEvent(.workspaceSync(payload))
+        var removal = update(2); removal.action = .remove
+        let payload = try result([removal], context: vm.resumeWorkspaceContext())
+        vm.removeDraft(vm.drafts[0]); vm.handleVoiceEvent(.workspaceSync(payload))
         XCTAssertTrue(vm.drafts.isEmpty)
         vm.cancelSession()
+    }
+
+    func testLiteralRatioTokensRequireUniqueSplitAndExactNumericBoundaries() {
+        let pair = VoiceWorkspaceDomain.concatenatedPercentages("7030")
+        XCTAssertEqual(pair?.0, 70); XCTAssertEqual(pair?.1, 30)
+        XCTAssertEqual(VoiceWorkspaceDomain.concatenatedPercentages("9010")?.0, 90)
+        XCTAssertNil(VoiceWorkspaceDomain.concatenatedPercentages("991"))
+        XCTAssertNil(VoiceWorkspaceDomain.concatenatedPercentages("seventy thirty"))
+        XCTAssertTrue(VoiceWorkspaceDomain.numericToken("7030", occursIn: "7030 teilen"))
+        XCTAssertFalse(VoiceWorkspaceDomain.numericToken("70", occursIn: "7030 teilen"))
+        XCTAssertFalse(VoiceWorkspaceDomain.numericToken("30", occursIn: "7030 teilen"))
+        XCTAssertTrue(VoiceWorkspaceDomain.numericToken("9,80", occursIn: "Preis 9,80 Euro"))
+        XCTAssertFalse(VoiceWorkspaceDomain.numericToken("80", occursIn: "Preis 9,80 Euro"))
+    }
+
+    @available(iOS 26.0, *)
+    func testStructuredPlanMultiplePurchasesGetDomainDefaultsAndSharedRelativeDate() throws {
+        let actions: [LocalPlanAction] = [
+            .add(.init(title: "Coffee", amount: .init(euros: 4, cents: 50), date: .relativeDays(-1), share: .notMentioned)),
+            .add(.init(title: "Flowers", amount: .init(euros: 12, cents: 0), date: .relativeDays(-1), share: .notMentioned))]
+        let result = try AppleExpenseInterpreter.applyPlan(.init(actions: actions), to: [], transcript: "", today: "2026-09-27", timeZone: TimeZone(identifier: "Europe/Berlin")!)
+        XCTAssertEqual(result.expenses.map(\.amount), [4.5, 12])
+        XCTAssertEqual(result.expenses.map(\.dateISO), ["2026-09-26", "2026-09-26"])
+        XCTAssertEqual(result.expenses.map(\.splitValue), [50, 50])
+        XCTAssertEqual(Set(result.expenses.map(\.id)).count, 2)
+        XCTAssertTrue(result.expenses.allSatisfy { $0.draft.isReadyForSaving })
+    }
+
+    @available(iOS 26.0, *)
+    func testStructuredPlanRatioKeepsPriceAndDateUntilPersonClarification() throws {
+        let initial = try AppleExpenseInterpreter.applyPlan(.init(actions: [.add(.init(title: "Tesla", amount: .init(euros: 73, cents: 0), date: .relativeDays(-3), share: .init(kind: .unassignedRatio, value: 70, secondValue: 30)))]), to: [], transcript: "", today: "2026-09-27", timeZone: .current)
+        XCTAssertEqual(initial.expenses[0].amount, 73)
+        XCTAssertEqual(initial.expenses[0].dateISO, "2026-09-24")
+        XCTAssertTrue(initial.expenses[0].splitIntent?.contains("70/30") == true)
+        XCTAssertFalse(initial.expenses[0].draft.isReadyForSaving)
+        let fixed = try AppleExpenseInterpreter.applyPlan(.init(actions: [.edit(.init(expenseNumber: 1, title: nil, amount: nil, date: .notMentioned, share: .init(kind: .speakerPercent, value: 70, secondValue: 0)))]), to: initial.expenses, transcript: "", today: "2026-09-27", timeZone: .current)
+        XCTAssertEqual(fixed.expenses[0].id, initial.expenses[0].id)
+        XCTAssertEqual(fixed.expenses[0].splitValue, 30)
+        XCTAssertEqual(fixed.expenses[0].dateISO, "2026-09-24")
+        XCTAssertTrue(fixed.expenses[0].draft.isReadyForSaving)
+    }
+
+    @available(iOS 26.0, *)
+    func testStructuredPlanInvalidTargetIsAtomicAndExistingCorrectionsKeepIDs() throws {
+        let rows = [draft("coffee", "Coffee", 4).payload, draft("flowers", "Flowers", 12).payload]
+        let edit = LocalPlanAction.edit(.init(expenseNumber: 1, title: nil, amount: .init(euros: 5, cents: 0), date: .notMentioned, share: .notMentioned))
+        let result = try AppleExpenseInterpreter.applyPlan(.init(actions: [edit]), to: rows, transcript: "", today: "2026-09-27", timeZone: .current)
+        XCTAssertEqual(result.expenses.map(\.id), ["coffee", "flowers"])
+        XCTAssertEqual(result.expenses.map(\.amount), [5, 12])
+        XCTAssertThrowsError(try AppleExpenseInterpreter.applyPlan(.init(actions: [edit, .remove(expenseNumber: 3)]), to: rows, transcript: "", today: "2026-09-27", timeZone: .current))
+        XCTAssertEqual(rows.map(\.amount), [4, 12])
+    }
+
+    @available(iOS 26.0, *)
+    func testStructuredPlanUnresolvedFieldDoesNotDiscardRecognizedPurchase() throws {
+        let result = try AppleExpenseInterpreter.applyPlan(.init(actions: [.add(.init(title: "Entry", amount: .init(euros: 28, cents: 0), date: .notMentioned, share: .init(kind: .unresolved, value: 0, secondValue: 0, intent: "unclear contribution")))]), to: [], transcript: "", today: "2026-09-27", timeZone: .current)
+        XCTAssertEqual(result.expenses[0].amount, 28)
+        XCTAssertEqual(result.expenses[0].dateISO, "2026-09-27")
+        XCTAssertTrue(result.expenses[0].missingFields.contains(.split))
+        XCTAssertFalse(result.expenses[0].draft.isReadyForSaving)
+    }
+
+    @available(iOS 26.0, *)
+    func testStructuredPlanInvalidSharePreservesMoneyAndBlocksSaving() throws {
+        for share in [LocalPlanShare(kind: .speakerEuros, value: 29, secondValue: 0),
+                      LocalPlanShare(kind: .partnerPercent, value: 101, secondValue: 0),
+                      LocalPlanShare(kind: .unassignedRatio, value: 0, secondValue: 0)] {
+            let result = try AppleExpenseInterpreter.applyPlan(.init(actions: [.add(.init(title: "Entry", amount: .init(euros: 28, cents: 0), date: .relativeDays(-2), share: share))]), to: [], transcript: "", today: "2026-09-27", timeZone: .current)
+            XCTAssertEqual(result.expenses[0].amount, 28)
+            XCTAssertEqual(result.expenses[0].dateISO, "2026-09-25")
+            XCTAssertFalse(result.expenses[0].draft.isReadyForSaving)
+            XCTAssertTrue(result.expenses[0].missingFields.contains(.split))
+        }
     }
 
     private func draft(_ id: String, _ title: String, _ amount: Double) -> VoiceExpenseDraft {

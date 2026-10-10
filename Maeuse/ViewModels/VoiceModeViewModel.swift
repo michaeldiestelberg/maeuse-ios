@@ -158,6 +158,29 @@ final class VoiceModeViewModel {
                               dateISO: formatter.string(from: yesterday), splitMode: .percent,
                               splitValue: 50, confidence: 1, missingFields: [])
         }
+        // Synthetic structured changes exercise the shared production domain/UI.
+        // They deliberately do not claim to test real model understanding.
+        if ProcessInfo.processInfo.arguments.contains("--voice-tesla") ||
+           ProcessInfo.processInfo.arguments.contains("--voice-unresolved-date") {
+            drafts = []; understandingHistory = []
+            let uncertainDate = ProcessInfo.processInfo.arguments.contains("--voice-unresolved-date")
+            let change = VoiceExpenseChange(existingID: nil, remove: false, title: "Tesla Supercharger", amount: .value(73),
+                date: uncertainDate ? .uncertain : .relativeDays(-3),
+                share: uncertainDate ? .equalDefault : .unassignedRatio(70, 30))
+            if let payload = try? VoiceWorkspaceDomain.apply([change], to: [],
+                understanding: german ? "Tesla Supercharger, 73 Euro, vor drei Tagen, 70/30 teilen." : "Tesla Supercharger, 73 euros, three days ago, split 70/30.",
+                question: "", todayISO: Self.todayISOString()) {
+                handleVoiceEvent(.workspaceSync(payload))
+            }
+            if ProcessInfo.processInfo.arguments.contains("--voice-tesla-resolved"), let draft = drafts.first {
+                let assignment = VoiceExpenseChange(existingID: draft.id, remove: false, share: .userPercent(70))
+                if let payload = try? VoiceWorkspaceDomain.apply([assignment], to: drafts.map(\.payload),
+                    understanding: german ? "Ich übernehme 70 Prozent." : "I pay 70 percent.",
+                    question: "", todayISO: Self.todayISOString()) {
+                    handleVoiceEvent(.workspaceSync(payload))
+                }
+            }
+        }
         // Simulator-only fixtures exercise the production event handler and layout.
         if ProcessInfo.processInfo.arguments.contains("--voice-meter-audio") {
             drafts = []
@@ -336,9 +359,11 @@ final class VoiceModeViewModel {
         let rows: [[String: Any]] = drafts.map { draft in
             ["id": draft.id, "title": draft.title, "amount": draft.amount as Any? ?? NSNull(),
              "date_iso": draft.dateISO as Any? ?? NSNull(), "split_mode": draft.splitMode?.rawValue as Any? ?? NSNull(),
-             "split_value": draft.splitValue as Any? ?? NSNull(), "missing_fields": draft.missingFields.map(\.rawValue)]
+             "split_value": draft.splitValue as Any? ?? NSNull(), "missing_fields": draft.missingFields.map(\.rawValue),
+             "split_intent": draft.splitIntent as Any? ?? NSNull(),
+             "pending_user_fixed_share": draft.pendingUserFixedShare as Any? ?? NSNull()]
         }
-        guard let data = try? JSONSerialization.data(withJSONObject: ["expenses": rows, "removed_ids": removedDraftIDs.sorted(), "clarification_question": clarificationQuestion]),
+        guard let data = try? JSONSerialization.data(withJSONObject: ["expenses": rows, "removed_ids": removedDraftIDs.sorted(), "clarification_question": clarificationQuestion, "last_request": understandingHistory.last?.text ?? ""]),
               let text = String(data: data, encoding: .utf8) else { return nil }
         return "App-provided initial workspace, not a spoken request. Keep these drafts and IDs when processing the next spoken request. Removed IDs must stay removed; an explicit re-add must use a new ID. Do not respond to this note. \(text)"
     }
@@ -491,7 +516,7 @@ final class VoiceModeViewModel {
         }
 
         let incomingDrafts = payload.expenses.filter { !removedDraftIDs.contains($0.id) }.map { payloadDraft -> VoiceExpenseDraft in
-            var next = applyDefaultWorkspaceFields(to: payloadDraft.draft, todayISO: todayISO)
+            var next = VoiceWorkspaceDomain.normalized(payloadDraft.draft, todayISO: todayISO)
             if let previous = previousDrafts[next.id],
                previous.withoutChangeTimestamp == next.withoutChangeTimestamp {
                 next.lastChangedAt = previous.lastChangedAt
@@ -521,9 +546,7 @@ final class VoiceModeViewModel {
         })
         updatedExpenseIDs = updatedIDs
         drafts = nextDrafts
-        if clarificationQuestion.isEmpty, drafts.contains(where: { $0.dateISO.map { Expense.dateFromISO($0) == nil } ?? false }) {
-            clarificationQuestion = loc("VoiceInvalidDateQuestion")
-        }
+        clarificationQuestion = VoiceWorkspaceDomain.clarification(for: drafts, proposed: clarificationQuestion)
 
         if !addedIDs.isEmpty {
             playVoiceHaptic(.success)
@@ -573,20 +596,7 @@ final class VoiceModeViewModel {
         }
     }
 
-    private func applyDefaultWorkspaceFields(to draft: VoiceExpenseDraft, todayISO: String) -> VoiceExpenseDraft {
-        var draft = draft
-        if draft.dateISO == nil {
-            draft.dateISO = todayISO
-        }
-        if draft.splitMode == nil {
-            draft.splitMode = .percent
-        }
-        if draft.splitValue == nil {
-            draft.splitValue = 50
-        }
-        draft.missingFields.removeAll { $0 == .date || $0 == .split }
-        return draft
-    }
+
 }
 
 extension VoiceModeViewModel: RealtimeVoiceServiceDelegate {
@@ -681,7 +691,9 @@ private extension VoiceExpenseDraft {
             splitValue: splitValue,
             confidence: 0, // Model confidence alone is not a visible correction.
             missingFields: missingFields,
-            lastChangedAt: .distantPast
+            lastChangedAt: .distantPast,
+            splitIntent: splitIntent,
+            pendingUserFixedShare: pendingUserFixedShare
         )
     }
 }

@@ -1,3 +1,8 @@
+## 1.5.0 (55) — internal TestFlight candidate, 2026-10-10
+- Apple Voice Mode uses a structured action plan instead of free model tool calls. Multiple purchases retain their prices and dates; unspecified shares default to 50/50 in the app.
+- Relative dates, money rounding, speaker/partner contributions and draft identities are computed or validated by shared app rules. Unassigned ratios remain open until the people are clarified; invalid dates/shares cannot be saved.
+- Actual on-device Apple model validation on the Mac passed 26/26 checks twice, including German/English follow-ups and additional formulations. All 110 iOS simulator tests, Release build and static analysis passed. Physical iPhone audio/model validation remains the tester's final check.
+
 ## 1.5.0 (54)
 - Apple listening keeps a stable microphone with a soft accent halo, breathing slowly only during actual capture; quiet and speech share the same clear state.
 - Pause/inference extinguish the halo and show a crossed microphone. Resume intent alone never lights it. Reduce Motion uses a steady halo.

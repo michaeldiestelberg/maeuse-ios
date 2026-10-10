@@ -222,3 +222,9 @@
 "LocalPauseAfterProcessing" = "Stay paused after processing";
 "LocalResumeAfterProcessing" = "Resume listening after processing";
 "LocalSaveReviewHint" = "Ends recording for review first. Tap again to save reviewed drafts.";
+
+"VoiceCheckSplit" = "Check split";
+"VoiceClarifySplitQuestion" = "Who pays which share? Please clarify the marked split.";
+"VoiceUnassignedRatio" = "%@/%@ – assignment needed";
+"VoiceUserFixedPending" = "I pay €%@ – total needed";
+"VoiceUnassignedFixed" = "€%@ – assignment needed";

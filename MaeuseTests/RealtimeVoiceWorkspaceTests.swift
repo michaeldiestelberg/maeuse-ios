@@ -177,7 +177,7 @@ final class RealtimeVoiceWorkspaceTests: XCTestCase {
                     splitMode: nil,
                     splitValue: nil,
                     confidence: 0.92,
-                    missingFields: [.date, .split]
+                    missingFields: []
                 )
             ],
             changedExpenseIDs: ["expense-1"],
@@ -192,6 +192,44 @@ final class RealtimeVoiceWorkspaceTests: XCTestCase {
         XCTAssertEqual(draft?.splitValue, 50)
         XCTAssertEqual(draft?.missingFields, [])
         XCTAssertEqual(viewModel.takeawayText, "1 expense · €10.00 total · €5.00 partner")
+    }
+
+    func testCloudToolUnclearDateAndUnassignedSplitRemainUnsavableUntilResolved() throws {
+        let object: [String: Any] = ["user_understanding": "Tesla 73 euros three days ago, 70/30", "clarification_question": "Who pays 70?",
+            "expenses": [["id": "tesla", "title": "Tesla", "amount": 73, "date_iso": NSNull(),
+                "split_mode": "percent", "split_value": NSNull(), "split_intent": "70/30 assignment needed",
+                "confidence": 1, "missing_fields": ["date", "split"]]],
+            "changed_expense_ids": ["tesla"], "removed_expense_ids": []]
+        let data = try JSONSerialization.data(withJSONObject: object)
+        let args = try XCTUnwrap(String(data: data, encoding: .utf8))
+        let event = try JSONSerialization.data(withJSONObject: ["type": "response.done", "response": [
+            "id": "cloud-pending", "status": "completed", "output": [["type": "function_call",
+                "name": "sync_expense_workspace", "call_id": "cloud-call", "arguments": args]]]])
+        var parser = RealtimeServerEventParser()
+        let pending = try XCTUnwrap(parser.parse(event).compactMap(\.workspaceSyncPayload).first)
+        let vm = VoiceModeViewModel(); vm.open(provider: .openAI)
+        vm.handleVoiceEvent(.workspaceSync(pending))
+        XCTAssertNil(vm.drafts[0].dateISO); XCTAssertNil(vm.drafts[0].splitValue)
+        XCTAssertEqual(vm.drafts[0].splitIntent, "70/30 assignment needed")
+        XCTAssertEqual(vm.drafts[0].missingFields, [.date, .split])
+        XCTAssertFalse(vm.canSaveDrafts); XCTAssertTrue(vm.expensesForSaving().isEmpty)
+        vm.handleVoiceEvent(.workspaceSync(.init(userUnderstanding: "October 7, partner pays 30", clarificationQuestion: "",
+            expenses: [.init(id: "tesla", title: "Tesla", amount: 73, dateISO: "2026-10-07", splitMode: "percent",
+                splitValue: 30, confidence: 1, missingFields: [])], changedExpenseIDs: ["tesla"], removedExpenseIDs: [])))
+        XCTAssertTrue(vm.canSaveDrafts); XCTAssertNil(vm.drafts[0].splitIntent)
+        XCTAssertEqual(vm.expensesForSaving()[0].partnerShare, 21.9)
+        vm.cancelSession()
+    }
+
+    func testCloudInvalidFixedShareIsMarkedInsteadOfSilentlyCapped() {
+        let vm = VoiceModeViewModel(); vm.open(provider: .openAI)
+        vm.handleVoiceEvent(.workspaceSync(.init(userUnderstanding: "Coffee 4, partner 5 euros", clarificationQuestion: "",
+            expenses: [.init(id: "coffee", title: "Coffee", amount: 4, dateISO: nil, splitMode: "fixed",
+                splitValue: 5, confidence: 1, missingFields: [])], changedExpenseIDs: ["coffee"], removedExpenseIDs: [])))
+        XCTAssertEqual(vm.drafts[0].splitValue, 5)
+        XCTAssertEqual(vm.drafts[0].missingFields, [.split])
+        XCTAssertFalse(vm.canSaveDrafts); XCTAssertFalse(vm.clarificationQuestion.isEmpty)
+        vm.cancelSession()
     }
 
     func testWorkspaceSyncReplacesLatestUnderstandingAndAppliesCorrections() {
@@ -645,9 +683,9 @@ final class RealtimeVoiceWorkspaceTests: XCTestCase {
         )
         viewModel.drafts = [draft]
 
-        XCTAssertTrue(viewModel.canSaveDrafts)
-        XCTAssertEqual(draft.normalizedSplitValue, 20)
-        XCTAssertEqual(viewModel.expensesForSaving().first?.splitValue, 20)
+        XCTAssertFalse(viewModel.canSaveDrafts, "An explicit fixed share above the total must not be silently capped")
+        XCTAssertEqual(draft.normalizedSplitValue, 20) // Display normalization alone is not save permission.
+        XCTAssertTrue(viewModel.expensesForSaving().isEmpty)
 
         viewModel.drafts[0].splitMode = .percent
         viewModel.drafts[0].splitValue = 125
