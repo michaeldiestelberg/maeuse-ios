@@ -236,3 +236,20 @@
 "LocalDiagnosis" = "Lokale Diagnose";
 "LocalShareDiagnosis" = "Diagnose teilen";
 "LocalDiagnosisPrivacy" = "Enthält nur technische Angaben, keinen Sprachtext, keine Beträge und keine Audiodaten. Wird erst durch deine Auswahl geteilt.";
+
+/* Voice mode choice and Settings diagnosis */
+"VoiceChooseMode" = "Sprachmodus auswählen";
+"VoiceChangeMode" = "Ändern";
+"VoiceChooseTitle" = "Wie möchtest du diktieren?";
+"VoiceChooseIntro" = "Diktiere deine Ausgaben und prüfe die Entwürfe vor dem Speichern.";
+"VoiceChoiceAppleExperience" = "Mit Sprechpausen";
+"VoiceChoiceCloudExperience" = "Fortlaufend diktieren";
+"VoiceChoiceAppleBody" = "Sprich, dann mache eine Pause. Dein iPhone verarbeitet den Entwurf mit pausiertem Mikrofon und hört danach wieder zu, sofern du nicht pausiert hast.";
+"VoiceChoiceCloudBody" = "Nimmt fortlaufend auf und verarbeitet deine Anfragen mit OpenAI. Dabei werden Audio und Ausgabenkontext an OpenAI gesendet.";
+"VoiceChoiceAppleNeeds" = "Apple Intelligence und geladene Sprach- und Modellressourcen. Kein API-Schlüssel.";
+"VoiceChoiceCloudNeeds" = "Internet und dein API-Schlüssel. OpenAI berechnet die Nutzung über dein API-Konto.";
+"VoiceChoiceRemembered" = "Deine Wahl bleibt gespeichert und ist in den Einstellungen änderbar. Die Auswahl startet keine Aufnahme.";
+"VoiceChoiceConfirm" = "Diesen Modus wählen";
+"LocalDiagnosisEmpty" = "Nach einer Apple-Sprachaufnahme findest du hier technische Angaben zum letzten Vorgang. Sie bleiben nur bis zum Beenden der App erhalten.";
+"LocalClearDiagnosis" = "Diagnose löschen";
+"VoiceChoiceUnavailable" = "Hier momentan nicht bereit. Die Einstellungen zeigen dir, was noch fehlt.";

@@ -9,6 +9,10 @@
   The expense tracker for couples. A local-first iPhone app for two people who share everyday costs without sharing a bank account.
 </p>
 
+## Pending Voice Mode UI update
+
+The next internal build includes a thin capture-only accent ring without a halo, diagnostics in Settings, a remembered Apple/OpenAI mode chooser and simplified recording status. Local verification passed 124 simulator tests, Release build and static analysis. Publication is pending renewed App Store Connect authentication and verification of the next unused Cloud build number; the changes are not yet in TestFlight.
+
 ## Current release
 
 | | |

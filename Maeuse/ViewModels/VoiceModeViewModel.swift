@@ -627,6 +627,7 @@ extension VoiceModeViewModel: RealtimeVoiceServiceDelegate {
         switch event {
         case .localDiagnostic(let diagnostic):
             guard provider == .appleLocal else { return }
+            LocalVoiceDiagnosticStore.shared.record(diagnostic)
             localDiagnostic = diagnostic
             if diagnostic.isTerminal { completedLocalDiagnostic = diagnostic }
         case .localTurnReady:

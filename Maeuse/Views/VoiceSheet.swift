@@ -5,7 +5,6 @@ import SwiftData
 struct VoiceSheet: View {
     @Bindable var viewModel: VoiceModeViewModel
     @State private var showsUnderstanding = false
-    @State private var showsLocalDiagnostic = false
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
@@ -44,21 +43,6 @@ struct VoiceSheet: View {
                     if !viewModel.understandingHistory.isEmpty ||
                         (viewModel.provider == .appleLocal && !viewModel.localTranscript.isEmpty) {
                         understandingDetail
-                    }
-                    if viewModel.provider == .appleLocal, let diagnostic = viewModel.displayedLocalDiagnostic {
-                        DisclosureGroup(isExpanded: $showsLocalDiagnostic) {
-                            Text(diagnostic.exportText).font(.caption.monospaced()).textSelection(.enabled)
-                                .accessibilityIdentifier("local-diagnostic-details")
-                            ShareLink(item: diagnostic.exportText) {
-                                Label(loc("LocalShareDiagnosis"), systemImage: "square.and.arrow.up")
-                            }
-                            .accessibilityIdentifier("local-diagnostic-share")
-                            Text(loc("LocalDiagnosisPrivacy")).font(.caption).foregroundStyle(Color.maeusTextSecondary)
-                        } label: { Text(loc("LocalDiagnosis")) }
-                        #if targetEnvironment(simulator)
-                        .onAppear { if ProcessInfo.processInfo.arguments.contains("--voice-local-diagnostic") { showsLocalDiagnostic = true } }
-                        #endif
-                        .accessibilityIdentifier("local-diagnostic")
                     }
                     if viewModel.phase == .error {
                         Label(viewModel.errorMessage, systemImage: "exclamationmark.triangle.fill")
@@ -110,9 +94,7 @@ struct VoiceSheet: View {
             Text(viewModel.stateLabel)
                 .font(.system(.subheadline, design: .rounded, weight: .bold))
                 .accessibilityIdentifier("local-record-state")
-            Text(loc(viewModel.isProcessingRequest ?
-                (viewModel.localShouldListen ? "LocalWillResume" : "LocalWillPause") : "VoiceAppleTitle"))
-                .font(.caption).foregroundStyle(Color.maeusTextSecondary)
+
         }
         .padding(.vertical, 10)
         .frame(maxWidth: .infinity, alignment: .center)
@@ -286,6 +268,7 @@ private struct LocalVoiceMicrophoneMotion: View {
     @Environment(\.accessibilityReduceMotion) private var systemReduceMotion
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.colorSchemeContrast) private var contrast
     @State private var started = Date.now
     @State private var countdown = LocalEndpointIndicator()
 
@@ -303,11 +286,15 @@ private struct LocalVoiceMicrophoneMotion: View {
             let elapsed = timeline.date.timeIntervalSince(started)
             let breath = reduceMotion ? 0 : sin(elapsed * .pi * 2 / 6)
             ZStack {
-                Circle().fill(Color.maeusCheese)
-                    .scaleEffect(1.16 + breath * 0.025)
-                    .blur(radius: size * 0.075)
-                    .opacity(active ? 0.30 + breath * 0.04 : 0)
-                    .animation(reduceMotion ? nil : .easeOut(duration: 0.35), value: active)
+                if active {
+                    // A full, thin listening ring sits outside the separate endpoint arc.
+                    // It follows capture, not resume intent; Reduce Motion keeps it still.
+                    Circle().stroke(Color.maeusPrimaryHover,
+                        lineWidth: contrast == .increased ? 3 : 2)
+                        .padding(-12)
+                        .scaleEffect(reduceMotion ? 1 : 1 + breath * 0.008)
+                        .opacity(reduceMotion || contrast == .increased ? 1 : 0.925 + breath * 0.075)
+                }
                 Circle().fill(Color.maeusCheese)
                 Circle().stroke(Color.maeusInk, lineWidth: 3)
                 if active {

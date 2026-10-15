@@ -36,6 +36,11 @@ struct MainExpenseView: View {
         .fullScreenCover(isPresented: $voiceVM.isPresented, onDismiss: onCaptureModalDismissed) {
             VoiceSheet(viewModel: voiceVM)
         }
+        .sheet(isPresented: $settingsVM.isChoosingVoiceMode, onDismiss: { settingsVM.modeChoiceDismissed(); onCaptureModalDismissed() }) {
+            VoiceModeSelectionView(viewModel: settingsVM) { provider in
+                settingsVM.confirmVoiceMode(provider, openSetup: true)
+            } onCancel: { settingsVM.isChoosingVoiceMode = false }
+        }
         .sheet(isPresented: $settingsVM.isPresented, onDismiss: onCaptureModalDismissed) {
             SettingsSheet(
                 viewModel: settingsVM,
@@ -152,6 +157,9 @@ struct MainExpenseView: View {
                     MaeuseMicIcon(size: 24, color: .maeusInk)
                 }.buttonStyle(FABStyle()).accessibilityLabel(loc("StartVoiceMode"))
             } else {
+                Button { settingsVM.requestVoiceSetup() } label: {
+                    MaeuseMicIcon(size: 24, color: .maeusInk)
+                }.buttonStyle(FABStyle(isPrimary: false)).accessibilityLabel(loc("VoiceChooseMode"))
                 Button { editorVM.prepareForNew() } label: {
                     MaeusePlusIcon()
                 }.buttonStyle(FABStyle()).accessibilityLabel(loc("AddExpense"))

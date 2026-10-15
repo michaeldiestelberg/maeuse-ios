@@ -316,13 +316,78 @@ final class LocalVoiceTests: XCTestCase {
     }
 
     private var savedSettings: Data?
+    private var savedModeChoice: Any?
     override func setUp() async throws {
+        savedModeChoice = UserDefaults.standard.object(forKey: SettingsViewModel.modeChoiceKey)
+        UserDefaults.standard.removeObject(forKey: SettingsViewModel.modeChoiceKey)
         savedSettings = UserDefaults.standard.data(forKey: VoiceSettings.storageKey)
         UserDefaults.standard.removeObject(forKey: VoiceSettings.storageKey)
     }
     override func tearDown() async throws {
+        if let savedModeChoice { UserDefaults.standard.set(savedModeChoice, forKey: SettingsViewModel.modeChoiceKey) }
+        else { UserDefaults.standard.removeObject(forKey: SettingsViewModel.modeChoiceKey) }
+        LocalVoiceDiagnosticStore.shared.clear()
         if let savedSettings { UserDefaults.standard.set(savedSettings, forKey: VoiceSettings.storageKey) }
         else { UserDefaults.standard.removeObject(forKey: VoiceSettings.storageKey) }
+    }
+
+    func testModeChoiceCancelDoesNotSelectEnableOrOpenSetup() {
+        let settings = SettingsViewModel(availabilityProvider: { .available })
+        settings.requestVoiceSetup()
+        XCTAssertTrue(settings.isChoosingVoiceMode)
+        settings.isChoosingVoiceMode = false
+        settings.modeChoiceDismissed()
+        XCTAssertFalse(settings.isPresented)
+        XCTAssertFalse(settings.hasSelectedVoiceMode)
+        XCTAssertFalse(settings.voiceSettings.enabled)
+    }
+
+    func testModeChoiceIsRememberedAndWaitsForDismissalBeforeSetup() {
+        let settings = SettingsViewModel(availabilityProvider: { .available })
+        settings.requestVoiceSetup()
+        settings.confirmVoiceMode(.openAI, openSetup: true)
+        XCTAssertFalse(settings.isChoosingVoiceMode)
+        XCTAssertFalse(settings.isPresented)
+        XCTAssertFalse(settings.voiceSettings.enabled)
+        XCTAssertFalse(settings.hasVoiceConsent)
+        settings.modeChoiceDismissed()
+        XCTAssertTrue(settings.isPresented)
+        let reloaded = SettingsViewModel(availabilityProvider: { .available })
+        reloaded.requestVoiceSetup()
+        XCTAssertEqual(reloaded.voiceSettings.provider, .openAI)
+        XCTAssertTrue(reloaded.isPresented)
+        XCTAssertFalse(reloaded.isChoosingVoiceMode)
+    }
+
+    func testModeChoiceUnavailableAppleDoesNotFallbackOrEnable() {
+        let settings = SettingsViewModel(availabilityProvider: { .modelNotReady })
+        settings.confirmVoiceMode(.appleLocal)
+        settings.acceptVoiceConsent(); settings.voiceEnabled = true
+        XCTAssertEqual(settings.voiceSettings.provider, .appleLocal)
+        XCTAssertFalse(settings.voiceSettings.enabled)
+        XCTAssertFalse(settings.canEnableVoice)
+    }
+
+    func testSameModePreservesConsentButSwitchRequiresSetupAgain() {
+        let settings = SettingsViewModel(availabilityProvider: { .available })
+        settings.acceptVoiceConsent(); settings.voiceEnabled = true
+        settings.confirmVoiceMode(.appleLocal)
+        XCTAssertTrue(settings.voiceSettings.isReady)
+        settings.confirmVoiceMode(.openAI)
+        XCTAssertFalse(settings.voiceSettings.isReady)
+        XCTAssertFalse(settings.hasVoiceConsent)
+        XCTAssertFalse(settings.canEnableVoice)
+    }
+
+    func testTechnicalDiagnosisSurvivesVoiceCloseAndCanBeCleared() {
+        let vm = VoiceModeViewModel(); vm.open(provider: .appleLocal)
+        let trace = LocalVoiceTrace(language: "de-DE", modelVariant: "test", availability: "available", referenceDate: "2026-10-11")
+        trace.completed(); vm.handleVoiceEvent(.localDiagnostic(trace.snapshot))
+        vm.cancelSession()
+        XCTAssertEqual(LocalVoiceDiagnosticStore.shared.displayed?.turnID, trace.snapshot.turnID)
+        XCTAssertFalse(LocalVoiceDiagnosticStore.shared.displayed?.exportText.contains("Tesla") ?? true)
+        LocalVoiceDiagnosticStore.shared.clear()
+        XCTAssertNil(LocalVoiceDiagnosticStore.shared.displayed)
     }
 
     func testNewInstallDefaultsToLocalWithoutEnablingCapture() {

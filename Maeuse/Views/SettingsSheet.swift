@@ -18,11 +18,15 @@ struct SettingsSheet: View {
     @State private var showFileExporter = false
     @State private var exportDocument = BackupDocument()
     @State private var showVoiceConsent = false
+    @State private var showModeSelection = false
+    @State private var showsDiagnosis = false
+    @State private var diagnosisStore = LocalVoiceDiagnosticStore.shared
 
     var body: some View {
         VStack(spacing: 0) {
             Capsule().fill(Color.maeusTextTertiary.opacity(0.45)).frame(width: 40, height: 5).padding(.top, 10)
             settingsHeader.padding(.horizontal, 22).padding(.top, 8).padding(.bottom, 4)
+            ScrollViewReader { proxy in
             ScrollView {
                 VStack(spacing: 16) {
                     // App Settings
@@ -30,6 +34,8 @@ struct SettingsSheet: View {
 
                     // Voice Settings
                     voiceSection
+
+                    diagnosticsSection.id("local-diagnostics")
 
                     // Backup & Restore
                     backupSection
@@ -49,6 +55,17 @@ struct SettingsSheet: View {
                 .padding(.horizontal, 22).padding(.top, 14).padding(.bottom, 40)
             }
             .background(Color.maeusBackground)
+            #if targetEnvironment(simulator)
+            .onAppear {
+                if ProcessInfo.processInfo.arguments.contains("--settings-local-diagnostic") {
+                    Task { @MainActor in
+                        try? await Task.sleep(for: .milliseconds(250))
+                        proxy.scrollTo("local-diagnostics", anchor: .top)
+                    }
+                }
+            }
+            #endif
+            }
         }
         .fontDesign(.rounded)
         .background(Color.maeusBackground.ignoresSafeArea())
@@ -99,6 +116,12 @@ struct SettingsSheet: View {
             if phase == .active { viewModel.refreshLocalAvailability() }
         }
         .onChange(of: languageManager.activeLanguageCode) { _, _ in viewModel.refreshLocalAvailability() }
+        .sheet(isPresented: $showModeSelection) {
+            VoiceModeSelectionView(viewModel: viewModel) { provider in
+                viewModel.confirmVoiceMode(provider)
+                showModeSelection = false
+            } onCancel: { showModeSelection = false }
+        }
         .sheet(isPresented: $showVoiceConsent) {
             VoicePrivacyConsentSheet(provider: viewModel.voiceSettings.provider) {
                 viewModel.acceptVoiceConsent()
@@ -181,6 +204,30 @@ struct SettingsSheet: View {
         }.buttonStyle(.plain)
     }
 
+    private var diagnosticsSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            DisclosureGroup(isExpanded: $showsDiagnosis) {
+                if let diagnostic = diagnosisStore.displayed {
+                    Text(diagnostic.exportText).font(.caption.monospaced()).textSelection(.enabled)
+                        .accessibilityIdentifier("settings-local-diagnostic-details")
+                    ShareLink(item: diagnostic.exportText) {
+                        Label(loc("LocalShareDiagnosis"), systemImage: "square.and.arrow.up")
+                    }.frame(minHeight: 44).accessibilityIdentifier("settings-local-diagnostic-share")
+                    Button(loc("LocalClearDiagnosis")) { diagnosisStore.clear() }
+                        .frame(minHeight: 44)
+                } else { Text(loc("LocalDiagnosisEmpty")).font(.callout) }
+                Text(loc("LocalDiagnosisPrivacy")).font(.caption).foregroundStyle(Color.maeusTextSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            } label: {
+                Label(loc("LocalDiagnosis"), systemImage: "stethoscope").font(.subheadline.weight(.bold)).frame(minHeight: 44)
+            }
+        }.foregroundStyle(Color.maeusForeground).padding(18).glassSurface()
+        .accessibilityIdentifier("settings-local-diagnostic")
+        #if targetEnvironment(simulator)
+        .onAppear { if ProcessInfo.processInfo.arguments.contains("--settings-local-diagnostic") { showsDiagnosis = true } }
+        #endif
+    }
+
     // MARK: - Backup Section
 
     private var backupSection: some View {
@@ -217,31 +264,16 @@ struct SettingsSheet: View {
         VStack(alignment: .leading, spacing: 14) {
             themeLabel(loc("VoiceMode"))
 
-            VStack(spacing: 10) {
-                ForEach(VoiceProvider.allCases) { provider in
-                    Button { viewModel.selectProvider(provider) } label: {
-                        VStack(alignment: .leading, spacing: 6) {
-                            HStack {
-                                Text(provider.title).font(.subheadline.weight(.heavy))
-                                Spacer()
-                                Image(systemName: viewModel.voiceSettings.provider == provider ? "checkmark.circle.fill" : "circle")
-                            }
-                            Text(loc(provider == .appleLocal ? "VoiceAppleSummary" : "VoiceCloudSummary"))
-                                .font(.caption).fixedSize(horizontal: false, vertical: true)
-                        }
-                        .foregroundStyle(Color.maeusForeground)
-                        .padding(14)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(viewModel.voiceSettings.provider == provider ? Color.maeusCheese.opacity(0.2) : Color.maeusInputBackground,
-                                    in: RoundedRectangle(cornerRadius: 12))
-                        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.maeusCardBorder, lineWidth: 1.5))
-                    }
-                    .buttonStyle(.plain)
-                    .disabled(viewModel.isVerifying)
-                    .accessibilityIdentifier("voice-provider-\(provider.rawValue)")
-                    .accessibilityAddTraits(viewModel.voiceSettings.provider == provider ? .isSelected : [])
-                }
+            HStack {
+                Text(viewModel.voiceSettings.provider.title).font(.headline)
+                Spacer()
+                Button(loc("VoiceChangeMode")) { showModeSelection = true }
+                    .font(.subheadline.weight(.bold)).frame(minHeight: 44)
+                    .accessibilityIdentifier("voice-change-mode").disabled(viewModel.isVerifying)
             }
+            Text(loc(viewModel.voiceSettings.provider == .appleLocal ? "VoiceChoiceAppleBody" : "VoiceChoiceCloudBody"))
+                .font(.caption).foregroundStyle(Color.maeusTextSecondary)
+                .fixedSize(horizontal: false, vertical: true)
 
             if viewModel.voiceSettings.provider == .appleLocal {
                 Text(viewModel.localAvailability.message)
@@ -575,5 +607,77 @@ private struct VoicePrivacyConsentSheet: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
+    }
+}
+
+/// Invoked for Voice Mode setup/change, never at app launch or as a recording action.
+struct VoiceModeSelectionView: View {
+    @Bindable var viewModel: SettingsViewModel
+    let onSelect: (VoiceProvider) -> Void
+    let onCancel: () -> Void
+    @State private var selection: VoiceProvider
+
+    init(viewModel: SettingsViewModel, onSelect: @escaping (VoiceProvider) -> Void, onCancel: @escaping () -> Void) {
+        self.viewModel = viewModel; self.onSelect = onSelect; self.onCancel = onCancel
+        _selection = State(initialValue: viewModel.voiceSettings.provider)
+    }
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Text(loc("VoiceMode")).font(.headline.weight(.heavy))
+                Spacer()
+                Button(action: onCancel) { Image(systemName: "xmark").font(.headline).frame(width: 44, height: 44) }
+                    .accessibilityLabel(loc("Close"))
+            }.padding(.horizontal, 22).padding(.top, 12)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    MouseCoin(size: 82, fill: .maeusCheese) {
+                        Image(systemName: "mic.fill").font(.system(size: 30, weight: .heavy)).foregroundStyle(Color.maeusInk)
+                    }.frame(maxWidth: .infinity).padding(.top, 8).accessibilityHidden(true)
+                    Text(loc("VoiceChooseTitle")).font(.system(.largeTitle, design: .rounded, weight: .heavy))
+                        .fixedSize(horizontal: false, vertical: true)
+                    Text(loc("VoiceChooseIntro")).font(.body).foregroundStyle(Color.maeusTextSecondary)
+                    ForEach(VoiceProvider.allCases) { provider in
+                        Button { selection = provider } label: {
+                            VStack(alignment: .leading, spacing: 10) {
+                                HStack {
+                                    Image(systemName: provider == .appleLocal ? "iphone" : "cloud").accessibilityHidden(true)
+                                    Text(loc(provider == .appleLocal ? "VoiceChoiceAppleExperience" : "VoiceChoiceCloudExperience"))
+                                        .font(.headline.weight(.heavy))
+                                    Spacer(minLength: 4)
+                                    Image(systemName: selection == provider ? "checkmark.circle.fill" : "circle").accessibilityHidden(true)
+                                }
+                                Text(provider.title).font(.subheadline.weight(.semibold))
+                                Text(loc(provider == .appleLocal ? "VoiceChoiceAppleBody" : "VoiceChoiceCloudBody"))
+                                    .font(.callout).fixedSize(horizontal: false, vertical: true)
+                                Text(loc(provider == .appleLocal ? "VoiceChoiceAppleNeeds" : "VoiceChoiceCloudNeeds"))
+                                    .font(.caption).foregroundStyle(Color.maeusTextSecondary)
+                                if provider == .appleLocal && viewModel.localAvailability != .available {
+                                    Label(loc("VoiceChoiceUnavailable"), systemImage: "exclamationmark.circle")
+                                        .font(.caption.weight(.semibold)).fixedSize(horizontal: false, vertical: true)
+                                }
+                            }.padding(18).frame(maxWidth: .infinity, alignment: .leading)
+                            .background(selection == provider ? Color.maeusCheese.opacity(0.2) : Color.maeusSurface, in: RoundedRectangle(cornerRadius: 20))
+                            .overlay(RoundedRectangle(cornerRadius: 20).stroke(selection == provider ? Color.maeusPrimaryHover : Color.maeusCardBorder, lineWidth: selection == provider ? 3 : 1.5))
+                        }.buttonStyle(.plain).accessibilityElement(children: .combine).accessibilityAddTraits(selection == provider ? .isSelected : [])
+                            .accessibilityIdentifier("voice-choice-\(provider.rawValue)")
+                    }
+                    Text(loc("VoiceChoiceRemembered")).font(.footnote).foregroundStyle(Color.maeusTextSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }.padding(.horizontal, 22).padding(.bottom, 20)
+            }
+            Button(loc("VoiceChoiceConfirm")) { onSelect(selection) }
+                .buttonStyle(GlassPrimaryButtonStyle()).padding(22)
+                .accessibilityIdentifier("voice-choice-confirm").disabled(viewModel.isVerifying)
+        }.foregroundStyle(Color.maeusForeground).fontDesign(.rounded)
+            .background(Color.maeusBackground.ignoresSafeArea())
+            .presentationDetents([.large]).presentationDragIndicator(.visible)
+            .onAppear {
+                viewModel.refreshLocalAvailability()
+                #if targetEnvironment(simulator)
+                if ProcessInfo.processInfo.arguments.contains("--screenshot-voice-choice") { viewModel.localAvailability = .available }
+                if ProcessInfo.processInfo.arguments.contains("--screenshot-voice-choice-unavailable") { viewModel.localAvailability = .deviceNotEligible }
+                #endif
+            }
     }
 }

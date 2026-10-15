@@ -236,3 +236,20 @@
 "LocalDiagnosis" = "Local diagnosis";
 "LocalShareDiagnosis" = "Share diagnosis";
 "LocalDiagnosisPrivacy" = "Contains technical information only: no transcript, amounts or audio. Shared only when you choose to.";
+
+/* Voice mode choice and Settings diagnosis */
+"VoiceChooseMode" = "Choose voice mode";
+"VoiceChangeMode" = "Change";
+"VoiceChooseTitle" = "How would you like to dictate?";
+"VoiceChooseIntro" = "Dictate expenses and review your drafts before saving.";
+"VoiceChoiceAppleExperience" = "Speak, then pause";
+"VoiceChoiceCloudExperience" = "Keep dictating";
+"VoiceChoiceAppleBody" = "Speak, then pause. Your iPhone processes the draft with the microphone paused, then listens again unless you paused it.";
+"VoiceChoiceCloudBody" = "Records continuously and processes requests with OpenAI. Audio and expense context are sent to OpenAI.";
+"VoiceChoiceAppleNeeds" = "Apple Intelligence and downloaded speech/model resources. No API key.";
+"VoiceChoiceCloudNeeds" = "Internet and your API key. OpenAI bills usage to your API account.";
+"VoiceChoiceRemembered" = "Your choice is remembered and can be changed in Settings. Choosing a mode does not start recording.";
+"VoiceChoiceConfirm" = "Choose this mode";
+"LocalDiagnosisEmpty" = "After an Apple voice capture, technical details of the last turn appear here. They are kept only until the app quits.";
+"LocalClearDiagnosis" = "Clear diagnosis";
+"VoiceChoiceUnavailable" = "Not ready here yet. Settings show what is needed.";

@@ -1,5 +1,6 @@
 import Foundation
 import FoundationModels
+import Observation
 
 /// Technical metadata only: no audio, transcript, titles, amounts or model output.
 struct LocalVoiceDiagnostic: Equatable {
@@ -161,4 +162,18 @@ final class LocalVoiceTrace {
 
 enum LocalVoiceTraceScope {
     @TaskLocal static var current: LocalVoiceTrace?
+}
+
+/// Session-scoped technical metadata survives closing capture, but never writes to disk.
+@MainActor @Observable
+final class LocalVoiceDiagnosticStore {
+    static let shared = LocalVoiceDiagnosticStore()
+    private(set) var latest: LocalVoiceDiagnostic?
+    private(set) var completed: LocalVoiceDiagnostic?
+    var displayed: LocalVoiceDiagnostic? { completed ?? latest }
+    func record(_ value: LocalVoiceDiagnostic) {
+        latest = value
+        if value.isTerminal { completed = value }
+    }
+    func clear() { latest = nil; completed = nil }
 }

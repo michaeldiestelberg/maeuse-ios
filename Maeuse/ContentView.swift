@@ -96,6 +96,11 @@ struct ContentView: View {
     private func applyCaptureLaunch(_ destination: CaptureLaunchDestination) {
         switch destination {
         case .addExpense:
+            if settingsVM.isChoosingVoiceMode {
+                deferredCaptureLaunch = destination
+                settingsVM.isChoosingVoiceMode = false
+                return
+            }
             if voiceVM.isPresented {
                 deferredCaptureLaunch = destination
                 voiceVM.cancelSession()
@@ -118,6 +123,7 @@ struct ContentView: View {
             editorVM.prepareForNew()
 
         case .dictateExpense:
+            guard !settingsVM.isChoosingVoiceMode else { return }
             if settingsVM.voiceSettings.isReady {
                 guard !voiceVM.isPresented else { return }
                 if editorVM.isPresented || settingsVM.isPresented {
@@ -138,7 +144,7 @@ struct ContentView: View {
                     editorVM.isPresented = false
                     return
                 }
-                settingsVM.isPresented = true
+                settingsVM.requestVoiceSetup()
             }
         }
     }
@@ -148,7 +154,7 @@ struct ContentView: View {
     /// callback confirms that it has left the hierarchy.
     private func resumeDeferredCaptureLaunchIfNeeded() {
         guard let destination = deferredCaptureLaunch else { return }
-        guard !editorVM.isPresented, !voiceVM.isPresented, !settingsVM.isPresented else { return }
+        guard !editorVM.isPresented, !voiceVM.isPresented, !settingsVM.isPresented, !settingsVM.isChoosingVoiceMode else { return }
         deferredCaptureLaunch = nil
         applyCaptureLaunch(destination)
     }
@@ -209,6 +215,16 @@ struct ContentView: View {
             settingsVM.voiceSettings.consentVersion = VoiceSettings.currentConsentVersion
             settingsVM.voiceSettings.consentedAt = Date()
             settingsVM.voiceSettings.enabled = true
+            settingsVM.isPresented = true
+        case "voice-choice":
+            settingsVM.isChoosingVoiceMode = true
+        case "voice-choice-unavailable":
+            settingsVM.localAvailability = .deviceNotEligible
+            settingsVM.isChoosingVoiceMode = true
+        case "local-diagnostics":
+            let trace = LocalVoiceTrace(language: "de-DE", modelVariant: "simulator-fixture", availability: "fixture-only", referenceDate: VoiceModeViewModel.todayISOString())
+            trace.begin("LocalGroundedPrice"); trace.failed(.init(.timeout, reason: "processing-deadline"))
+            LocalVoiceDiagnosticStore.shared.record(trace.snapshot)
             settingsVM.isPresented = true
         case "local-settings":
             settingsVM.selectProvider(.appleLocal)

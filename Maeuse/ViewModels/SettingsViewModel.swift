@@ -7,6 +7,29 @@ import Observation
 @Observable
 final class SettingsViewModel {
     var isPresented: Bool = false
+    var isChoosingVoiceMode = false
+    private var opensSetupAfterChoice = false
+    private let hadStoredVoiceSettings: Bool
+    static let modeChoiceKey = "maeuse.voice-mode-chosen"
+    var hasSelectedVoiceMode: Bool {
+        UserDefaults.standard.bool(forKey: Self.modeChoiceKey) ||
+        hadStoredVoiceSettings
+    }
+    func requestVoiceSetup() {
+        if hasSelectedVoiceMode { isPresented = true }
+        else { isChoosingVoiceMode = true }
+    }
+    func confirmVoiceMode(_ provider: VoiceProvider, openSetup: Bool = false) {
+        guard !isVerifying else { return }
+        selectProvider(provider)
+        UserDefaults.standard.set(true, forKey: Self.modeChoiceKey)
+        saveVoiceSettings()
+        opensSetupAfterChoice = openSetup
+        isChoosingVoiceMode = false
+    }
+    func modeChoiceDismissed() {
+        if opensSetupAfterChoice { opensSetupAfterChoice = false; isPresented = true }
+    }
     var voiceSettings: VoiceSettings
     var statusMessage: String = ""
     var showStatus: Bool = false
@@ -28,6 +51,7 @@ final class SettingsViewModel {
     init(availabilityProvider: @escaping () -> LocalVoiceAvailability = { .current }) {
         self.availabilityProvider = availabilityProvider
         let storedData = UserDefaults.standard.data(forKey: VoiceSettings.storageKey)
+        hadStoredVoiceSettings = storedData != nil
 
         if let data = storedData,
            let settings = try? JSONDecoder().decode(VoiceSettings.self, from: data) {
