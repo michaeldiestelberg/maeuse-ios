@@ -1,9 +1,9 @@
-## Unreleased — Voice Mode UI, 2026-10-15
+## 1.5.0 (57) — internal TestFlight candidate, 2026-10-15
 - Apple recording uses a thin accent ring with a gentle six-second pulse during actual capture. There is no diffuse halo; pause and processing remove the listening ring. Reduce Motion keeps a static ring; the separate endpoint arc and microphone glyphs are preserved.
 - Local technical diagnostics live in Settings, with explicit share and clear actions and no audio/transcript/financial values. They remain in memory until the app quits.
 - A contextual Apple/OpenAI mode chooser explains behavior, requirements and cloud audio/context transfer. Selection is remembered, cancellable and revisitable in Settings, and starts no recording. Existing provider consent remains required.
 - The recording screen has a single primary status label. Expense extraction, shares, save rules and endpoint behavior are unchanged.
-- 124 simulator tests, Release build and static analysis passed. Physical-device speech and model behavior remain device checks. Distribution is pending Apple authentication and confirmation of the next unused Xcode Cloud build number.
+- 124 simulator tests, Release build and static analysis passed. Physical-device speech and model behavior remain device checks. Internal distribution uses the existing Xcode Cloud workflow.
 
 ## 1.5.0 (56) — internal TestFlight candidate, 2026-10-10
 - Apple Voice Mode validates original price/currency evidence before computing amounts. Guided source choices prevent numeric prices from being rewritten; recognized sharing intent stays open rather than silently becoming 50/50.
