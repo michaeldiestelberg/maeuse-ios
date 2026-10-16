@@ -9,17 +9,17 @@
   The expense tracker for couples. A local-first iPhone app for two people who share everyday costs without sharing a bank account.
 </p>
 
-## Voice Mode UI update
+## Adaptive iPhone layouts
 
-Build 57 includes a thin capture-only accent ring without a halo, diagnostics in Settings, a remembered Apple/OpenAI mode chooser and simplified recording status. Local verification passed 124 simulator tests, Release build and static analysis. It is prepared for the existing internal Xcode Cloud / TestFlight workflow; processed availability is tracked separately.
+Build 58 adapts month review, onboarding and voice drafts to the available window width while preserving a single column for narrow windows and accessibility text. Native Duo simulator checks cover portrait, landscape, Closed and Partially Open, light/dark appearance and preserved Settings/voice-draft state. Preview voice data is simulated; physical microphone/model checks remain separate. Some Duo XCTest welcome-button queries remain unreliable, while native click navigation and provider selection were verified independently.
 
 ## Current release
 
 | | |
 | --- | --- |
-| Version | 1.5.0 (build 57) |
+| Version | 1.5.0 (build 58) |
 | Platform | iPhone · iOS 17 or later |
-| Status | Internal TestFlight candidate; 1.4.0 (48) remains in App Review |
+| Status | Internal TestFlight candidate; Xcode Cloud distribution pending |
 | Languages | English and German |
 
 Version 1.5.0 adds **Apple · On device** to Voice Mode: local Apple speech recognition and Foundation Models, with no API key, usage fees, or cloud fallback. Choose a provider in Settings before enabling Voice Mode. Apple mode requires iOS 26+, a compatible iPhone, enabled Apple Intelligence, and downloaded model/language resources.

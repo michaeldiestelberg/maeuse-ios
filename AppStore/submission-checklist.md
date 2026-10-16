@@ -1,5 +1,18 @@
 # Mäuse release checklist
 
+## 1.5.0 (58) — internal TestFlight only
+
+- [x] Account holder approved pushing the Duo changes to GitHub after disclosure that main pushes trigger Xcode Cloud and internal TestFlight distribution (October 16, 2026).
+- [x] Reviewed adaptive layout source and tests integrated into main; original dirty release documentation and research/screenshots excluded.
+- [x] Marketing version remains 1.5.0; repository build number incremented to 58 with the release script.
+- [x] Native simulator checks cover Duo inner portrait/landscape, Closed and Partially Open; Settings and three voice drafts survive the tested pose changes.
+- [x] Native-helper navigation and an automated nested Settings local-to-cloud provider selection check pass without activating voice services.
+- [x] All 126 unit/layout and five UI tests pass on iPhone 17e (iOS 27.0); build 58 device Release configuration builds successfully without signing.
+- [ ] Exact pushed commit succeeds in Xcode Cloud and the processed build is confirmed in the internal testing group.
+- [ ] Physical eligible-iPhone microphone/model validation through TestFlight; simulator voice images are synthetic previews.
+
+Known automation limitation: some native Duo XCTest welcome-start queries timed out despite separately verified click navigation. Those runs are not counted as passed. Public App Store submission/release is outside this internal distribution request.
+
 ## 1.4.0 (48) — App Store candidate
 
 - [x] Account holder approved build 47 in testing on September 27 and requested a 1.4.0 minor release.

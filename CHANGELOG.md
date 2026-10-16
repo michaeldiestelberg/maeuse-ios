@@ -1,3 +1,10 @@
+## 1.5.0 (58) — internal TestFlight candidate, 2026-10-16
+- Month review uses the available window width: wide windows pair the monthly summary with the expense ledger, while narrow windows and accessibility text retain a scrollable single column.
+- Onboarding and voice drafts adapt to larger windows. Settings and mode selection respect their sheet width; semantic text and scrollable content support larger text sizes. Portrait and landscape orientations are supported.
+- Native Duo simulator checks cover inner portrait/landscape, Closed and Partially Open, including Settings and voice-draft state preservation, light/dark fixtures and actual provider selection. Voice preview images are explicitly simulated; real microphone/model behavior still requires an eligible physical iPhone.
+- Local integrated-main validation passes all 126 unit/layout tests and five UI tests on iPhone 17e (iOS 27.0); build 58 device Release configuration builds successfully with Xcode 27.1.
+- Some native Duo XCTest welcome-button queries timed out despite independently verified native navigation; those runs are not counted as passing. The previous missing-ink diagnosis was disproved by original-PNG checks. Internal distribution uses the existing Xcode Cloud workflow; no public App Store submission is included.
+
 ## 1.5.0 (57) — internal TestFlight candidate, 2026-10-15
 - Apple recording uses a thin accent ring with a gentle six-second pulse during actual capture. There is no diffuse halo; pause and processing remove the listening ring. Reduce Motion keeps a static ring; the separate endpoint arc and microphone glyphs are preserved.
 - Local technical diagnostics live in Settings, with explicit share and clear actions and no audio/transcript/financial values. They remain in memory until the app quits.
