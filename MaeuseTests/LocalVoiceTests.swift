@@ -2,6 +2,7 @@ import XCTest
 import AVFoundation
 import UIKit
 import FoundationModels
+import Speech
 @testable import Maeuse
 
 @MainActor
@@ -1151,6 +1152,68 @@ final class LocalVoiceTests: XCTestCase {
         service.processRecognizedText("   ", workspaceContext: nil, completion: "manual-stop")
         XCTAssertEqual(events, ["ready"], "A manual stop without speech is not a silent recording limit")
         service.disconnect()
+    }
+
+    // MARK: - On-device speech model (SpeechAnalyzer)
+
+    func testMissingSpeechModelIsDownloadableNotADeadEnd() async {
+        var installs = 0
+        var speechState = LocalVoiceAvailability.speechModelMissing
+        let settings = SettingsViewModel(availabilityProvider: { .available },
+                                         speechAvailabilityProvider: { speechState },
+                                         speechModelInstaller: { installs += 1; speechState = .available })
+        await settings.refreshSpeechAvailability()
+        XCTAssertEqual(settings.localAvailability, .speechModelMissing)
+        XCTAssertTrue(settings.canEnableVoice, "Capture downloads the model on first use")
+        await settings.downloadSpeechModel()
+        XCTAssertEqual(installs, 1)
+        XCTAssertEqual(settings.localAvailability, .available)
+        XCTAssertFalse(settings.isDownloadingSpeechModel)
+    }
+
+    func testSpeechModelDownloadFailureIsReportedAndStaysRetryable() async {
+        struct Offline: Error {}
+        let settings = SettingsViewModel(availabilityProvider: { .available },
+                                         speechAvailabilityProvider: { .speechModelMissing },
+                                         speechModelInstaller: { throw Offline() })
+        await settings.refreshSpeechAvailability()
+        await settings.downloadSpeechModel()
+        XCTAssertTrue(settings.statusIsError)
+        XCTAssertEqual(settings.localAvailability, .speechModelMissing)
+        XCTAssertFalse(settings.isDownloadingSpeechModel)
+    }
+
+    func testUnavailableModelSkipsSpeechCheck() async {
+        var checked = false
+        let settings = SettingsViewModel(availabilityProvider: { .intelligenceDisabled },
+                                         speechAvailabilityProvider: { checked = true; return .available })
+        await settings.refreshSpeechAvailability()
+        XCTAssertFalse(checked)
+        XCTAssertEqual(settings.localAvailability, .intelligenceDisabled)
+        XCTAssertFalse(LocalVoiceAvailability.speechUnavailable.allowsCapture)
+    }
+
+    func testMicrophoneAudioIsConvertedToTheAnalyzerFormat() async throws {
+        guard #available(iOS 27.0, *) else { throw XCTSkip("Input format inspection needs iOS 27") }
+        let target = try XCTUnwrap(AVAudioFormat(commonFormat: .pcmFormatInt16, sampleRate: 16_000, channels: 1, interleaved: true))
+        let source = try XCTUnwrap(AVAudioFormat(standardFormatWithSampleRate: 48_000, channels: 1))
+        let (stream, continuation) = AsyncStream.makeStream(of: AnalyzerInput.self)
+        let feeder = LocalSpeechAudioFeeder(format: target, continuation: continuation)
+        let buffer = try XCTUnwrap(AVAudioPCMBuffer(pcmFormat: source, frameCapacity: 4_800))
+        buffer.frameLength = 4_800
+        for index in 0..<4_800 { buffer.floatChannelData![0][index] = sin(Float(index) * 0.05) * 0.5 }
+        for _ in 0..<3 { feeder.append(buffer) }
+        feeder.finish()
+        var inputs: [AnalyzerInput] = []
+        for await input in stream { inputs.append(input) }
+        XCTAssertEqual(inputs.count, 3)
+        for input in inputs {
+            XCTAssertEqual(input.bufferFormat.sampleRate, 16_000)
+            XCTAssertEqual(input.bufferFormat.commonFormat, .pcmFormatInt16)
+        }
+        // The resampler keeps a short filter tail for the next buffer, so audio is not lost
+        // between buffers; only the last few milliseconds of a phrase stay unflushed.
+        XCTAssertEqual(inputs.map(\.bufferDuration.seconds).reduce(0, +), 0.3, accuracy: 0.02)
     }
 
     private func draft(_ id: String, _ title: String, _ amount: Double) -> VoiceExpenseDraft {

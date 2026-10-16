@@ -9,6 +9,10 @@
   The expense tracker for couples. A local-first iPhone app for two people who share everyday costs without sharing a bank account.
 </p>
 
+## On-device speech and review fixes
+
+Build 59 moves Apple voice capture to Apple's iOS 26 SpeechAnalyzer and SpeechTranscriber. A missing speech model for the app language downloads in the app, from Settings or on the first capture, instead of being a dead end. It also fixes the 1.4 upgrade selecting OpenAI, overlapping prices, unreadable contributions, weekday dates, the silent-microphone restart loop and background processing, and improves VoiceOver and the mode chooser on short screens. Real speech recognition and the model download still need a physical iPhone check.
+
 ## Adaptive iPhone layouts
 
 Build 58 adapts month review, onboarding and voice drafts to the available window width while preserving a single column for narrow windows and accessibility text. Native Duo simulator checks cover portrait, landscape, Closed and Partially Open, light/dark appearance and preserved Settings/voice-draft state. Preview voice data is simulated; physical microphone/model checks remain separate. Some Duo XCTest welcome-button queries remain unreliable, while native click navigation and provider selection were verified independently.
@@ -17,7 +21,7 @@ Build 58 adapts month review, onboarding and voice drafts to the available windo
 
 | | |
 | --- | --- |
-| Version | 1.5.0 (build 58) |
+| Version | 1.5.0 (build 59) |
 | Platform | iPhone · iOS 17 or later |
 | Status | Internal TestFlight candidate; Xcode Cloud distribution pending |
 | Languages | English and German |

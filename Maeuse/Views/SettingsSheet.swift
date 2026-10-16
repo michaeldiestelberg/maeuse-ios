@@ -300,8 +300,22 @@ struct SettingsSheet: View {
                     .foregroundStyle(Color.maeusTextSecondary)
                     .fixedSize(horizontal: false, vertical: true)
                 Text(loc("LocalRequirements")).font(.caption).foregroundStyle(Color.maeusTextSecondary)
-                Button(loc("LocalCheckAgain")) { viewModel.refreshLocalAvailability() }
+                if viewModel.localAvailability == .speechModelMissing {
+                    Button {
+                        Task { await viewModel.downloadSpeechModel() }
+                    } label: {
+                        HStack(spacing: 8) {
+                            if viewModel.isDownloadingSpeechModel { ProgressView() }
+                            Text(loc(viewModel.isDownloadingSpeechModel ? "LocalSpeechModelDownloading" : "LocalDownloadSpeechModel"))
+                        }
+                    }
                     .buttonStyle(GlassSecondaryButtonStyle())
+                    .disabled(viewModel.isDownloadingSpeechModel)
+                    .accessibilityIdentifier("local-download-speech-model")
+                }
+                Button(loc("LocalCheckAgain")) { Task { await viewModel.refreshSpeechAvailability() } }
+                    .buttonStyle(GlassSecondaryButtonStyle())
+                    .task(id: viewModel.voiceSettings.provider) { await viewModel.refreshSpeechAvailability() }
             } else {
             if viewModel.hasSavedVoiceAPIKey {
                 savedVoiceKeyRow
@@ -726,7 +740,7 @@ struct VoiceModeSelectionView: View {
                     .font(.callout).fixedSize(horizontal: false, vertical: true)
                 Text(loc(provider == .appleLocal ? "VoiceChoiceAppleNeeds" : "VoiceChoiceCloudNeeds"))
                     .font(.caption).foregroundStyle(Color.maeusTextSecondary).fixedSize(horizontal: false, vertical: true)
-                if provider == .appleLocal && viewModel.localAvailability != .available {
+                if provider == .appleLocal && !viewModel.localAvailability.allowsCapture {
                     Label(loc("VoiceChoiceUnavailable"), systemImage: "exclamationmark.circle")
                         .font(.caption.weight(.semibold)).fixedSize(horizontal: false, vertical: true)
                 }

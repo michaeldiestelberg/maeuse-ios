@@ -6,6 +6,9 @@ import UIKit
 
 enum LocalVoiceAvailability: Equatable {
     case available, needsOS, deviceNotEligible, intelligenceDisabled, modelNotReady, unsupportedLanguage, speechUnavailable
+    /// The on-device speech model for the app language is not installed yet. It downloads
+    /// from Settings or automatically on the first capture; capture then works offline.
+    case speechModelMissing
 
     var message: String {
         switch self {
@@ -16,9 +19,14 @@ enum LocalVoiceAvailability: Equatable {
         case .modelNotReady: return loc("LocalModelNotReady")
         case .unsupportedLanguage: return loc("LocalLanguageUnsupported")
         case .speechUnavailable: return loc("LocalSpeechUnavailable")
+        case .speechModelMissing: return loc("LocalSpeechModelMissing")
         }
     }
 
+    /// A missing speech model is downloadable, so it does not block enabling capture.
+    var allowsCapture: Bool { self == .available || self == .speechModelMissing }
+
+    /// Synchronous checks only. Speech assets are asynchronous; see `resolved()`.
     @MainActor static var current: Self {
         guard #available(iOS 26.0, *) else { return .needsOS }
         let model = SystemLanguageModel.default
@@ -30,9 +38,24 @@ enum LocalVoiceAvailability: Equatable {
         case .unavailable: return .modelNotReady
         }
         guard model.supportsLocale(AppleLocalVoiceService.locale) else { return .unsupportedLanguage }
-        guard let recognizer = SFSpeechRecognizer(locale: AppleLocalVoiceService.locale),
-              recognizer.supportsOnDeviceRecognition else { return .speechUnavailable }
         return .available
+    }
+
+    /// `current` plus the on-device speech model state for the app language.
+    @MainActor static func resolved() async -> Self {
+        let base = current
+        guard base == .available, #available(iOS 26.0, *) else { return base }
+        switch await LocalSpeechTranscription.assetStatus(for: AppleLocalVoiceService.locale) {
+        case .installed: return .available
+        case .supported, .downloading: return .speechModelMissing
+        case .unsupported: return .speechUnavailable
+        @unknown default: return .speechUnavailable
+        }
+    }
+
+    @MainActor static func installSpeechModel() async throws {
+        guard #available(iOS 26.0, *) else { throw LocalVoiceError(message: loc("LocalNeedsOS")) }
+        try await LocalSpeechTranscription.installAssets(for: AppleLocalVoiceService.locale)
     }
 }
 
@@ -41,7 +64,165 @@ struct LocalVoiceError: LocalizedError {
     var errorDescription: String? { message }
 }
 
-/// Apple speech recognition (strictly offline) followed by the on-device system model.
+/// iOS 26 on-device transcription: `SpeechTranscriber` (or `DictationTranscriber` where the
+/// newer model is unavailable) analyzing microphone buffers through `SpeechAnalyzer`.
+/// Partial ("volatile") results drive the endpoint; finalized results build the phrase.
+@available(iOS 26.0, *)
+@MainActor
+final class LocalSpeechTranscription {
+    enum Failure: Error { case unsupportedLocale, unavailable }
+
+    private let analyzer: SpeechAnalyzer
+    let feeder: LocalSpeechAudioFeeder
+    private var results: Task<Void, Never>?
+    private var finalized = ""
+    private var volatile = ""
+
+    private init(analyzer: SpeechAnalyzer, feeder: LocalSpeechAudioFeeder) {
+        self.analyzer = analyzer; self.feeder = feeder
+    }
+
+    private static func module(for locale: Locale) -> any SpeechModule {
+        SpeechTranscriber.isAvailable
+            ? SpeechTranscriber(locale: locale, preset: .progressiveTranscription)
+            : DictationTranscriber(locale: locale, preset: .progressiveShortDictation)
+    }
+
+    private static func supportedLocale(for locale: Locale) async -> Locale? {
+        SpeechTranscriber.isAvailable
+            ? await SpeechTranscriber.supportedLocale(equivalentTo: locale)
+            : await DictationTranscriber.supportedLocale(equivalentTo: locale)
+    }
+
+    static func assetStatus(for locale: Locale) async -> AssetInventory.Status {
+        guard let supported = await supportedLocale(for: locale) else { return .unsupported }
+        return await AssetInventory.status(forModules: [module(for: supported)])
+    }
+
+    /// Downloads the language model once; it is reused offline afterwards.
+    static func installAssets(for locale: Locale) async throws {
+        guard let supported = await supportedLocale(for: locale) else { throw Failure.unsupportedLocale }
+        try await installAssets(for: module(for: supported))
+    }
+
+    private static func installAssets(for module: any SpeechModule) async throws {
+        switch await AssetInventory.status(forModules: [module]) {
+        case .installed: return
+        case .supported, .downloading:
+            if let request = try await AssetInventory.assetInstallationRequest(supporting: [module]) {
+                try await request.downloadAndInstall()
+            }
+        case .unsupported: throw Failure.unavailable
+        @unknown default: throw Failure.unavailable
+        }
+    }
+
+    /// Prepares the model (downloading it on first use) and starts analysis. Audio arrives
+    /// later through `feeder`; `onTranscript` receives the whole phrase so far.
+    static func start(locale: Locale,
+                      onTranscript: @escaping @MainActor (String) -> Void,
+                      onEnd: @escaping @MainActor (_ failed: Bool) -> Void) async throws -> LocalSpeechTranscription {
+        guard let supported = await supportedLocale(for: locale) else { throw Failure.unsupportedLocale }
+        let module = module(for: supported)
+        try await installAssets(for: module)
+        guard let format = await SpeechAnalyzer.bestAvailableAudioFormat(compatibleWith: [module]) else { throw Failure.unavailable }
+        let (stream, continuation) = AsyncStream.makeStream(of: AnalyzerInput.self)
+        let analyzer = SpeechAnalyzer(modules: [module])
+        try await analyzer.prepareToAnalyze(in: format)
+        let transcription = LocalSpeechTranscription(analyzer: analyzer,
+            feeder: LocalSpeechAudioFeeder(format: format, continuation: continuation))
+        transcription.consume(module, onTranscript: onTranscript, onEnd: onEnd)
+        do { try await analyzer.start(inputSequence: stream) }
+        catch { transcription.cancel(); throw error }
+        return transcription
+    }
+
+    private func consume(_ module: any SpeechModule,
+                         onTranscript: @escaping @MainActor (String) -> Void,
+                         onEnd: @escaping @MainActor (Bool) -> Void) {
+        results = Task { [weak self] in
+            do {
+                if let transcriber = module as? SpeechTranscriber {
+                    for try await result in transcriber.results {
+                        self?.receive(String(result.text.characters), isFinal: result.isFinal, onTranscript)
+                    }
+                } else if let dictation = module as? DictationTranscriber {
+                    for try await result in dictation.results {
+                        self?.receive(String(result.text.characters), isFinal: result.isFinal, onTranscript)
+                    }
+                }
+                if !Task.isCancelled { onEnd(false) }
+            } catch {
+                if !Task.isCancelled { onEnd(true) }
+            }
+        }
+    }
+
+    private func receive(_ text: String, isFinal: Bool, _ onTranscript: @MainActor (String) -> Void) {
+        // A volatile result replaces the previous guess for the same audio; a final result
+        // is appended and never revised.
+        if isFinal { finalized += text; volatile = "" } else { volatile = text }
+        onTranscript(finalized + volatile)
+    }
+
+    /// No more audio: finalize what was heard. The results sequence then ends.
+    func finishInput() {
+        feeder.finish()
+        let analyzer = analyzer
+        Task { try? await analyzer.finalizeAndFinishThroughEndOfInput() }
+    }
+
+    func cancel() {
+        results?.cancel(); results = nil
+        feeder.finish()
+        let analyzer = analyzer
+        Task { await analyzer.cancelAndFinishNow() }
+    }
+}
+
+/// Converts microphone buffers to the analyzer's format and yields them. It is called only
+/// from the audio engine's tap thread; the stream continuation itself is thread-safe.
+@available(iOS 26.0, *)
+final class LocalSpeechAudioFeeder: @unchecked Sendable {
+    private let format: AVAudioFormat
+    private let continuation: AsyncStream<AnalyzerInput>.Continuation
+    private var converter: AVAudioConverter?
+
+    init(format: AVAudioFormat, continuation: AsyncStream<AnalyzerInput>.Continuation) {
+        self.format = format; self.continuation = continuation
+    }
+
+    func append(_ buffer: AVAudioPCMBuffer) {
+        guard let converted = convert(buffer) else { return }
+        continuation.yield(AnalyzerInput(buffer: converted))
+    }
+
+    func finish() { continuation.finish() }
+
+    private func convert(_ buffer: AVAudioPCMBuffer) -> AVAudioPCMBuffer? {
+        if buffer.format == format { return buffer }
+        if converter == nil || converter?.inputFormat != buffer.format {
+            converter = AVAudioConverter(from: buffer.format, to: format)
+            converter?.primeMethod = .none
+        }
+        guard let converter else { return nil }
+        let ratio = format.sampleRate / buffer.format.sampleRate
+        let capacity = AVAudioFrameCount((Double(buffer.frameLength) * ratio).rounded(.up)) + 1
+        guard let output = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: capacity) else { return nil }
+        var supplied = false
+        var error: NSError?
+        let status = converter.convert(to: output, error: &error) { _, inputStatus in
+            if supplied { inputStatus.pointee = .noDataNow; return nil }
+            supplied = true
+            inputStatus.pointee = .haveData
+            return buffer
+        }
+        return status == .error || output.frameLength == 0 ? nil : output
+    }
+}
+
+/// Apple on-device speech analysis (offline once the language model is installed)
+/// followed by the on-device system model.
 /// This service has no credentials, network client, or reference to the cloud service.
 @MainActor
 final class AppleLocalVoiceService: VoiceSessionService {
@@ -52,9 +233,10 @@ final class AppleLocalVoiceService: VoiceSessionService {
     }
 
     private var engine: AVAudioEngine?
-    private var recognizer: SFSpeechRecognizer?
-    private var request: SFSpeechAudioBufferRecognitionRequest?
-    private var recognition: SFSpeechRecognitionTask?
+    /// A `LocalSpeechTranscription`; stored untyped because the app still deploys to iOS 17.
+    private var transcription: AnyObject?
+    @available(iOS 26.0, *)
+    private var speech: LocalSpeechTranscription? { transcription as? LocalSpeechTranscription }
     private var timer: Task<Void, Never>?
     private var generation: Task<Void, Never>?
     private var observers: [NSObjectProtocol] = []
@@ -113,7 +295,7 @@ final class AppleLocalVoiceService: VoiceSessionService {
         }
         try checkIdentity(id)
         guard micPermission else { trace?.failed(.init(.speech, reason: "microphone-permission")); throw LocalVoiceError(message: loc("LocalMicPermission")) }
-        do { try startRecording(id: id) }
+        do { try await startRecording(id: id) }
         catch { trace?.failed(.init(.speech, reason: "capture-start")); disconnect(); throw error }
     }
 
@@ -122,19 +304,25 @@ final class AppleLocalVoiceService: VoiceSessionService {
         guard identity == id else { throw CancellationError() }
     }
 
-    private func startRecording(id: UUID) throws {
-        guard let recognizer = SFSpeechRecognizer(locale: Self.locale),
-              recognizer.supportsOnDeviceRecognition else {
+    private func startRecording(id: UUID) async throws {
+        guard #available(iOS 26.0, *) else { throw LocalVoiceError(message: loc("LocalNeedsOS")) }
+        // Prepare the speech model before the microphone: the first use may download it.
+        trace?.begin("speech-model")
+        let speech: LocalSpeechTranscription
+        do {
+            speech = try await LocalSpeechTranscription.start(locale: Self.locale,
+                onTranscript: { [weak self] text in self?.receiveTranscript(text, id: id) },
+                onEnd: { [weak self] failed in self?.recognitionEnded(failed: failed, id: id) })
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch is LocalSpeechTranscription.Failure {
             throw LocalVoiceError(message: loc("LocalSpeechUnavailable"))
+        } catch {
+            throw LocalVoiceError(message: loc("LocalSpeechModelPreparationFailed"))
         }
+        transcription = speech
+        try checkIdentity(id)
         trace?.begin("speech")
-        self.recognizer = recognizer
-        let request = SFSpeechAudioBufferRecognitionRequest()
-        // Apple only honors this flag after supportsOnDeviceRecognition was checked.
-        request.requiresOnDeviceRecognition = true
-        request.shouldReportPartialResults = true
-        request.taskHint = .dictation
-        self.request = request
         // Serialized with the asynchronous deactivation of the previous turn, so a late
         // deactivation can never stop this recording.
         try Self.audioSessionQueue.sync {
@@ -152,43 +340,15 @@ final class AppleLocalVoiceService: VoiceSessionService {
             throw LocalVoiceError(message: loc("LocalMicPermission"))
         }
         self.engine = engine
-        recognition = recognizer.recognitionTask(with: request) { [weak self] result, error in
-            let text = result?.bestTranscription.formattedString
-            let final = result?.isFinal ?? false
-            let failed = error != nil
-            Task { @MainActor [weak self] in
-                guard let self, self.identity == id, !self.generating else { return }
-                if let text {
-                    self.transcript = text
-                    self.endpoint.updateTranscript(text, at: ProcessInfo.processInfo.systemUptime)
-                    self.onEvent?(.localEndpointProgress(self.endpoint.indicatorProgress(at: ProcessInfo.processInfo.systemUptime)))
-                    self.onEvent?(.localTranscript(text))
-                }
-                switch LocalRecognitionCompletion.action(final: final, failed: failed, finishing: self.finishing) {
-                case .complete:
-                    self.processTurn(id: id, completion: final ? "asr-final" : "finishing-recognition-error")
-                case .fail:
-                    self.fail(loc("LocalRecognitionFailed"), issue: .init(.speech))
-                case .wait: break
-                }
-            }
-        }
-        input.installTap(onBus: 0, bufferSize: 2_048, format: format) { [weak self] buffer, _ in
-            request.append(buffer)
-            let count = Int(buffer.frameLength)
-            let level: Double
-            if let channel = buffer.floatChannelData?[0], count > 0 {
-                var sum: Float = 0
-                for index in 0..<count { sum += channel[index] * channel[index] }
-                level = min(1, Double(sqrt(sum / Float(count))) * 12)
-            } else { level = 0 }
+        input.installTap(onBus: 0, bufferSize: 2_048, format: format,
+                         block: Self.tap(feeding: speech.feeder) { [weak self] level in
             Task { @MainActor [weak self] in
                 guard let self, self.identity == id, !self.finishing, !self.generating else { return }
                 self.onEvent?(.microphoneLevel(level))
                 self.endpoint.observeLevel(level, at: ProcessInfo.processInfo.systemUptime)
                 if level >= 0.10 { self.onEvent?(.localEndpointProgress(0)) }
             }
-        }
+        })
         engine.prepare()
         try engine.start()
         for name in [AVAudioSession.interruptionNotification, AVAudioSession.routeChangeNotification,
@@ -221,6 +381,47 @@ final class AppleLocalVoiceService: VoiceSessionService {
         }
     }
 
+    /// Built outside the main actor: the engine calls it on its audio thread.
+    @available(iOS 26.0, *)
+    private nonisolated static func tap(feeding feeder: LocalSpeechAudioFeeder,
+                                        level report: @escaping @Sendable (Double) -> Void) -> AVAudioNodeTapBlock {
+        { buffer, _ in
+            feeder.append(buffer)
+            let count = Int(buffer.frameLength)
+            var level = 0.0
+            if let channel = buffer.floatChannelData?[0], count > 0 {
+                var sum: Float = 0
+                for index in 0..<count { sum += channel[index] * channel[index] }
+                level = min(1, Double(sqrt(sum / Float(count))) * 12)
+            }
+            report(level)
+        }
+    }
+
+    private func receiveTranscript(_ text: String, id: UUID) {
+        guard identity == id, !generating else { return }
+        transcript = text
+        let now = ProcessInfo.processInfo.systemUptime
+        endpoint.updateTranscript(text, at: now)
+        onEvent?(.localEndpointProgress(endpoint.indicatorProgress(at: now)))
+        onEvent?(.localTranscript(text))
+    }
+
+    /// The results sequence ended: normally after finishing input, or with an error.
+    private func recognitionEnded(failed: Bool, id: UUID) {
+        guard identity == id, !generating else { return }
+        switch LocalRecognitionCompletion.action(final: !failed, failed: failed, finishing: finishing) {
+        case .complete: processTurn(id: id, completion: failed ? "finishing-recognition-error" : "asr-final")
+        case .fail: fail(loc("LocalRecognitionFailed"), issue: .init(.speech))
+        case .wait: break
+        }
+    }
+
+    private func cancelTranscription() {
+        if #available(iOS 26.0, *) { speech?.cancel() }
+        transcription = nil
+    }
+
     func finishTurn() { finishTurn(reason: "manual-stop") }
 
     private func finishTurn(reason: String) {
@@ -230,7 +431,7 @@ final class AppleLocalVoiceService: VoiceSessionService {
         timer?.cancel()
         stopMicrophone()
         onEvent?(.listeningStopped)
-        request?.endAudio()
+        if #available(iOS 26.0, *) { speech?.finishInput() }
         let id = identity
         // Recognition may never deliver a final callback after an interruption.
         timer = Task { [weak self] in
@@ -243,7 +444,7 @@ final class AppleLocalVoiceService: VoiceSessionService {
     private func processTurn(id: UUID, completion: String) {
         guard identity == id, !generating else { return }
         stopMicrophone()
-        recognition?.cancel(); recognition = nil; request = nil
+        cancelTranscription()
         processRecognizedText(transcript, workspaceContext: context,
             completion: finishing ? "\(captureEndReason)/\(completion)" : completion)
     }
@@ -328,9 +529,7 @@ final class AppleLocalVoiceService: VoiceSessionService {
         timer?.cancel(); timer = nil
         generation?.cancel(); generation = nil
         stopMicrophone()
-        recognition?.cancel(); recognition = nil
-        request = nil
-        recognizer = nil
+        cancelTranscription()
         transcript = ""
         context = nil
         trace = nil; captureEndReason = "asr-final"

@@ -188,7 +188,7 @@
 "LocalIntelligenceDisabled" = "Turn on Apple Intelligence in iPhone Settings, then check again.";
 "LocalModelNotReady" = "Apple’s model is not ready. Let Apple Intelligence finish downloading in iPhone Settings, then check again.";
 "LocalLanguageUnsupported" = "Apple’s model does not currently support the selected app language on this iPhone. Try English or German after updating iOS.";
-"LocalSpeechUnavailable" = "On-device speech recognition is unavailable for this app language. Check the language and downloaded dictation resources in iPhone Settings, then try again. No audio was sent to the cloud.";
+"LocalSpeechUnavailable" = "On-device speech recognition is not available for this app language on this iPhone. No audio was sent to the cloud.";
 "LocalRequirements" = "Requires iOS 26+, an Apple Intelligence compatible iPhone, Apple Intelligence enabled, and downloaded models for the app language. Initial downloads need internet; capture works offline once ready.";
 "LocalCheckAgain" = "Check availability again";
 "LocalPrivacyIntro" = "Use Apple’s Foundation Models to capture expenses entirely on your iPhone.";
@@ -252,3 +252,7 @@
 "ExpenseCountOne" = "1 expense";
 "VoiceChangeModeAccessibility" = "Change voice mode";
 "LocalDraftLimit" = "You have reached the limit of 10 drafts. Save or remove drafts before adding more.";
+"LocalSpeechModelMissing" = "The speech model for this app language is not on your iPhone yet. Download it now, or it downloads automatically when you first start Apple voice capture. Capture works offline afterwards.";
+"LocalDownloadSpeechModel" = "Download speech model";
+"LocalSpeechModelDownloading" = "Downloading speech model…";
+"LocalSpeechModelPreparationFailed" = "The on-device speech model could not be prepared. Its first download needs an internet connection; try again later. No audio was sent to the cloud.";

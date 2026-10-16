@@ -46,10 +46,18 @@ final class SettingsViewModel {
     private let apiKeyStore = OpenAIAPIKeyStore.shared
     private let clientSecretService = OpenAIRealtimeClientSecretService()
 
-    private let availabilityProvider: () -> LocalVoiceAvailability
+    var isDownloadingSpeechModel = false
 
-    init(availabilityProvider: @escaping () -> LocalVoiceAvailability = { .current }) {
+    private let availabilityProvider: () -> LocalVoiceAvailability
+    private let speechAvailabilityProvider: () async -> LocalVoiceAvailability
+    private let speechModelInstaller: () async throws -> Void
+
+    init(availabilityProvider: @escaping () -> LocalVoiceAvailability = { .current },
+         speechAvailabilityProvider: @escaping () async -> LocalVoiceAvailability = { await LocalVoiceAvailability.resolved() },
+         speechModelInstaller: @escaping () async throws -> Void = { try await LocalVoiceAvailability.installSpeechModel() }) {
         self.availabilityProvider = availabilityProvider
+        self.speechAvailabilityProvider = speechAvailabilityProvider
+        self.speechModelInstaller = speechModelInstaller
         let storedData = UserDefaults.standard.data(forKey: VoiceSettings.storageKey)
 
         if let data = storedData,
@@ -102,12 +110,32 @@ final class SettingsViewModel {
 
     var canEnableVoice: Bool {
         switch voiceSettings.provider {
-        case .appleLocal: return localAvailability == .available
+        case .appleLocal: return localAvailability.allowsCapture
         case .openAI: return voiceSettings.isVerified && hasSavedVoiceAPIKey && !isVerifying
         }
     }
 
     func refreshLocalAvailability() { localAvailability = availabilityProvider() }
+
+    /// Adds the asynchronous on-device speech model check to the synchronous one.
+    func refreshSpeechAvailability() async {
+        refreshLocalAvailability()
+        guard localAvailability == .available else { return }
+        let resolved = await speechAvailabilityProvider()
+        if localAvailability == .available { localAvailability = resolved }
+    }
+
+    func downloadSpeechModel() async {
+        guard !isDownloadingSpeechModel else { return }
+        isDownloadingSpeechModel = true
+        defer { isDownloadingSpeechModel = false }
+        do {
+            try await speechModelInstaller()
+            await refreshSpeechAvailability()
+        } catch {
+            showErrorStatus(loc("LocalSpeechModelPreparationFailed"))
+        }
+    }
 
     func selectProvider(_ provider: VoiceProvider) {
         guard voiceSettings.provider != provider else { return }
