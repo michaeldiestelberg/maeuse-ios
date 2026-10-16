@@ -129,7 +129,7 @@ struct MainExpenseView: View {
                     .font(.system(.headline, design: .rounded, weight: .heavy))
                 shareTotal(loc("You"), amount: max(0, listVM.totalAmount(for: filtered) - listVM.partnerTotal(for: filtered)))
                 shareTotal(loc("Partner"), amount: listVM.partnerTotal(for: filtered))
-                Text(loc("ExpenseCount", filtered.count))
+                Text(filtered.count == 1 ? loc("ExpenseCountOne") : loc("ExpenseCount", filtered.count))
                     .font(.system(.caption, design: .rounded, weight: .bold))
                     .foregroundStyle(Color.maeusTextSecondary)
             }

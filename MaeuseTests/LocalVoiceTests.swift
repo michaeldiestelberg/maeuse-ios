@@ -203,15 +203,22 @@ final class LocalVoiceTests: XCTestCase {
         vm.drafts = [draft("coffee", "Coffee", 4)]
         vm.startSession()
         for _ in 0..<20 { await Task.yield() }
-        let old = services.last!.onEvent
+        let current = services.last!.onEvent
         services.last!.finishTurn()
+        XCTAssertTrue(vm.isProcessingRequest)
         vm.suspendLocalRecording()
-        old?(.localTurnReady)
-        XCTAssertEqual(vm.phase, .error)
+        XCTAssertNotEqual(vm.phase, .error, "A recognized phrase keeps processing in the background")
+        XCTAssertTrue(vm.errorMessage.isEmpty)
+        current?(.workspaceSync(VoiceWorkspaceSyncPayload(userUnderstanding: "Tea", clarificationQuestion: "",
+            expenses: [draft("coffee", "Coffee", 4).payload, draft("tea", "Tea", 3).payload],
+            changedExpenseIDs: ["tea"], removedExpenseIDs: [])))
+        current?(.localTurnReady)
+        XCTAssertEqual(vm.phase, .idle)
         XCTAssertFalse(vm.localShouldListen)
         XCTAssertEqual(services.count, 1)
-        XCTAssertEqual(vm.drafts.map(\.id), ["coffee"])
-        vm.restartSession()
+        XCTAssertEqual(vm.drafts.map(\.id), ["coffee", "tea"])
+        vm.drafts = [draft("coffee", "Coffee", 4)]
+        vm.toggleLocalRecording() // Paused, not failed: resuming is a microphone tap.
         for _ in 0..<20 { await Task.yield() }
         vm.drafts = (0..<10).map { draft("\($0)", "Coffee", 4) }
         services.last!.finishTurn()
@@ -837,7 +844,7 @@ final class LocalVoiceTests: XCTestCase {
         XCTAssertEqual(AppleExpenseInterpreter.literalMoney("7030")?.cents, 0)
         XCTAssertEqual(AppleExpenseInterpreter.literalMoney("82,40")?.euros, 82)
         XCTAssertEqual(AppleExpenseInterpreter.literalMoney("82,40")?.cents, 40)
-        XCTAssertNil(AppleExpenseInterpreter.literalMoney("7.030"), "Ambiguous grouping is never silently a decimal amount")
+        XCTAssertNil(AppleExpenseInterpreter.literalMoney("7.030", groupingSeparator: ","), "Ambiguous grouping is never silently a decimal amount")
         XCTAssertNil(AppleExpenseInterpreter.literalMoney("-73"))
         XCTAssertEqual(VoiceWorkspaceDomain.literalNumericTokens(in: "73 €; 7030 teilen."), ["73", "7030"])
         XCTAssertEqual(VoiceWorkspaceDomain.literalNumericTokens(in: "82,40 € und 19.80 Euro"), ["82,40", "19.80"])
@@ -970,6 +977,179 @@ final class LocalVoiceTests: XCTestCase {
         await fulfillment(of: [completed], timeout: 2)
         XCTAssertEqual(published.count, 3)
         XCTAssertFalse(published.contains(1), "Canceled old processing must never publish")
+        service.disconnect()
+    }
+
+    // MARK: - 1.5.0 review regressions
+
+    func testLegacySettingsWithoutVoiceUseMigrateToAppleAndKeepChooser() throws {
+        // 1.4 saved this on every launch, even for people who never used voice.
+        UserDefaults.standard.set(Data(#"{"enabled":false,"hapticsEnabled":true}"#.utf8), forKey: VoiceSettings.storageKey)
+        let settings = SettingsViewModel(availabilityProvider: { .available })
+        XCTAssertEqual(settings.voiceSettings.provider, .appleLocal)
+        XCTAssertFalse(settings.hasSelectedVoiceMode)
+        settings.requestVoiceSetup()
+        XCTAssertTrue(settings.isChoosingVoiceMode)
+        XCTAssertFalse(settings.isPresented)
+        let stored = try XCTUnwrap(UserDefaults.standard.data(forKey: VoiceSettings.storageKey))
+        XCTAssertFalse(VoiceSettings.isMissingProvider(in: stored), "The migration runs once")
+    }
+
+    func testLegacyCloudSetupKeepsOpenAIAndSkipsChooser() {
+        UserDefaults.standard.set(Data(#"{"enabled":false,"apiKeySuffix":"1234","verifiedAt":1000}"#.utf8), forKey: VoiceSettings.storageKey)
+        let settings = SettingsViewModel(availabilityProvider: { .available })
+        XCTAssertEqual(settings.voiceSettings.provider, .openAI)
+        XCTAssertTrue(settings.hasSelectedVoiceMode)
+        settings.requestVoiceSetup()
+        XCTAssertTrue(settings.isPresented)
+        XCTAssertFalse(settings.isChoosingVoiceMode)
+    }
+
+    func testLaunchReconcileKeepsChooserForFreshInstall() throws {
+        try XCTSkipIf((try? OpenAIAPIKeyStore.shared.readAPIKey()) != nil, "This simulator's keychain holds a QA key")
+        SettingsViewModel(availabilityProvider: { .available }).reconcileStoredAPIKey()
+        XCTAssertNil(UserDefaults.standard.data(forKey: VoiceSettings.storageKey), "An untouched install stores nothing")
+        let nextLaunch = SettingsViewModel(availabilityProvider: { .available })
+        nextLaunch.reconcileStoredAPIKey()
+        nextLaunch.requestVoiceSetup()
+        XCTAssertTrue(nextLaunch.isChoosingVoiceMode)
+    }
+
+    @available(iOS 26.0, *)
+    func testPriceQuoteSkipsCopiesInsideLongerNumbers() {
+        let text = "Pizza 12,50 € und Cola 2,50 €"
+        XCTAssertEqual(AppleExpenseInterpreter.purchaseQuote("2,50 €", in: text), "2,50 €")
+        XCTAssertEqual(AppleExpenseInterpreter.purchaseQuote("2,50", in: text), "2,50 €")
+        XCTAssertEqual(AppleExpenseInterpreter.purchaseQuote("12,50", in: text), "12,50 €")
+        let range = AppleExpenseInterpreter.numericBoundedRange(of: "2,50 €", in: text)
+        XCTAssertEqual(range.map { String(text[..<$0.lowerBound]) }, "Pizza 12,50 € und Cola ")
+        XCTAssertNil(AppleExpenseInterpreter.purchaseQuote("30 €", in: "7030 €"))
+        XCTAssertNil(AppleExpenseInterpreter.purchaseQuote("2,50 €", in: "Pizza 12,50 €"))
+    }
+
+    @available(iOS 26.0, *)
+    func testLocaleThousandsGroupingIsReadAsMoney() {
+        XCTAssertEqual(AppleExpenseInterpreter.literalMoney("1.500", groupingSeparator: ".")?.euros, 1500)
+        let grouped = AppleExpenseInterpreter.literalMoney("2.500,50", groupingSeparator: ".")
+        XCTAssertEqual(grouped?.euros, 2500)
+        XCTAssertEqual(grouped?.cents, 50)
+        XCTAssertEqual(AppleExpenseInterpreter.literalMoney("1,250.00", groupingSeparator: ",")?.euros, 1250)
+        XCTAssertEqual(AppleExpenseInterpreter.literalMoney("82,40", groupingSeparator: ".")?.cents, 40)
+        XCTAssertNil(AppleExpenseInterpreter.literalMoney("1.50.000", groupingSeparator: "."))
+        XCTAssertNil(AppleExpenseInterpreter.literalMoney("7.030", groupingSeparator: ","))
+    }
+
+    @available(iOS 26.0, *)
+    func testUnreadableContributionStaysOpenInsteadOfZero() throws {
+        let share = AppleExpenseInterpreter.euroShare(nil, kind: .speakerEuros, quote: "ich zahle 1.500 Euro")
+        XCTAssertEqual(share.kind, .unresolved)
+        let result = try AppleExpenseInterpreter.applyPlan(.init(actions: [.add(.init(title: "Sofa", amount: .init(euros: 3000, cents: 0),
+            date: .notMentioned, share: share))]), to: [], transcript: "", today: "2026-10-16", timeZone: .current)
+        XCTAssertFalse(result.expenses[0].draft.isReadyForSaving)
+        XCTAssertTrue(result.expenses[0].missingFields.contains(.split))
+        XCTAssertEqual(AppleExpenseInterpreter.euroShare(20, kind: .speakerEuros, quote: "").kind, .speakerEuros)
+    }
+
+    func testWeekdayDatesAreComputedFromToday() throws {
+        let berlin = try XCTUnwrap(TimeZone(identifier: "Europe/Berlin"))
+        func offset(_ weekday: Int, _ reference: VoiceWorkspaceDomain.WeekdayReference) -> Int? {
+            VoiceWorkspaceDomain.weekdayOffset(weekday, reference: reference, todayISO: "2026-10-16", timeZone: berlin)
+        }
+        // 2026-10-16 is a Friday (Calendar weekday 6); Monday is 2, Saturday 7.
+        XCTAssertEqual(offset(6, .last), -7)
+        XCTAssertEqual(offset(6, .this), 0)
+        XCTAssertEqual(offset(6, .next), 7)
+        XCTAssertEqual(offset(2, .last), -4)
+        XCTAssertEqual(offset(2, .this), -4)
+        XCTAssertEqual(offset(2, .next), 3)
+        XCTAssertEqual(offset(7, .last), -6)
+        XCTAssertNil(offset(8, .last))
+        XCTAssertNil(VoiceWorkspaceDomain.weekdayOffset(6, reference: .last, todayISO: "2026-02-30", timeZone: berlin))
+        let result = try VoiceWorkspaceDomain.apply([VoiceExpenseChange(existingID: nil, remove: false, title: "Tesla",
+            amount: .value(73), date: .relativeDays(try XCTUnwrap(offset(6, .last))))],
+            to: [], understanding: "", question: "", todayISO: "2026-10-16", timeZone: berlin)
+        XCTAssertEqual(result.expenses[0].dateISO, "2026-10-09")
+    }
+
+    func testSpeakerContributionSurvivesTotalCorrections() throws {
+        func apply(_ change: VoiceExpenseChange, to drafts: [VoiceExpenseDraftPayload]) throws -> VoiceWorkspaceSyncPayload {
+            try VoiceWorkspaceDomain.apply([change], to: drafts, understanding: "", question: "", todayISO: "2026-10-16")
+        }
+        var result = try apply(VoiceExpenseChange(existingID: nil, remove: false, title: "Dinner", amount: .value(73), share: .userFixed(20)), to: [])
+        let id = result.expenses[0].id
+        XCTAssertEqual(result.expenses[0].splitValue, 53)
+        result = try apply(VoiceExpenseChange(existingID: id, remove: false, amount: .value(80)), to: result.expenses)
+        XCTAssertEqual(result.expenses[0].splitValue, 60, "The speaker still pays 20")
+        XCTAssertTrue(result.expenses[0].draft.isReadyForSaving)
+        result = try apply(VoiceExpenseChange(existingID: id, remove: false, amount: .value(15)), to: result.expenses)
+        XCTAssertTrue(result.expenses[0].missingFields.contains(.split), "20 cannot be paid from a 15 total")
+        XCTAssertFalse(result.expenses[0].draft.isReadyForSaving)
+        result = try apply(VoiceExpenseChange(existingID: id, remove: false, amount: .value(80)), to: result.expenses)
+        XCTAssertFalse(result.expenses[0].missingFields.contains(.split), "Correcting the total again clears the flag")
+        XCTAssertEqual(result.expenses[0].splitValue, 60)
+        XCTAssertTrue(result.expenses[0].draft.isReadyForSaving)
+        result = try apply(VoiceExpenseChange(existingID: id, remove: false, share: .partnerPercent(50)), to: result.expenses)
+        result = try apply(VoiceExpenseChange(existingID: id, remove: false, amount: .value(90)), to: result.expenses)
+        XCTAssertEqual(result.expenses[0].splitValue, 50, "An explicit new split replaces the old contribution")
+    }
+
+    func testPartnerFixedShareFlagClearsWhenTotalIsCorrected() throws {
+        var result = try VoiceWorkspaceDomain.apply([VoiceExpenseChange(existingID: nil, remove: false, title: "Dinner",
+            amount: .value(73), share: .partnerFixed(50))], to: [], understanding: "", question: "", todayISO: "2026-10-16")
+        let id = result.expenses[0].id
+        result = try VoiceWorkspaceDomain.apply([VoiceExpenseChange(existingID: id, remove: false, amount: .value(40))],
+            to: result.expenses, understanding: "", question: "", todayISO: "2026-10-16")
+        XCTAssertTrue(result.expenses[0].missingFields.contains(.split))
+        result = try VoiceWorkspaceDomain.apply([VoiceExpenseChange(existingID: id, remove: false, amount: .value(73))],
+            to: result.expenses, understanding: "", question: "", todayISO: "2026-10-16")
+        XCTAssertFalse(result.expenses[0].missingFields.contains(.split))
+        XCTAssertTrue(result.expenses[0].draft.isReadyForSaving)
+    }
+
+    func testEmptyCloudSplitIntentDoesNotBlockSaving() {
+        let draft = VoiceExpenseDraft(id: "coffee", title: "Coffee", amount: 4, dateISO: "2026-10-16", splitMode: .percent,
+            splitValue: 50, confidence: 1, missingFields: [], splitIntent: "  ")
+        let normalized = VoiceWorkspaceDomain.normalized(draft, todayISO: "2026-10-16")
+        XCTAssertNil(normalized.splitIntent)
+        XCTAssertTrue(normalized.isReadyForSaving)
+    }
+
+    func testSilentRecordingLimitPausesInsteadOfRestarting() async {
+        var services: [StubVoiceService] = []
+        let vm = VoiceModeViewModel(serviceFactory: { _ in
+            let service = StubVoiceService(); services.append(service); return service
+        })
+        vm.open(provider: .appleLocal)
+        vm.startSession()
+        for _ in 0..<20 { await Task.yield() }
+        services.last!.finishTurn()
+        services.last!.onEvent?(.localNoSpeech)
+        services.last!.onEvent?(.localTurnReady)
+        for _ in 0..<20 { await Task.yield() }
+        XCTAssertEqual(services.count, 1, "The microphone must not restart after a silent recording")
+        XCTAssertFalse(vm.localShouldListen)
+        XCTAssertFalse(vm.microphoneIsActive)
+        XCTAssertEqual(vm.phase, .idle)
+        vm.toggleLocalRecording()
+        for _ in 0..<20 { await Task.yield() }
+        XCTAssertEqual(services.count, 2, "Tapping the microphone resumes explicitly")
+        vm.cancelSession()
+    }
+
+    func testServiceReportsSilentRecordingLimitOnlyForEmptyLimitTurns() {
+        let service = AppleLocalVoiceService(processor: { _, _, _ in
+            VoiceWorkspaceSyncPayload(userUnderstanding: "", clarificationQuestion: "", expenses: [], changedExpenseIDs: [], removedExpenseIDs: [])
+        })
+        var events: [String] = []
+        service.onEvent = { event in
+            switch event {
+            case .localNoSpeech: events.append("no-speech")
+            case .localTurnReady: events.append("ready")
+            default: break
+            }
+        }
+        service.processRecognizedText("   ", workspaceContext: nil, completion: "manual-stop")
+        XCTAssertEqual(events, ["ready"], "A manual stop without speech is not a silent recording limit")
         service.disconnect()
     }
 

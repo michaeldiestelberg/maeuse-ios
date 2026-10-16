@@ -9,11 +9,11 @@ final class SettingsViewModel {
     var isPresented: Bool = false
     var isChoosingVoiceMode = false
     private var opensSetupAfterChoice = false
-    private let hadStoredVoiceSettings: Bool
     static let modeChoiceKey = "maeuse.voice-mode-chosen"
+    /// Only an explicit choice (or migrated evidence of real voice use) counts. Merely
+    /// having stored settings does not: every launch persists them, including 1.4.
     var hasSelectedVoiceMode: Bool {
-        UserDefaults.standard.bool(forKey: Self.modeChoiceKey) ||
-        hadStoredVoiceSettings
+        UserDefaults.standard.bool(forKey: Self.modeChoiceKey)
     }
     func requestVoiceSetup() {
         if hasSelectedVoiceMode { isPresented = true }
@@ -51,11 +51,11 @@ final class SettingsViewModel {
     init(availabilityProvider: @escaping () -> LocalVoiceAvailability = { .current }) {
         self.availabilityProvider = availabilityProvider
         let storedData = UserDefaults.standard.data(forKey: VoiceSettings.storageKey)
-        hadStoredVoiceSettings = storedData != nil
 
         if let data = storedData,
            let settings = try? JSONDecoder().decode(VoiceSettings.self, from: data) {
             self.voiceSettings = settings
+            migrateStoredVoiceChoice(storedData: data)
         } else {
             self.voiceSettings = .default
         }
@@ -63,6 +63,22 @@ final class SettingsViewModel {
         localAvailability = availabilityProvider()
         if !self.voiceSettings.hasCurrentConsent {
             self.voiceSettings.enabled = false
+        }
+    }
+
+    /// Releases before 1.5 stored voice settings without a provider on every launch, so a
+    /// missing provider does not mean the user chose the cloud. Keep OpenAI only where
+    /// there is evidence of cloud setup; otherwise default to Apple and keep the chooser.
+    private func migrateStoredVoiceChoice(storedData: Data) {
+        let defaults = UserDefaults.standard
+        let showsVoiceUse = voiceSettings.enabled || voiceSettings.consentVersion != nil ||
+            voiceSettings.apiKeySuffix != nil || voiceSettings.verifiedAt != nil
+        if VoiceSettings.isMissingProvider(in: storedData) {
+            if !showsVoiceUse { voiceSettings.provider = .appleLocal }
+            saveVoiceSettings()
+        }
+        if showsVoiceUse && !defaults.bool(forKey: Self.modeChoiceKey) {
+            defaults.set(true, forKey: Self.modeChoiceKey)
         }
     }
 
@@ -250,6 +266,10 @@ final class SettingsViewModel {
     func reconcileStoredAPIKey() {
         guard let storedKey = try? apiKeyStore.readAPIKey(), !storedKey.isEmpty else {
             hasSavedVoiceAPIKey = false
+            // Persist only real changes; an untouched install must not gain stored settings.
+            let needsCloudReset = voiceSettings.apiKeySuffix != nil || voiceSettings.verifiedAt != nil ||
+                (voiceSettings.provider == .openAI && (voiceSettings.enabled || voiceSettings.consentVersion != nil))
+            guard needsCloudReset else { return }
             voiceSettings.apiKeySuffix = nil
             voiceSettings.verifiedAt = nil
             if voiceSettings.provider == .openAI { disableVoiceModeRevokingConsent() }

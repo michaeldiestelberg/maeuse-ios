@@ -44,6 +44,11 @@ struct VoiceSheet: View {
         .onChange(of: scenePhase) { _, phase in
             if phase == .background { viewModel.suspendLocalRecording() }
         }
+        .onChange(of: viewModel.stateLabel) { _, label in
+            // Automatic pauses, processing and resumption otherwise only have a haptic cue.
+            guard viewModel.provider == .appleLocal else { return }
+            AccessibilityNotification.Announcement(label).post()
+        }
     }
 
     private var captureRail: some View {
@@ -129,6 +134,10 @@ struct VoiceSheet: View {
             .accessibilityIdentifier("local-record")
             Text(viewModel.stateLabel)
                 .font(.system(.subheadline, design: .rounded, weight: .bold))
+                .dynamicTypeSize(...DynamicTypeSize.accessibility2)
+                .multilineTextAlignment(.center)
+                // The microphone button already reads this state as its value.
+                .accessibilityHidden(true)
                 .accessibilityIdentifier("local-record-state")
 
         }
@@ -138,6 +147,8 @@ struct VoiceSheet: View {
 
     private var localControlLabel: String {
         if viewModel.phase == .error { return loc("VoiceResumeListening") }
+        // While connecting, tapping cancels the pending start; nothing is processed yet.
+        if viewModel.phase == .connecting { return loc("Cancel") }
         if viewModel.isProcessingRequest {
             return loc(viewModel.localShouldListen ? "LocalPauseAfterProcessing" : "LocalResumeAfterProcessing")
         }

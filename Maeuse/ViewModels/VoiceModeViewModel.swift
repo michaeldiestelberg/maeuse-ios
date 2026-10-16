@@ -495,7 +495,10 @@ final class VoiceModeViewModel {
         guard provider == .appleLocal, isPresented else { return }
         localEndpointProgress = 0
         localShouldListen = false
-        guard microphoneIsActive || isProcessingRequest || phase == .connecting else { return }
+        // Recording already ended: let the recognized phrase finish processing rather than
+        // discarding it. Only automatic resumption is prevented.
+        if isProcessingRequest && !microphoneIsActive && phase != .connecting { return }
+        guard microphoneIsActive || phase == .connecting else { return }
         connectionTask?.cancel()
         sessionID = UUID()
         service?.onEvent = nil
@@ -638,6 +641,9 @@ extension VoiceModeViewModel: RealtimeVoiceServiceDelegate {
             phase = .idle
             if drafts.count >= 10 { localShouldListen = false }
             if localShouldListen { startNextLocalTurn() }
+        case .localNoSpeech:
+            guard provider == .appleLocal else { return }
+            localShouldListen = false
         case .localTranscript(let text):
             localTranscript = text
         case .localEndpointProgress(let value):
@@ -716,7 +722,8 @@ private extension VoiceExpenseDraft {
             missingFields: missingFields,
             lastChangedAt: .distantPast,
             splitIntent: splitIntent,
-            pendingUserFixedShare: pendingUserFixedShare
+            pendingUserFixedShare: pendingUserFixedShare,
+            speakerFixedShare: speakerFixedShare
         )
     }
 }

@@ -70,7 +70,7 @@
 "HowToGetApiKey" = "How to get an API key";
 "RemoveSavedKey" = "Remove Saved Key";
 "EnableVoiceMode" = "Enable voice mode";
-"ShowsMicButton" = "Shows the mic button on the main screen";
+"ShowsMicButton" = "Opens voice capture directly from the mic button";
 "VoiceHaptics" = "Haptic feedback";
 "VoiceHapticsDesc" = "Vibrate when listening starts and when expenses are captured";
 "ApiKeyVerifiedMsg" = "API key verified %@";
@@ -182,8 +182,6 @@
 // Apple on-device voice capture
 "VoiceAppleTitle" = "Apple · On device";
 "VoiceCloudTitle" = "OpenAI · Cloud";
-"VoiceAppleSummary" = "Free, without an API key. Audio and processing stay on your iPhone. Speech pauses are processed automatically; the microphone briefly pauses during processing. Best for simple expenses.";
-"VoiceCloudSummary" = "Continuous capture with automatic pauses and more flexible requests. Sends audio and expense context to OpenAI. Requires internet and your own API key; OpenAI charges your API account for usage.";
 "LocalAvailable" = "Ready for local voice capture on this iPhone.";
 "LocalNeedsOS" = "Requires iOS 26 or later. You can still enter expenses manually or choose OpenAI.";
 "LocalDeviceUnsupported" = "This iPhone does not support Apple’s on-device model. Manual capture and the optional OpenAI mode remain available.";
@@ -203,21 +201,13 @@
 "LocalSpeechPermission" = "Allow Speech Recognition for Mäuse in iPhone Settings → Privacy & Security → Speech Recognition, then resume. Local mode only uses on-device recognition.";
 "LocalMicPermission" = "Allow microphone access for Mäuse in iPhone Settings and check your microphone, then resume.";
 "LocalRecognitionFailed" = "Local dictation could not finish. Check that speech resources are downloaded and try a shorter phrase. Your existing drafts are safe; no cloud service was used.";
-"LocalNoSpeech" = "No speech was recognized. Resume and try a short expense in the app’s language.";
 "LocalTooMuchContext" = "This local session is full. Save or remove existing drafts, then try a shorter request. Local mode supports up to 10 drafts per session.";
 "LocalGenerationFailed" = "Apple’s model could not safely create these drafts. Your previous drafts are unchanged. Try a shorter, clearer request; no cloud model was used.";
 "LocalMissingDetails" = "Please give the missing expense name or amount before saving.";
-"LocalRecordingHint" = "Speak in the app’s language, then tap Process phrase. Recording stops after 50 seconds.";
-"LocalProcessingHint" = "Creating drafts on your iPhone. The microphone is paused.";
-"LocalReadyHint" = "Review your drafts, or record another phrase to add or correct an expense.";
-"LocalFinishPhrase" = "Process phrase";
-"LocalRecordMore" = "Record more";
 "LocalAmbiguousCorrection" = "Please correct or remove one named expense at a time. Your existing drafts are unchanged.";
 
 "LocalProcessingState" = "Processing · microphone paused";
 "LocalPausedState" = "Paused · review drafts";
-"LocalWillResume" = "Listening resumes afterward";
-"LocalWillPause" = "Staying paused afterward";
 "LocalPause" = "Pause and process recording";
 "LocalPauseAfterProcessing" = "Stay paused after processing";
 "LocalResumeAfterProcessing" = "Resume listening after processing";
@@ -229,10 +219,10 @@
 "VoiceUserFixedPending" = "I pay €%@ – total needed";
 "VoiceUnassignedFixed" = "€%@ – assignment needed";
 
-"LocalModelTimeout" = "Local processing took too long. Your drafts remain available. The diagnosis shows the last processing step.";
+"LocalModelTimeout" = "Local processing took too long. Your drafts remain available. Settings → Local diagnosis shows the last processing step.";
 "LocalModelBlocked" = "Apple declined this request. Your drafts remain available. Try a different wording.";
 "LocalModelBusy" = "Apple’s model is currently busy. Your drafts remain available. Try again.";
-"LocalModelInvalidPlan" = "The local response could not be applied safely. Your drafts remain available. The diagnosis shows the reason.";
+"LocalModelInvalidPlan" = "The local response could not be applied safely. Your drafts remain available. Settings → Local diagnosis shows the reason.";
 "LocalDiagnosis" = "Local diagnosis";
 "LocalShareDiagnosis" = "Share diagnosis";
 "LocalDiagnosisPrivacy" = "Contains technical information only: no transcript, amounts or audio. Shared only when you choose to.";
@@ -258,3 +248,7 @@
 "ExpenseCount" = "%d expenses";
 
 "VoicePreviewFixture" = "Simulated preview – no audio capture or model processing.";
+
+"ExpenseCountOne" = "1 expense";
+"VoiceChangeModeAccessibility" = "Change voice mode";
+"LocalDraftLimit" = "You have reached the limit of 10 drafts. Save or remove drafts before adding more.";

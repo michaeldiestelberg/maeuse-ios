@@ -31,6 +31,9 @@ struct VoiceExpenseDraft: Identifiable, Equatable {
     var lastChangedAt: Date
     var splitIntent: String?
     var pendingUserFixedShare: Double?
+    /// The speaker's own stated fixed contribution ("I pay 20"). The partner share is derived
+    /// from it, so a later total correction keeps what the speaker said they pay.
+    var speakerFixedShare: Double?
 
     init(
         id: String,
@@ -43,8 +46,10 @@ struct VoiceExpenseDraft: Identifiable, Equatable {
         missingFields: [VoiceExpenseMissingField],
         lastChangedAt: Date = Date(),
         splitIntent: String? = nil,
-        pendingUserFixedShare: Double? = nil
+        pendingUserFixedShare: Double? = nil,
+        speakerFixedShare: Double? = nil
     ) {
+        self.speakerFixedShare = speakerFixedShare
         self.id = id
         self.title = title
         self.amount = amount
@@ -158,6 +163,8 @@ struct VoiceExpenseDraftPayload: Decodable, Equatable {
     let missingFields: [VoiceExpenseMissingField]
     var splitIntent: String? = nil
     var pendingUserFixedShare: Double? = nil
+    /// App-side state only; intentionally not part of the decoded model contract.
+    var speakerFixedShare: Double? = nil
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -183,7 +190,8 @@ struct VoiceExpenseDraftPayload: Decodable, Equatable {
             confidence: min(max(confidence, 0), 1),
             missingFields: missingFields,
             splitIntent: splitIntent,
-            pendingUserFixedShare: pendingUserFixedShare
+            pendingUserFixedShare: pendingUserFixedShare,
+            speakerFixedShare: speakerFixedShare
         )
     }
 }
@@ -262,6 +270,12 @@ struct VoiceSettings: Codable {
         try container.encode(hapticsEnabled, forKey: .hapticsEnabled)
         try container.encodeIfPresent(consentVersion, forKey: .consentVersion)
         try container.encodeIfPresent(consentedAt, forKey: .consentedAt)
+    }
+
+    /// True for settings saved before providers existed (1.4 and earlier).
+    static func isMissingProvider(in data: Data) -> Bool {
+        guard let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return false }
+        return object[CodingKeys.provider.rawValue] == nil
     }
 
     var isVerified: Bool {
@@ -354,11 +368,25 @@ enum VoiceWorkspaceDomain {
     /// Defaults apply to absent/unspecified values, never an explicitly unresolved field.
     static func normalized(_ draft: VoiceExpenseDraft, todayISO: String) -> VoiceExpenseDraft {
         var result = draft
+        // An empty intent (e.g. `split_intent: ""` from the cloud model) is no open question.
+        if let intent = result.splitIntent, intent.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            result.splitIntent = nil
+        }
         if result.dateISO == nil, !result.missingFields.contains(.date) { result.dateISO = todayISO }
         if let ownShare = result.pendingUserFixedShare, let total = result.amount,
            ownShare.isFinite, ownShare >= 0, total.isFinite, total >= ownShare {
             result.splitMode = .fixed; result.splitValue = (total - ownShare).roundedMoney
             result.pendingUserFixedShare = nil; result.splitIntent = nil; clear(.split, in: &result)
+            result.speakerFixedShare = ownShare
+        }
+        // Re-derive the partner share from what the speaker pays whenever the total changes.
+        if let ownShare = result.speakerFixedShare, result.splitIntent == nil, result.pendingUserFixedShare == nil,
+           let total = result.amount, ownShare.isFinite, total.isFinite {
+            result.splitMode = .fixed
+            if ownShare >= 0, total >= ownShare {
+                result.splitValue = (total - ownShare).roundedMoney
+                clear(.split, in: &result)
+            } else { mark(.split, in: &result) }
         }
         if result.splitIntent != nil || result.pendingUserFixedShare != nil { mark(.split, in: &result) }
         if !result.missingFields.contains(.split) {
@@ -422,6 +450,12 @@ enum VoiceWorkspaceDomain {
                 guard value.isFinite, value > 0, value <= ExpenseValidation.maximumAmount else { throw InvalidChange.invalidValue }
                 draft.amount = value.roundedMoney
                 clear(.amount, in: &draft)
+                // A fixed share flagged only because it exceeded the old total is re-validated
+                // against the new one below, so correcting the total can clear the flag again.
+                if draft.normalizedSplitMode == .fixed, draft.splitValue != nil,
+                   draft.splitIntent == nil, draft.pendingUserFixedShare == nil {
+                    clear(.split, in: &draft)
+                }
             case .uncertain: draft.amount = nil; mark(.amount, in: &draft)
             case .unresolved: mark(.amount, in: &draft)
             }
@@ -432,14 +466,7 @@ enum VoiceWorkspaceDomain {
                 else { draft.dateISO = nil; mark(.date, in: &draft) }
             case .relativeDays(let offset):
                 guard (-36_600...36_600).contains(offset) else { throw InvalidChange.invalidValue }
-                var calendar = Calendar(identifier: .gregorian)
-                calendar.timeZone = timeZone
-                let formatter = DateFormatter()
-                formatter.calendar = calendar
-                formatter.timeZone = timeZone
-                formatter.locale = Locale(identifier: "en_US_POSIX")
-                formatter.dateFormat = "yyyy-MM-dd"
-                formatter.isLenient = false
+                let (calendar, formatter) = isoCalendar(timeZone)
                 guard Expense.dateFromISO(todayISO) != nil, let reference = formatter.date(from: todayISO),
                       let resolved = calendar.date(byAdding: .day, value: offset, to: reference) else { throw InvalidChange.invalidValue }
                 let iso = formatter.string(from: resolved)
@@ -450,7 +477,8 @@ enum VoiceWorkspaceDomain {
             func setShare(_ value: Double, mode: SplitMode) throws {
                 guard value.isFinite, value >= 0, mode != .percent || value <= 100 else { throw InvalidChange.invalidValue }
                 draft.splitMode = mode; draft.splitValue = value
-                draft.splitIntent = nil; draft.pendingUserFixedShare = nil; clear(.split, in: &draft)
+                draft.splitIntent = nil; draft.pendingUserFixedShare = nil; draft.speakerFixedShare = nil
+                clear(.split, in: &draft)
             }
             switch change.share {
             case .unchanged: break
@@ -470,15 +498,16 @@ enum VoiceWorkspaceDomain {
                 guard value.isFinite, value >= 0 else { throw InvalidChange.invalidValue }
                 if let total = draft.amount {
                     try setShare((total - value).roundedMoney, mode: .fixed)
+                    draft.speakerFixedShare = value.roundedMoney
                 } else {
                     draft.splitIntent = loc("VoiceUserFixedPending", value.formatted(.number.precision(.fractionLength(0...2))))
-                    draft.pendingUserFixedShare = value
+                    draft.pendingUserFixedShare = value; draft.speakerFixedShare = nil
                     draft.splitMode = .fixed; draft.splitValue = nil; mark(.split, in: &draft)
                 }
             case .unassignedFixed(let value):
                 guard value.isFinite, value >= 0, value <= ExpenseValidation.maximumAmount else { throw InvalidChange.invalidValue }
                 draft.splitIntent = loc("VoiceUnassignedFixed", value.formatted(.number.precision(.fractionLength(0...2))))
-                draft.pendingUserFixedShare = nil
+                draft.pendingUserFixedShare = nil; draft.speakerFixedShare = nil
                 draft.splitMode = .fixed; draft.splitValue = nil; mark(.split, in: &draft)
             case .unassignedRatio(let first, let second):
                 guard first.isFinite, second.isFinite, first >= 0, second >= 0,
@@ -488,7 +517,7 @@ enum VoiceWorkspaceDomain {
                     // Keep both recognized values; do not guess which person pays which.
                     draft.splitIntent = loc("VoiceUnassignedRatio", first.formatted(.number.precision(.fractionLength(0...2))),
                         second.formatted(.number.precision(.fractionLength(0...2))))
-                    draft.pendingUserFixedShare = nil
+                    draft.pendingUserFixedShare = nil; draft.speakerFixedShare = nil
                     draft.splitMode = .percent; draft.splitValue = nil; mark(.split, in: &draft)
                 }
             }
@@ -504,6 +533,38 @@ enum VoiceWorkspaceDomain {
             removedExpenseIDs: removed.sorted())
     }
 
+    enum WeekdayReference { case last, this, next }
+
+    /// Signed day offset from `todayISO` to a named weekday (Calendar numbering, 1 = Sunday).
+    /// `last` is the most recent earlier occurrence; `this` the most recent including today,
+    /// because spoken expenses are usually past; `next` the first later occurrence.
+    static func weekdayOffset(_ weekday: Int, reference: WeekdayReference, todayISO: String, timeZone: TimeZone) -> Int? {
+        let (calendar, formatter) = isoCalendar(timeZone)
+        guard (1...7).contains(weekday), Expense.dateFromISO(todayISO) != nil,
+              let today = formatter.date(from: todayISO) else { return nil }
+        let current = calendar.component(.weekday, from: today)
+        let back = (current - weekday + 7) % 7
+        switch reference {
+        case .last: return back == 0 ? -7 : -back
+        case .this: return -back
+        case .next:
+            let forward = (weekday - current + 7) % 7
+            return forward == 0 ? 7 : forward
+        }
+    }
+
+    private static func isoCalendar(_ timeZone: TimeZone) -> (Calendar, DateFormatter) {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = timeZone
+        let formatter = DateFormatter()
+        formatter.calendar = calendar
+        formatter.timeZone = timeZone
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyy-MM-dd"
+        formatter.isLenient = false
+        return (calendar, formatter)
+    }
+
     private static func mark(_ field: VoiceExpenseMissingField, in draft: inout VoiceExpenseDraft) {
         if !draft.missingFields.contains(field) { draft.missingFields.append(field) }
     }
@@ -516,6 +577,7 @@ extension VoiceExpenseDraft {
     var payload: VoiceExpenseDraftPayload {
         VoiceExpenseDraftPayload(id: id, title: title, amount: amount, dateISO: dateISO,
             splitMode: splitMode?.rawValue, splitValue: splitValue, confidence: confidence,
-            missingFields: missingFields, splitIntent: splitIntent, pendingUserFixedShare: pendingUserFixedShare)
+            missingFields: missingFields, splitIntent: splitIntent, pendingUserFixedShare: pendingUserFixedShare,
+            speakerFixedShare: speakerFixedShare)
     }
 }

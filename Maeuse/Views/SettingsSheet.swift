@@ -287,6 +287,7 @@ struct SettingsSheet: View {
                 Spacer()
                 Button(loc("VoiceChangeMode")) { showModeSelection = true }
                     .font(.subheadline.weight(.bold)).frame(minHeight: 44)
+                    .accessibilityLabel(loc("VoiceChangeModeAccessibility"))
                     .accessibilityIdentifier("voice-change-mode").disabled(viewModel.isVerifying)
             }
             Text(loc(viewModel.voiceSettings.provider == .appleLocal ? "VoiceChoiceAppleBody" : "VoiceChoiceCloudBody"))
@@ -660,7 +661,9 @@ struct VoiceModeSelectionView: View {
                                 introduction
                             }
                         } else {
-                            modeEmblem.frame(maxWidth: .infinity)
+                            // On shorter sheets (e.g. the unfolded iPhone Duo) the emblem would
+                            // push the second option entirely below the fold.
+                            if geometry.size.height >= 760 { modeEmblem.frame(maxWidth: .infinity) }
                             introduction
                         }
                         LazyVGrid(columns: Array(repeating: GridItem(.flexible(), alignment: .top), count: wide ? 2 : 1), spacing: 18) {
@@ -671,7 +674,9 @@ struct VoiceModeSelectionView: View {
                     }
                     .padding(.horizontal, 22).padding(.vertical, 20)
                     .frame(maxWidth: 1040).frame(maxWidth: .infinity)
-                }.accessibilityIdentifier("voice-choice-scroll")
+                }
+                .scrollIndicatorsFlash(onAppear: true)
+                .accessibilityIdentifier("voice-choice-scroll")
                 Button(loc("VoiceChoiceConfirm")) { onSelect(selection) }
                     .buttonStyle(GlassPrimaryButtonStyle()).padding(22)
                     .frame(maxWidth: 1040).frame(maxWidth: .infinity)

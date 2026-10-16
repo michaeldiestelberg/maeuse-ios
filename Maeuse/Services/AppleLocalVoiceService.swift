@@ -46,6 +46,7 @@ struct LocalVoiceError: LocalizedError {
 @MainActor
 final class AppleLocalVoiceService: VoiceSessionService {
     var onEvent: ((RealtimeVoiceServiceEvent) -> Void)?
+    private static let audioSessionQueue = DispatchQueue(label: "maeuse.local.audio-session", qos: .userInitiated)
     static var locale: Locale {
         Locale(identifier: LanguageManager.shared.activeLanguageCode == "de" ? "de-DE" : "en-US")
     }
@@ -134,9 +135,15 @@ final class AppleLocalVoiceService: VoiceSessionService {
         request.shouldReportPartialResults = true
         request.taskHint = .dictation
         self.request = request
-        let session = AVAudioSession.sharedInstance()
-        try session.setCategory(.record, mode: .measurement, options: [.allowBluetoothHFP])
-        try session.setActive(true)
+        // Serialized with the asynchronous deactivation of the previous turn, so a late
+        // deactivation can never stop this recording.
+        try Self.audioSessionQueue.sync {
+            let session = AVAudioSession.sharedInstance()
+            try session.setCategory(.record, mode: .measurement, options: [.allowBluetoothHFP])
+            // Otherwise iOS mutes the "listening again" haptic while the microphone records.
+            try? session.setAllowHapticsAndSystemSoundsDuringRecording(true)
+            try session.setActive(true)
+        }
         ownsAudioSession = true
         let engine = AVAudioEngine()
         let input = engine.inputNode
@@ -250,7 +257,13 @@ final class AppleLocalVoiceService: VoiceSessionService {
         if trace == nil { trace = createTrace(id: id) }
         trace?.captureEnded(completion)
         let text = transcript.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !text.isEmpty else { trace?.completed(); onEvent?(.localTurnReady); return }
+        guard !text.isEmpty else {
+            trace?.completed()
+            // Nobody spoke for the whole recording: pause instead of restarting the microphone forever.
+            if captureEndReason == "recording-limit" { onEvent?(.localNoSpeech) }
+            onEvent?(.localTurnReady)
+            return
+        }
         guard text.count <= 1_500, (workspaceContext?.count ?? 0) <= 7_000 else {
             fail(loc("LocalTooMuchContext"), issue: .init(.context, reason: "app-input-limit")); return
         }
@@ -272,7 +285,10 @@ final class AppleLocalVoiceService: VoiceSessionService {
                 let issue: LocalVoiceIssue
                 if #available(iOS 26.0, *) { issue = LocalVoiceIssue.classify(error) }
                 else { issue = .init(.unavailable) }
-                self.fail((error as? LocalVoiceError)?.message ?? issue.category.message, issue: issue)
+                let message: String
+                if case VoiceWorkspaceDomain.InvalidChange.tooManyDrafts = error { message = loc("LocalDraftLimit") }
+                else { message = (error as? LocalVoiceError)?.message ?? issue.category.message }
+                self.fail(message, issue: issue)
             }
         }
         timer = Task { [weak self] in
@@ -292,7 +308,10 @@ final class AppleLocalVoiceService: VoiceSessionService {
             engine.stop()
         }
         if ownsAudioSession {
-            try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+            // Deactivation can block for a noticeable time; keep it off the main thread.
+            Self.audioSessionQueue.async {
+                try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+            }
             ownsAudioSession = false
         }
         onEvent?(.microphoneStopped)

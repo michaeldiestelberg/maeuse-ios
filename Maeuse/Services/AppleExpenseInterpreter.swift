@@ -82,8 +82,29 @@ private struct LocalSourcePurchase {
     @Guide(description: "Exact quote of changed personal contribution or ratio, or empty string if untouched.") var shareText: String
 }
 @available(iOS 26.0, *) @Generable private struct LocalDateKindPlan {
-    @Generable enum Kind { case relative, calendar, unclear }
+    @Generable enum Kind { case relative, weekday, calendar, unclear }
     var kind: Kind
+}
+@available(iOS 26.0, *) @Generable private struct LocalWeekdayPlan {
+    @Generable enum Weekday {
+        case monday, tuesday, wednesday, thursday, friday, saturday, sunday
+        /// Calendar weekday numbering (1 = Sunday).
+        var calendarWeekday: Int {
+            switch self {
+            case .sunday: 1
+            case .monday: 2
+            case .tuesday: 3
+            case .wednesday: 4
+            case .thursday: 5
+            case .friday: 6
+            case .saturday: 7
+            }
+        }
+    }
+    @Generable enum Reference { case last, this, next, unclear }
+    var weekday: Weekday
+    @Guide(description: "last for an explicitly previous occurrence (last, letzten, vergangenen); next for an explicitly upcoming one (next, nächsten, kommenden); this for a plain or 'this' weekday; unclear for anything else, such as 'vorletzten' or 'the Friday before last'.")
+    var reference: Reference
 }
 @available(iOS 26.0, *) @Generable private struct LocalOffsetPlan {
     @Guide(description: "Number of calendar days between today and the stated day, ignoring direction.", .range(0...36_600)) var distance: Int
@@ -250,7 +271,7 @@ enum AppleExpenseInterpreter {
                     price = try await extractGroundedPrice(text, title: purchase.title)
                 }
                 priceQuotes.append(price)
-                if !price.isEmpty, let range = shareContext.range(of: price, options: .caseInsensitive) {
+                if !price.isEmpty, let range = numericBoundedRange(of: price, in: shareContext) {
                     shareContext.replaceSubrange(range, with: "[purchase total]")
                 }
             }
@@ -436,18 +457,27 @@ enum AppleExpenseInterpreter {
         return quote
     }
 
+    /// The first occurrence of `quote` that does not begin or end inside another numeric
+    /// token. "2,50 €" must skip the copy embedded in "12,50 €" and match a later one.
+    static func numericBoundedRange(of quote: String, in source: String) -> Range<String.Index>? {
+        let numericBoundary: (Character) -> Bool = { $0.isASCII && ($0.isNumber || $0 == "." || $0 == ",") }
+        let checksLeft = quote.first.map(numericBoundary) ?? false
+        let checksRight = quote.last.map(numericBoundary) ?? false
+        var remaining = source.startIndex..<source.endIndex
+        while !quote.isEmpty, let range = source.range(of: quote, options: .caseInsensitive, range: remaining) {
+            let left = !checksLeft || range.lowerBound == source.startIndex || !numericBoundary(source[source.index(before: range.lowerBound)])
+            let right = !checksRight || range.upperBound == source.endIndex || !numericBoundary(source[range.upperBound])
+            if left && right { return range }
+            remaining = source.index(after: range.lowerBound)..<source.endIndex
+        }
+        return nil
+    }
+
     static func purchaseQuote(_ fragment: String, in source: String) -> String? {
         guard let quote = groundedQuote(fragment, in: source),
-              let sourceRange = source.range(of: quote, options: .caseInsensitive) else { return nil }
-        // A copied numeric fragment must not begin/end inside another numeric token.
-        let numericBoundary: (Character) -> Bool = { $0.isASCII && ($0.isNumber || $0 == "." || $0 == ",") }
-        if let first = quote.first, numericBoundary(first), sourceRange.lowerBound > source.startIndex,
-           numericBoundary(source[source.index(before: sourceRange.lowerBound)]) { return nil }
-        if let last = quote.last, numericBoundary(last), sourceRange.upperBound < source.endIndex,
-           numericBoundary(source[sourceRange.upperBound]) { return nil }
+              let range = numericBoundedRange(of: quote, in: source) else { return nil }
         if currencyEvidence(in: quote) != nil { return quote }
         // Join only adjacent literal currency bytes, never a distant unit or invented text.
-        guard let range = source.range(of: quote, options: .caseInsensitive) else { return nil }
         var next = range.upperBound
         while next < source.endIndex && source[next].isWhitespace { next = source.index(after: next) }
         for unit in ["€", "euros", "euro", "eur"] {
@@ -469,15 +499,39 @@ enum AppleExpenseInterpreter {
         }
     }
 
-    static func literalMoney(_ token: String) -> LocalPlanMoney? {
+    static func literalMoney(_ token: String,
+                             groupingSeparator: Character = LanguageManager.shared.activeLanguageCode == "de" ? "." : ",") -> LocalPlanMoney? {
         guard !token.isEmpty, token.allSatisfy({ $0.isASCII && ($0.isNumber || $0 == "." || $0 == ",") }) else { return nil }
-        let pieces = token.split(whereSeparator: { $0 == "." || $0 == "," })
-        guard pieces.count <= 2, pieces.count == 1 || (1...2).contains(pieces[1].count),
-              token.filter({ $0 == "." || $0 == "," }).count == pieces.count - 1,
-              let value = Double(token.replacingOccurrences(of: ",", with: ".")), value > 0,
-              value <= ExpenseValidation.maximumAmount else { return nil }
+        let decimal: String
+        if let ungrouped = ungroupedMoney(token, groupingSeparator: groupingSeparator) {
+            decimal = ungrouped
+        } else {
+            let pieces = token.split(whereSeparator: { $0 == "." || $0 == "," })
+            guard pieces.count <= 2, pieces.count == 1 || (1...2).contains(pieces[1].count),
+                  token.filter({ $0 == "." || $0 == "," }).count == pieces.count - 1 else { return nil }
+            decimal = token.replacingOccurrences(of: ",", with: ".")
+        }
+        guard let value = Double(decimal), value > 0, value <= ExpenseValidation.maximumAmount else { return nil }
         let cents = Int((value * 100).rounded())
         return .init(euros: cents / 100, cents: cents % 100)
+    }
+
+    /// Thousands groups in the app language's own convention ("1.500", "2.500,00" in German;
+    /// "1,250", "1,250.00" in English): exactly three digits per group and an optional
+    /// two-digit decimal part. Other groupings stay unverified rather than becoming decimals.
+    private static func ungroupedMoney(_ token: String, groupingSeparator: Character) -> String? {
+        let decimalSeparator: Character = groupingSeparator == "." ? "," : "."
+        var integerPart = Substring(token)
+        var fraction = ""
+        if let decimalIndex = token.lastIndex(of: decimalSeparator) {
+            integerPart = token[..<decimalIndex]
+            fraction = String(token[token.index(after: decimalIndex)...])
+            guard (1...2).contains(fraction.count), fraction.allSatisfy(\.isNumber) else { return nil }
+        }
+        let groups = integerPart.split(separator: groupingSeparator, omittingEmptySubsequences: false)
+        guard groups.count >= 2, (1...3).contains(groups[0].count), groups.dropFirst().allSatisfy({ $0.count == 3 }),
+              groups.allSatisfy({ $0.allSatisfy(\.isNumber) }) else { return nil }
+        return groups.joined() + (fraction.isEmpty ? "" : "." + fraction)
     }
 
     private static func currencyEvidence(in quote: String) -> String? {
@@ -516,8 +570,22 @@ enum AppleExpenseInterpreter {
     private static func interpretDate(_ quote: String, today: String, timeZone: TimeZone) async throws -> LocalPlanDate {
         if quote.isEmpty { return .notMentioned }
         let kind = try await generate(LocalDateKindPlan.self, quote: quote,
-            instructions: "Classify this date expression: relative for days relative to now, calendar for a named calendar day/month/year, unclear when it cannot be understood. Do not calculate any date.").kind
+            instructions: "Classify this date expression: weekday when it names a day of the week (Friday, letzten Montag, am Sonntag); relative for other days relative to now (yesterday, vorgestern, three days ago); calendar for a named calendar day/month/year; unclear when it cannot be understood. Do not calculate any date.").kind
         switch kind {
+        case .weekday:
+            // The model only names the weekday; the app computes the date from today's.
+            let plan = try await generate(LocalWeekdayPlan.self, quote: quote,
+                instructions: "Identify the named day of the week and which occurrence is meant. Do not calculate a date.")
+            let reference: VoiceWorkspaceDomain.WeekdayReference
+            switch plan.reference {
+            case .last: reference = .last
+            case .this: reference = .this
+            case .next: reference = .next
+            case .unclear: return .unclear
+            }
+            guard let days = VoiceWorkspaceDomain.weekdayOffset(plan.weekday.calendarWeekday, reference: reference,
+                                                                 todayISO: today, timeZone: timeZone) else { return .unclear }
+            return .relativeDays(days)
         case .relative:
             let offset = try await generate(LocalOffsetPlan.self, quote: quote,
                 instructions: LanguageManager.shared.activeLanguageCode == "de"
@@ -531,6 +599,12 @@ enum AppleExpenseInterpreter {
             return .calendarDate(year: date.year, month: date.month, day: date.day)
         case .unclear: return .unclear
         }
+    }
+
+    /// An unverifiable contribution stays open; it must never become a saveable €0 share.
+    static func euroShare(_ value: Double?, kind: LocalPlanShare.Kind, quote: String) -> LocalPlanShare {
+        guard let value else { return .init(kind: .unresolved, value: 0, secondValue: 0, intent: quote) }
+        return .init(kind: kind, value: value, secondValue: 0)
     }
 
     static func unresolvedShare(_ quote: String, recognizedIntent: Bool) -> LocalPlanShare {
@@ -589,10 +663,16 @@ enum AppleExpenseInterpreter {
                 return .init(kind: .unresolved, value: 0, secondValue: 0, intent: quote)
             }
             if unit == .euros {
-                let value = try normalizedMoney(await interpretMoney(grounded)) ?? 0
-                return .init(kind: actor == .partner ? .partnerEuros : actor == .speaker ? .speakerEuros : .unassignedEuros, value: value, secondValue: 0)
+                let kind: LocalPlanShare.Kind = actor == .partner ? .partnerEuros : actor == .speaker ? .speakerEuros : .unassignedEuros
+                return euroShare(try normalizedMoney(await interpretMoney(grounded)), kind: kind, quote: quote)
             }
-            let value = try await generate(LocalValuePlan.self, quote: grounded, instructions: "Copy this literal percentage as a number. Do not calculate the complementary percentage.").value
+            let value: Double
+            let literalPercent = VoiceWorkspaceDomain.literalNumericTokens(in: grounded)
+            if literalPercent.count == 1, let literal = Double(literalPercent[0].replacingOccurrences(of: ",", with: ".")) {
+                value = literal
+            } else {
+                value = try await generate(LocalValuePlan.self, quote: grounded, instructions: "Copy this literal percentage as a number. Do not calculate the complementary percentage.").value
+            }
             return .init(kind: actor == .speaker ? .speakerPercent : actor == .partner ? .partnerPercent : .unassignedRatio,
                 value: value, secondValue: actor == .unknown ? 100 - value : 0)
         } catch {

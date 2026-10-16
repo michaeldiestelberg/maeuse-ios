@@ -10,6 +10,8 @@ protocol RealtimeVoiceServiceDelegate: AnyObject {
 enum RealtimeVoiceServiceEvent {
     case localDiagnostic(LocalVoiceDiagnostic)
     case localTurnReady
+    /// A recording reached its time limit without recognized speech. Precedes `localTurnReady`.
+    case localNoSpeech
     case localTranscript(String)
     case localEndpointProgress(Double)
     case connected

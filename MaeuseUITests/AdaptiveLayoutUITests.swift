@@ -61,13 +61,30 @@ final class AdaptiveLayoutUITests: XCTestCase {
         }
     }
 
-    func testRotationPreservesMonthAndDraft() {
+    /// Element checks alone pass even when the window never rotates (as on the iPhone Duo
+    /// simulator's inner display), so verify the actual window shape and the wide layout.
+    private func requireLandscape(_ app: XCUIApplication) throws {
+        let window = app.windows.firstMatch
+        XCTAssertTrue(window.waitForExistence(timeout: 5))
+        let deadline = Date().addingTimeInterval(3)
+        while window.frame.width <= window.frame.height && Date() < deadline { Thread.sleep(forTimeInterval: 0.2) }
+        guard window.frame.width > window.frame.height else {
+            throw XCTSkip("The app window did not rotate on this device (\(window.frame.size)); landscape layout is unverified here.")
+        }
+        if window.frame.width >= 700 {
+            XCTAssertTrue(app.descendants(matching: .any)["monthly-split"].waitForExistence(timeout: 5),
+                          "A wide landscape window must show the two-column month review")
+        }
+    }
+
+    func testRotationPreservesMonthAndDraft() throws {
         let app = launch()
         XCTAssertTrue(app.buttons["expense-screenshot-1"].waitForExistence(timeout: 5))
         capture("01-portrait-light")
         app.buttons["Vorheriger Monat"].tap()
         XCTAssertFalse(app.buttons["expense-screenshot-1"].exists)
         XCUIDevice.shared.orientation = .landscapeLeft
+        try requireLandscape(app)
         XCTAssertTrue(app.buttons["Nächster Monat"].waitForExistence(timeout: 5))
         XCTAssertFalse(app.buttons["expense-screenshot-1"].exists)
         app.buttons["Nächster Monat"].tap()
@@ -89,22 +106,13 @@ final class AdaptiveLayoutUITests: XCTestCase {
         XCTAssertEqual(app.textFields.firstMatch.value as? String, "Wocheneinkauf Test")
         app.buttons["expense-cancel"].tap()
         XCUIDevice.shared.orientation = .landscapeRight
+        try requireLandscape(app)
         XCTAssertTrue(app.buttons["expense-screenshot-1"].waitForExistence(timeout: 5))
         capture("04-landscape-right")
     }
 
     func testDarkAndAccessibilityText() {
-        let app = launch(extra: ["-maeuse.colorScheme", "dark"])
-        XCTAssertTrue(app.buttons["expense-screenshot-1"].waitForExistence(timeout: 5))
-        capture("05-portrait-dark")
-        XCUIDevice.shared.orientation = .landscapeLeft
-        XCTAssertTrue(app.buttons["expense-screenshot-1"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.buttons["Vorheriger Monat"].isHittable)
-        capture("06-landscape-dark")
-        app.terminate()
-        XCUIDevice.shared.orientation = .portrait
-        app.launchArguments += ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"]
-        app.launch()
+        let app = launch(extra: ["-maeuse.colorScheme", "dark", "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"])
         XCTAssertTrue(app.buttons["Ausgabe hinzufügen"].waitForExistence(timeout: 10))
         capture("07-accessibility-XXXL")
         app.swipeUp()
@@ -112,11 +120,22 @@ final class AdaptiveLayoutUITests: XCTestCase {
         capture("08-accessibility-rows")
     }
 
+    func testDarkLandscape() throws {
+        let app = launch(extra: ["-maeuse.colorScheme", "dark"])
+        XCTAssertTrue(app.buttons["expense-screenshot-1"].waitForExistence(timeout: 5))
+        capture("05-portrait-dark")
+        XCUIDevice.shared.orientation = .landscapeLeft
+        try requireLandscape(app)
+        XCTAssertTrue(app.buttons["expense-screenshot-1"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["Vorheriger Monat"].isHittable)
+        capture("06-landscape-dark")
+    }
+
     func testAdditionalScreensUseSafeFixtureNavigation() {
         var app = launch("onboarding")
         let start = app.buttons["welcome-start"]
         scrollTo(start, in: app.scrollViews["welcome-scroll"])
-        start.tap()
+        tapReachable(start)
         XCTAssertTrue(app.buttons["Ausgabe hinzufügen"].waitForExistence(timeout: 5))
         app.terminate()
 
@@ -126,7 +145,7 @@ final class AdaptiveLayoutUITests: XCTestCase {
         XCTAssertTrue(app.buttons["voice-choice-confirm"].waitForExistence(timeout: 5))
         let local = app.buttons["voice-choice-appleLocal"]
         scrollTo(local, in: app.scrollViews["voice-choice-scroll"])
-        local.tap()
+        tapReachable(local)
         XCTAssertTrue(local.isSelected)
         app.terminate()
 
@@ -195,12 +214,25 @@ final class AdaptiveLayoutUITests: XCTestCase {
     private func scrollTo(_ target: XCUIElement, in scroll: XCUIElement) {
         XCTAssertTrue(scroll.waitForExistence(timeout: 5))
         for _ in 0..<12 {
-            if target.isHittable { break }
+            if isReachable(target, in: scroll) { break }
             scroll.swipeUp()
         }
-        XCTAssertTrue(target.isHittable, "The final control must be reachable through its own scroll view")
+        XCTAssertTrue(isReachable(target, in: scroll), "The final control must be reachable through its own scroll view")
     }
 
+    /// On the iPhone Duo simulator, XCTest can report a fully visible control in content
+    /// that does not need to scroll as not hittable. Its frame inside the visible scroll
+    /// view is the reachability that matters to a person.
+    private func isReachable(_ target: XCUIElement, in scroll: XCUIElement) -> Bool {
+        // Lazy rows do not exist until scrolled to; reading a missing element's frame fails.
+        guard target.exists else { return false }
+        return target.isHittable || (!target.frame.isEmpty && scroll.frame.contains(target.frame))
+    }
+
+    private func tapReachable(_ target: XCUIElement) {
+        if target.isHittable { target.tap() }
+        else { target.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap() }
+    }
 
 
 }
