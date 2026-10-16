@@ -9,25 +9,35 @@ struct MainExpenseView: View {
     let onShowWelcomeGuide: () -> Void
     let onCaptureModalDismissed: () -> Void
 
-    @State private var direction: CGFloat = 1
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @ScaledMetric(relativeTo: .largeTitle) private var totalFontSize = 42
 
     private var filtered: [Expense] { listVM.filteredExpenses(from: expenses) }
 
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
             PrismBackground()
-            VStack(spacing: 0) {
-                header.padding(.horizontal, 22).padding(.top, 12)
-                ZStack {
-                    monthContent
-                        .id("\(listVM.currentYear)-\(listVM.currentMonth)")
-                        .transition(reduceMotion ? .opacity : .asymmetric(
-                            insertion: .offset(x: direction * 14).combined(with: .opacity),
-                            removal: .opacity))
+            GeometryReader { geometry in
+                let wide = geometry.size.width >= 700 && !dynamicTypeSize.isAccessibilitySize
+                let short = geometry.size.height < 500
+                VStack(spacing: 0) {
+                    header(compactActions: short).padding(.horizontal, 22).padding(.top, 12)
+                    monthContent(wide: wide)
+                }
+                .frame(maxWidth: 1120)
+                .frame(maxWidth: .infinity)
+                .safeAreaInset(edge: .bottom, spacing: 0) {
+                    if !short {
+                        HStack {
+                            Spacer()
+                            fabStack
+                        }
+                        .padding(.horizontal, 22).padding(.top, 12).padding(.bottom, 16)
+                        .background(Color.maeusBackground)
+                    }
                 }
             }
-            fabStack.padding(.trailing, 22).padding(.bottom, 30)
         }
         .fontDesign(.rounded)
         .sheet(isPresented: $editorVM.isPresented, onDismiss: onCaptureModalDismissed) {
@@ -50,7 +60,7 @@ struct MainExpenseView: View {
         }
     }
 
-    private var header: some View {
+    private func header(compactActions: Bool) -> some View {
         HStack {
             HStack(spacing: 10) {
                 Image("CoinMouseMark")
@@ -61,6 +71,7 @@ struct MainExpenseView: View {
                 Text("Mäuse").font(.system(size: 19, weight: .heavy, design: .rounded)).foregroundStyle(Color.maeusForeground)
             }
             Spacer()
+            if compactActions { fabStack.padding(.trailing, 12) }
             Button { settingsVM.isPresented = true } label: {
                 MaeuseSettingsIcon().frame(width: 38, height: 38)
             }
@@ -69,23 +80,73 @@ struct MainExpenseView: View {
         }
     }
 
-    private var monthContent: some View {
+    private func monthContent(wide: Bool) -> some View {
+        // All navigation and draft state belongs to the models above this
+        // stateless arrangement; rebuilding columns cannot reset an entry.
         ScrollView {
-            VStack(spacing: 0) {
-                summaryCard.padding(.horizontal, 22).padding(.top, 20)
-                LazyVStack(spacing: 12) {
-                    if filtered.isEmpty { emptyState.padding(.top, 44) }
-                    else {
-                        ForEach(filtered, id: \.id) { expense in
-                            ExpenseRow(expense: expense, listVM: listVM)
-                                .contentShape(Rectangle()).onTapGesture { editorVM.prepareForEdit(expense) }
-                                .transition(.scale(scale: 0.82).combined(with: .opacity))
+            Group {
+                if wide {
+                    HStack(alignment: .top, spacing: 24) {
+                        VStack(spacing: 20) {
+                            summaryCard
+                            splitOverview
                         }
+                        .frame(width: 320)
+                        expenseList
+                    }
+                } else {
+                    VStack(spacing: 20) {
+                        summaryCard
+                        expenseList
                     }
                 }
-                .padding(.horizontal, 22).padding(.top, 20).padding(.bottom, 120)
+            }
+            .padding(.horizontal, 22).padding(.top, 20).padding(.bottom, 24)
+        }
+        .accessibilityIdentifier("expense-ledger")
+    }
+
+    private var expenseList: some View {
+        LazyVStack(spacing: 12) {
+            if filtered.isEmpty { emptyState.padding(.top, 44) }
+            else {
+                ForEach(filtered, id: \.id) { expense in
+                    Button { editorVM.prepareForEdit(expense) } label: {
+                        ExpenseRow(expense: expense, listVM: listVM)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("expense-\(expense.id)")
+                }
             }
         }
+        .frame(maxWidth: .infinity)
+    }
+
+    private var splitOverview: some View {
+        CheeseCard(cornerRadius: 22, shadow: 3) {
+            VStack(alignment: .leading, spacing: 16) {
+                Text(loc("MonthlySplit"))
+                    .font(.system(.headline, design: .rounded, weight: .heavy))
+                shareTotal(loc("You"), amount: max(0, listVM.totalAmount(for: filtered) - listVM.partnerTotal(for: filtered)))
+                shareTotal(loc("Partner"), amount: listVM.partnerTotal(for: filtered))
+                Text(loc("ExpenseCount", filtered.count))
+                    .font(.system(.caption, design: .rounded, weight: .bold))
+                    .foregroundStyle(Color.maeusTextSecondary)
+            }
+            .foregroundStyle(Color.maeusForeground)
+            .padding(20)
+        }
+        .accessibilityIdentifier("monthly-split")
+    }
+
+    private func shareTotal(_ title: String, amount: Double) -> some View {
+        HStack {
+            Text(title).foregroundStyle(Color.maeusTextSecondary)
+            Spacer()
+            Text(amount.euroFormatted).monospacedDigit()
+        }
+        .font(.system(.subheadline, design: .rounded, weight: .bold))
+        .accessibilityElement(children: .combine)
     }
 
     private var summaryCard: some View {
@@ -100,40 +161,52 @@ struct MainExpenseView: View {
                 }
                 VStack(alignment: .leading, spacing: 2) {
                     Text(listVM.totalAmount(for: filtered).euroFormatted)
-                        .font(.system(size: 42, weight: .heavy, design: .rounded)).tracking(-1.5).monospacedDigit()
-                    HStack(spacing: 6) {
-                        Text(loc("MausOwesYou")).font(.system(size: 14, weight: .bold, design: .rounded))
-                        Text(listVM.partnerTotal(for: filtered).euroFormatted)
-                            .font(.system(size: 13, weight: .heavy, design: .rounded)).monospacedDigit()
-                            .foregroundStyle(Color.maeusCheese).padding(.horizontal, 8).padding(.vertical, 3)
-                            .background(Color.maeusInk, in: RoundedRectangle(cornerRadius: 8))
-                            .contentTransition(.numericText())
+                        .font(.system(size: totalFontSize, weight: .heavy, design: .rounded)).tracking(-1.5).monospacedDigit()
+                        .minimumScaleFactor(0.65).lineLimit(1)
+                    ViewThatFits(in: .horizontal) {
+                        owedAmount(horizontal: true)
+                        owedAmount(horizontal: false)
                     }
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
             .foregroundStyle(Color.maeusInk).padding(.horizontal, 22).padding(.vertical, 20)
             .overlay {
                 GeometryReader { geometry in
                     FloatingCheeseHole(size: 34, duration: 7, stroke: .maeusInk)
                         .position(x: geometry.size.width - 53, y: 5)
                     FloatingCheeseHole(size: 14, duration: 8, delay: 2, stroke: .maeusInk)
-                        .position(x: geometry.size.width - 103, y: 33)
+                        .position(x: geometry.size.width - 103, y: 8)
                     FloatingCheeseHole(size: 22, duration: 9, delay: 1, stroke: .maeusInk)
                         .position(x: geometry.size.width - 3, y: geometry.size.height - 25)
                 }
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
             }
             .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
         }
     }
 
+    private func owedAmount(horizontal: Bool) -> some View {
+        let layout = horizontal ? AnyLayout(HStackLayout(spacing: 6)) : AnyLayout(VStackLayout(alignment: .leading, spacing: 6))
+        return layout {
+            Text(loc("MausOwesYou"))
+                .font(.system(.subheadline, design: .rounded, weight: .bold))
+            Text(listVM.partnerTotal(for: filtered).euroFormatted)
+                .font(.system(.subheadline, design: .rounded, weight: .heavy)).monospacedDigit()
+                .foregroundStyle(Color.maeusCheese).padding(.horizontal, 8).padding(.vertical, 3)
+                .background(Color.maeusInk, in: RoundedRectangle(cornerRadius: 8))
+                .contentTransition(.numericText())
+        }
+    }
+
     private func monthButton(direction newDirection: CGFloat) -> some View {
         Button {
-            direction = newDirection
             withAnimation(reduceMotion ? .easeOut(duration: 0.2) : .easeOut(duration: 0.35)) {
                 newDirection < 0 ? listVM.previousMonth() : listVM.nextMonth()
             }
         } label: {
-            MaeuseChevronIcon(pointsRight: newDirection > 0).frame(width: 28, height: 28)
+            MaeuseChevronIcon(pointsRight: newDirection > 0).frame(width: 44, height: 44)
         }.buttonStyle(.plain).accessibilityLabel(newDirection < 0 ? loc("PreviousMonth") : loc("NextMonth"))
     }
 
@@ -158,7 +231,7 @@ struct MainExpenseView: View {
                 }.buttonStyle(FABStyle()).accessibilityLabel(loc("StartVoiceMode"))
             } else {
                 Button { settingsVM.requestVoiceSetup() } label: {
-                    MaeuseMicIcon(size: 24, color: .maeusInk)
+                    MaeuseMicIcon(size: 24, color: .maeusForeground)
                 }.buttonStyle(FABStyle(isPrimary: false)).accessibilityLabel(loc("VoiceChooseMode"))
                 Button { editorVM.prepareForNew() } label: {
                     MaeusePlusIcon()

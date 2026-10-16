@@ -12,14 +12,58 @@ struct VoiceSheet: View {
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
-        VStack(spacing: 0) {
-            topBar
-                .padding(.horizontal, 20)
-                .padding(.vertical, 10)
-            if viewModel.provider == .appleLocal {
-                localControls
-            } else if !dynamicTypeSize.isAccessibilitySize { listeningHero }
-            ScrollView {
+        GeometryReader { geometry in
+            let wide = geometry.size.width >= 760 && !dynamicTypeSize.isAccessibilitySize
+            VStack(spacing: 0) {
+                topBar.padding(.horizontal, 20).padding(.vertical, 10)
+                #if targetEnvironment(simulator)
+                if ProcessInfo.processInfo.arguments.contains("--screenshot-voice") ||
+                    ProcessInfo.processInfo.arguments.contains("--screenshot-local-voice") {
+                    Text(loc("VoicePreviewFixture"))
+                        .font(.caption.weight(.semibold)).foregroundStyle(Color.maeusTextSecondary)
+                        .multilineTextAlignment(.center).padding(.horizontal, 20).padding(.bottom, 8)
+                        .accessibilityIdentifier("voice-fixture-notice")
+                }
+                #endif
+                if wide {
+                    HStack(alignment: .top, spacing: 20) {
+                        captureRail.frame(width: 240).padding(.leading, 20)
+                        draftList
+                    }.accessibilityIdentifier("voice-wide")
+                } else {
+                    if viewModel.provider == .appleLocal { localControls }
+                    else if !dynamicTypeSize.isAccessibilitySize { listeningHero }
+                    draftList
+                }
+                footer.dynamicTypeSize(...DynamicTypeSize.xxxLarge)
+            }
+        }
+        .background(Color.maeusBackground.ignoresSafeArea())
+        .interactiveDismissDisabled(true)
+        .task { viewModel.startSession() }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .background { viewModel.suspendLocalRecording() }
+        }
+    }
+
+    private var captureRail: some View {
+        VStack(spacing: 18) {
+            if viewModel.provider == .appleLocal { localControls }
+            else {
+                listeningHero
+                Text(viewModel.stateLabel).font(.subheadline.weight(.bold))
+            }
+            Text(viewModel.takeawayText).font(.footnote)
+                .foregroundStyle(Color.maeusTextSecondary).multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .foregroundStyle(Color.maeusForeground).padding(20)
+        .background(Color.maeusSurface, in: RoundedRectangle(cornerRadius: 24))
+        .overlay(RoundedRectangle(cornerRadius: 24).stroke(Color.maeusCardBorder, lineWidth: 2))
+    }
+
+    private var draftList: some View {
+        ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
                     Text(loc("VoiceYourDrafts"))
                         .font(.system(.headline, design: .rounded, weight: .heavy))
@@ -64,16 +108,8 @@ struct VoiceSheet: View {
                 .padding(.top, 12)
                 .padding(.bottom, 20)
             }
-            .animation(reduceMotion ? nil : .smooth(duration: 0.35), value: viewModel.drafts.map(\.id))
-            footer
-                .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
-        }
-        .background(Color.maeusBackground.ignoresSafeArea())
-        .interactiveDismissDisabled(true)
-        .task { viewModel.startSession() }
-        .onChange(of: scenePhase) { _, phase in
-            if phase == .background { viewModel.suspendLocalRecording() }
-        }
+        .accessibilityIdentifier("voice-drafts-scroll")
+        .animation(reduceMotion ? nil : .smooth(duration: 0.35), value: viewModel.drafts.map(\.id))
     }
 
     private var localControls: some View {
@@ -120,6 +156,7 @@ struct VoiceSheet: View {
             .background(Color.maeusSurface, in: Circle())
             .overlay(Circle().stroke(Color.maeusCardBorder, lineWidth: 2))
             .accessibilityLabel(loc("Close"))
+            .accessibilityIdentifier("voice-close")
 
             Spacer(minLength: 0)
             if dynamicTypeSize.isAccessibilitySize && viewModel.provider != .appleLocal {

@@ -6,6 +6,9 @@ struct OnboardingView: View {
     @State private var appeared = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @ScaledMetric(relativeTo: .largeTitle) private var titleSize = 44
+    @ScaledMetric(relativeTo: .subheadline) private var stepBadgeSize = 30
 
     var body: some View {
         ZStack {
@@ -14,42 +17,37 @@ struct OnboardingView: View {
             FloatingCheeseHole(size: 70, duration: 7, delay: 1, fill: onboardingHole, stroke: Color.maeusCardBorder).offset(x: 205, y: -260)
             FloatingCheeseHole(size: 40, duration: 8, delay: 2, fill: onboardingHole, stroke: Color.maeusCardBorder).offset(x: -210, y: 255)
             GeometryReader { geometry in
+                let wide = geometry.size.width >= 760 && !dynamicTypeSize.isAccessibilitySize
                 ScrollView {
-                    VStack(spacing: 14) {
-                        Spacer(minLength: 28)
-                        MouseCoin(size: 92, fill: logoCoinFill, shadow: colorScheme == .dark ? 0 : 6) {
-                            Text("€").font(.system(size: 42, weight: .heavy, design: .rounded)).foregroundStyle(Color.maeusInk)
+                    Group {
+                        if wide {
+                            HStack(alignment: .center, spacing: 36) {
+                                introduction.frame(maxWidth: 300)
+                                VStack(spacing: 20) {
+                                    steps
+                                    startButton
+                                    slangHint
+                                }.frame(maxWidth: 520)
+                            }
+                            .accessibilityIdentifier("welcome-wide")
+                        } else {
+                            VStack(spacing: 18) {
+                                introduction
+                                steps
+                                startButton
+                                slangHint
+                            }
                         }
-                        .scaleEffect(appeared ? 1 : 0.82).opacity(appeared ? 1 : 0).offset(y: appeared ? 0 : 10)
-                        Text("Mäuse").font(.system(size: 44, weight: .heavy, design: .rounded)).tracking(-1.5)
-                        Text(loc("SplitSubtitle")).font(.system(size: 15, weight: .bold, design: .rounded)).multilineTextAlignment(.center)
-
-                        VStack(spacing: 10) {
-                            step(1, loc("LogExpenseTitle"), loc("LogExpenseDesc"), delay: 0.1)
-                            step(2, loc("ChooseSplitTitle"), loc("ChooseSplitDesc"), delay: 0.22)
-                            step(3, loc("TrackTotalsTitle"), loc("TrackTotalsDesc"), delay: 0.34)
-                        }.padding(.top, 8)
-                        Spacer(minLength: 12)
-                        Button(loc("GetStarted")) {
-                            onDismiss(true)
-                            withAnimation(.easeOut(duration: 0.3)) { isPresented = false }
-                        }
-                        .font(.system(size: 16, weight: .heavy, design: .rounded))
-                        .foregroundStyle(ctaForeground).frame(maxWidth: .infinity).padding(.vertical, 16)
-                        .background {
-                            let shape = RoundedRectangle(cornerRadius: 18, style: .continuous)
-                            ZStack { shape.fill(ctaShadow).offset(x: 4, y: 4); shape.fill(ctaBackground) }
-                        }
-                        Text(loc("SlangHint")).fixedSize(horizontal: false, vertical: true).font(.system(size: 12, weight: .bold, design: .rounded)).italic().multilineTextAlignment(.center)
                     }
                     .foregroundStyle(Color.maeusForeground)
                     .padding(.horizontal, 32)
-                    .padding(.bottom, 28)
-                    .frame(maxWidth: 600)
+                    .padding(.vertical, 28)
+                    .frame(maxWidth: wide ? 1040 : 600)
                     .frame(minHeight: geometry.size.height)
                     .frame(maxWidth: .infinity)
                 }
                 .scrollBounceBehavior(.basedOnSize)
+                .accessibilityIdentifier("welcome-scroll")
             }
         }
         .fontDesign(.rounded)
@@ -58,17 +56,59 @@ struct OnboardingView: View {
         }
     }
 
+    private var introduction: some View {
+        VStack(spacing: 14) {
+            MouseCoin(size: 92, fill: logoCoinFill, shadow: colorScheme == .dark ? 0 : 6) {
+                Text("€").font(.system(size: 42, weight: .heavy, design: .rounded)).foregroundStyle(Color.maeusInk)
+            }
+            .accessibilityHidden(true)
+            .scaleEffect(appeared ? 1 : 0.82).opacity(appeared ? 1 : 0).offset(y: appeared ? 0 : 10)
+            Text("Mäuse").font(.system(size: titleSize, weight: .heavy, design: .rounded)).tracking(-1.5)
+            Text(loc("SplitSubtitle")).font(.body.weight(.bold)).multilineTextAlignment(.center)
+        }
+    }
+
+    private var steps: some View {
+        VStack(spacing: 12) {
+            step(1, loc("LogExpenseTitle"), loc("LogExpenseDesc"), delay: 0.1)
+            step(2, loc("ChooseSplitTitle"), loc("ChooseSplitDesc"), delay: 0.22)
+            step(3, loc("TrackTotalsTitle"), loc("TrackTotalsDesc"), delay: 0.34)
+        }
+    }
+
+    private var startButton: some View {
+        Button(loc("GetStarted")) {
+            onDismiss(true)
+            withAnimation(.easeOut(duration: 0.3)) { isPresented = false }
+        }
+        .font(.headline.weight(.heavy))
+        .foregroundStyle(ctaForeground)
+        .frame(maxWidth: .infinity, minHeight: 44).padding(.vertical, 12)
+        .background {
+            let shape = RoundedRectangle(cornerRadius: 18, style: .continuous)
+            ZStack { shape.fill(ctaShadow).offset(x: 4, y: 4); shape.fill(ctaBackground) }
+        }
+        .accessibilityIdentifier("welcome-start")
+    }
+
+    private var slangHint: some View {
+        Text(loc("SlangHint")).font(.footnote.weight(.bold)).italic()
+            .fixedSize(horizontal: false, vertical: true).multilineTextAlignment(.center)
+    }
+
     private func step(_ number: Int, _ title: String, _ subtitle: String, delay: Double) -> some View {
-        HStack(spacing: 12) {
-            Text("\(number)").font(.system(size: 14, weight: .heavy, design: .rounded)).frame(width: 30, height: 30)
+        HStack(alignment: .top, spacing: 12) {
+            Text("\(number)").font(.subheadline.weight(.heavy))
+                .frame(width: stepBadgeSize, height: stepBadgeSize)
                 .foregroundStyle(Color.maeusInk)
                 .background(Color.maeusCheese, in: Circle()).overlay(Circle().stroke(Color.maeusInk, lineWidth: 2))
-            VStack(alignment: .leading, spacing: 1) {
-                Text(title).font(.system(size: 14, weight: .heavy, design: .rounded))
-                Text(subtitle).font(.system(size: 12, weight: .bold, design: .rounded)).foregroundStyle(Color.maeusTextSecondary)
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title).font(.headline.weight(.heavy))
+                Text(subtitle).font(.subheadline.weight(.semibold)).foregroundStyle(Color.maeusTextSecondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
-            Spacer()
+            Spacer(minLength: 0)
         }
         .padding(.horizontal, 16).padding(.vertical, 12)
         .background {

@@ -55,7 +55,7 @@
                ReferencedContainer = "container:Maeuse.xcodeproj">
             </BuildableReference>
          </TestableReference>
-      </Testables>
+      <TestableReference skipped="NO" parallelizable="NO"><BuildableReference BuildableIdentifier="primary" BlueprintIdentifier="D28000000000000000000005" BuildableName="MaeuseUITests.xctest" BlueprintName="MaeuseUITests" ReferencedContainer="container:Maeuse.xcodeproj" /></TestableReference></Testables>
    </TestAction>
    <LaunchAction
       buildConfiguration = "Debug"

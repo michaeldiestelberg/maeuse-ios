@@ -52,6 +52,7 @@
 		A15000000000000000000103 /* AppleExpenseInterpreter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A15000000000000000000003 /* AppleExpenseInterpreter.swift */; };
 		A15000000000000000000104 /* LocalVoiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A15000000000000000000004 /* LocalVoiceTests.swift */; };
 		A16000000000000000000104 /* LocalVoiceDiagnostics.swift in Sources */ = {isa = PBXBuildFile; fileRef = A16000000000000000000004 /* LocalVoiceDiagnostics.swift */; };
+D28000000000000000000001 = {isa = PBXBuildFile; fileRef = D28000000000000000000002; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -123,6 +124,8 @@
 		A15000000000000000000003 /* AppleExpenseInterpreter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleExpenseInterpreter.swift; sourceTree = "<group>"; };
 		A15000000000000000000004 /* LocalVoiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalVoiceTests.swift; sourceTree = "<group>"; };
 		A16000000000000000000004 /* LocalVoiceDiagnostics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalVoiceDiagnostics.swift; sourceTree = "<group>"; };
+D28000000000000000000002 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaeuseUITests/AdaptiveLayoutUITests.swift; sourceTree = SOURCE_ROOT; };
+D28000000000000000000003 = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; path = MaeuseUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -350,6 +353,7 @@
 			productReference = C10000000000000000000020 /* MaeuseControls.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
+D28000000000000000000005 = {isa = PBXNativeTarget; buildConfigurationList = D28000000000000000000006; buildPhases = (D28000000000000000000004,); buildRules = (); dependencies = (312F51F36C60EEB9952F6E12,); name = MaeuseUITests; productName = MaeuseUITests; productReference = D28000000000000000000003; productType = "com.apple.product-type.bundle.ui-testing"; };
 /* End PBXNativeTarget section */
 
 /* Begin PBXVariantGroup section */
@@ -404,6 +408,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
+                D28000000000000000000005,
 				D29418A4906E4219A1580FF0 /* Maeuse */,
 				C40000000000000000000001 /* MaeuseControls */,
 				95447C7231765DF92BF86227 /* MaeuseTests */,
@@ -517,6 +522,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+D28000000000000000000004 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (D28000000000000000000001,); runOnlyForDeploymentPostprocessing = 0; };
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -548,7 +554,7 @@
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -601,7 +607,7 @@
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -815,6 +821,8 @@
 			};
 			name = Release;
 		};
+D28000000000000000000007 = {isa = XCBuildConfiguration; buildSettings = {CODE_SIGN_STYLE = Automatic; GENERATE_INFOPLIST_FILE = YES; IPHONEOS_DEPLOYMENT_TARGET = 18.0; PRODUCT_BUNDLE_IDENTIFIER = com.michaeldiestelberg.maeuse.uitests; PRODUCT_NAME = "$(TARGET_NAME)"; SWIFT_VERSION = 5.0; TARGETED_DEVICE_FAMILY = 1; TEST_TARGET_NAME = Maeuse; }; name = Debug; };
+D28000000000000000000008 = {isa = XCBuildConfiguration; buildSettings = {CODE_SIGN_STYLE = Automatic; GENERATE_INFOPLIST_FILE = YES; IPHONEOS_DEPLOYMENT_TARGET = 18.0; PRODUCT_BUNDLE_IDENTIFIER = com.michaeldiestelberg.maeuse.uitests; PRODUCT_NAME = "$(TARGET_NAME)"; SWIFT_VERSION = 5.0; TARGETED_DEVICE_FAMILY = 1; TEST_TARGET_NAME = Maeuse; }; name = Release; };
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -855,6 +863,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+D28000000000000000000006 = {isa = XCConfigurationList; buildConfigurations = (D28000000000000000000007,D28000000000000000000008,); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
 /* End XCConfigurationList section */
 	};
 	rootObject = 5A033581FC8A431FABB39F96 /* Project object */;

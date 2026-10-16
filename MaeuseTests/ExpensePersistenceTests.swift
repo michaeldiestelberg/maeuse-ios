@@ -139,6 +139,56 @@ final class ExpensePersistenceTests: XCTestCase {
     /// Exercise the actual editor in a hosting view that changes size, as a
     /// resizable scene does. Attach renders for visual review, and check that
     /// the scrollable body retains a usable viewport at each size.
+    /// Window-size coverage on the installed runtime, not a native Duo pose test.
+    func testLedgerResizesWithoutLosingMonthOrEditorState() async throws {
+        let store = try container()
+        let list = ExpenseListViewModel()
+        list.currentYear = 2026
+        list.currentMonth = 9
+        let editor = ExpenseEditorViewModel()
+        editor.prepareForNew()
+        editor.amountText = "84,30"
+        editor.description = "Unfinished groceries"
+        editor.setPartnerFraction(0.35)
+        // Keep the draft in the owner without presenting a modal over layout checks.
+        editor.isPresented = false
+        let scene = try XCTUnwrap(UIApplication.shared.connectedScenes.first as? UIWindowScene)
+        let previousWindow = scene.windows.first(where: \.isKeyWindow)
+        let window = UIWindow(windowScene: scene)
+        let fixtures = [Expense(id: "resize-fixture", amount: 84.30, desc: "Weekly groceries", date: try XCTUnwrap(Expense.dateFromISO("2026-09-14")))]
+        let host = UIHostingController(rootView: MainExpenseView(listVM: list, editorVM: editor,
+            voiceVM: VoiceModeViewModel(), settingsVM: SettingsViewModel(), expenses: fixtures,
+            onShowWelcomeGuide: {}, onCaptureModalDismissed: {})
+            .modelContainer(store))
+        window.rootViewController = host
+        window.makeKeyAndVisible()
+        defer { window.isHidden = true; previousWindow?.makeKeyAndVisible() }
+        for size in [CGSize(width: 320, height: 568), CGSize(width: 466, height: 678),
+                     CGSize(width: 890, height: 626), CGSize(width: 626, height: 890),
+                     CGSize(width: 320, height: 400)] {
+            window.frame = CGRect(origin: .zero, size: size)
+            host.view.frame = window.bounds
+            host.view.setNeedsLayout()
+            host.view.layoutIfNeeded()
+            try await Task.sleep(for: .milliseconds(200))
+            host.view.layoutIfNeeded()
+            let scroll = try XCTUnwrap(descendants(of: host.view).compactMap { $0 as? UIScrollView }.first)
+            XCTAssertLessThanOrEqual(scroll.contentSize.width, scroll.bounds.width + 1)
+            XCTAssertEqual(list.currentMonth, 9)
+            XCTAssertEqual(list.currentYear, 2026)
+            XCTAssertEqual(editor.amountText, "84,30")
+            XCTAssertEqual(editor.description, "Unfinished groceries")
+            XCTAssertEqual(editor.partnerPercent, 35)
+            let image = UIGraphicsImageRenderer(bounds: host.view.bounds).image { _ in
+                host.view.drawHierarchy(in: host.view.bounds, afterScreenUpdates: true)
+            }
+            let attachment = XCTAttachment(image: image)
+            attachment.name = "window-layout-\(Int(size.width))x\(Int(size.height))"
+            attachment.lifetime = .keepAlways
+            add(attachment)
+        }
+    }
+
     func testEditorResizingKeepsScrollableContentReachable() async throws {
         let store = try container()
         let editor = ExpenseEditorViewModel()
@@ -223,6 +273,55 @@ final class ExpensePersistenceTests: XCTestCase {
                 attachment.name = "welcome-\(language.rawValue)-\(Int(size.width))x\(Int(size.height))-bottom"
                 attachment.lifetime = .keepAlways
                 add(attachment)
+            }
+        }
+    }
+
+    func testSupportingScreensKeepScrollableViewportsAcrossWindowSizes() async throws {
+        let store = try container()
+        let scene = try XCTUnwrap(UIApplication.shared.connectedScenes.first as? UIWindowScene)
+        let previous = scene.windows.first(where: \.isKeyWindow)
+        let sizes = [CGSize(width: 320, height: 400), CGSize(width: 390, height: 844),
+                     CGSize(width: 900, height: 640), CGSize(width: 640, height: 900)]
+        for largeText in [false, true] {
+            for name in ["welcome", "settings", "mode-choice", "voice"] {
+                let settings = SettingsViewModel()
+                let voice = VoiceModeViewModel()
+                #if targetEnvironment(simulator)
+                voice.openScreenshotPreview()
+                #endif
+                let content: AnyView
+                switch name {
+                case "welcome": content = AnyView(OnboardingView(isPresented: .constant(true), onDismiss: { _ in }))
+                case "settings": content = AnyView(SettingsSheet(viewModel: settings, expenses: [], onShowWelcomeGuide: {}))
+                case "mode-choice": content = AnyView(VoiceModeSelectionView(viewModel: settings, onSelect: { _ in }, onCancel: {}))
+                default: content = AnyView(VoiceSheet(viewModel: voice))
+                }
+                let host = UIHostingController(rootView: content
+                    .environment(\.dynamicTypeSize, largeText ? .accessibility5 : .large)
+                    .transaction { $0.disablesAnimations = true }
+                    .modelContainer(store))
+                let window = UIWindow(windowScene: scene)
+                window.rootViewController = host
+                window.makeKeyAndVisible()
+                for size in sizes {
+                    window.frame = CGRect(origin: .zero, size: size)
+                    host.view.frame = window.bounds
+                    host.view.setNeedsLayout()
+                    host.view.layoutIfNeeded()
+                    try await Task.sleep(for: .milliseconds(180))
+                    host.view.layoutIfNeeded()
+                    let scrolls = descendants(of: host.view).compactMap { $0 as? UIScrollView }
+                    XCTAssertFalse(scrolls.isEmpty, "\(name) must retain a scrollable content area")
+                    for scroll in scrolls where !scroll.isHidden && scroll.bounds.width > 100 {
+                        XCTAssertGreaterThan(scroll.bounds.height, 70, "\(name) must leave room for its content")
+                        XCTAssertLessThanOrEqual(scroll.contentSize.width, scroll.bounds.width + 1,
+                                                 "\(name) must not require horizontal scrolling")
+                    }
+                }
+                window.isHidden = true
+                previous?.makeKeyAndVisible()
+                voice.cancelSession()
             }
         }
     }

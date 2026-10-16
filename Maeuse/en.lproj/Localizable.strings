@@ -253,3 +253,8 @@
 "LocalDiagnosisEmpty" = "After an Apple voice capture, technical details of the last turn appear here. They are kept only until the app quits.";
 "LocalClearDiagnosis" = "Clear diagnosis";
 "VoiceChoiceUnavailable" = "Not ready here yet. Settings show what is needed.";
+
+"MonthlySplit" = "Monthly split";
+"ExpenseCount" = "%d expenses";
+
+"VoicePreviewFixture" = "Simulated preview – no audio capture or model processing.";

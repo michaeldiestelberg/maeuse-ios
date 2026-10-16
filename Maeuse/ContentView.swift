@@ -202,11 +202,20 @@ struct ContentView: View {
         }
 
         switch screenshotScenario {
+        case "onboarding":
+            showOnboarding = true
         case "editor":
             editorVM.prepareForNew()
             editorVM.amountText = LanguageManager.shared.activeLanguageCode == "de" ? "84,30" : "84.30"
             editorVM.description = LanguageManager.shared.activeLanguageCode == "de" ? "Wocheneinkauf" : "Weekly groceries"
             editorVM.setPartnerFraction(0.5)
+        case "settings-basic":
+            settingsVM.voiceSettings.provider = .openAI
+            settingsVM.hasSavedVoiceAPIKey = false
+            settingsVM.voiceSettings.verifiedAt = nil
+            settingsVM.voiceSettings.enabled = false
+            settingsVM.voiceAPIKeyText = ""
+            settingsVM.isPresented = true
         case "settings":
             settingsVM.voiceSettings.provider = .openAI
             settingsVM.hasSavedVoiceAPIKey = true

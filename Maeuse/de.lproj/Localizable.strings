@@ -253,3 +253,8 @@
 "LocalDiagnosisEmpty" = "Nach einer Apple-Sprachaufnahme findest du hier technische Angaben zum letzten Vorgang. Sie bleiben nur bis zum Beenden der App erhalten.";
 "LocalClearDiagnosis" = "Diagnose löschen";
 "VoiceChoiceUnavailable" = "Hier momentan nicht bereit. Die Einstellungen zeigen dir, was noch fehlt.";
+
+"MonthlySplit" = "Aufteilung im Monat";
+"ExpenseCount" = "%d Ausgaben";
+
+"VoicePreviewFixture" = "Simulierte Vorschau – keine Audio- oder Modellverarbeitung.";

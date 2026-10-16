@@ -11,6 +11,7 @@ struct SettingsSheet: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     @AppStorage("maeuse.colorScheme") private var colorSchemePreference: String = "system"
     @State private var languageManager = LanguageManager.shared
@@ -23,38 +24,18 @@ struct SettingsSheet: View {
     @State private var diagnosisStore = LocalVoiceDiagnosticStore.shared
 
     var body: some View {
+        GeometryReader { geometry in
         VStack(spacing: 0) {
             Capsule().fill(Color.maeusTextTertiary.opacity(0.45)).frame(width: 40, height: 5).padding(.top, 10)
             settingsHeader.padding(.horizontal, 22).padding(.top, 8).padding(.bottom, 4)
             ScrollViewReader { proxy in
             ScrollView {
-                VStack(spacing: 16) {
-                    // App Settings
-                    appSection
-
-                    // Voice Settings
-                    voiceSection
-
-                    diagnosticsSection.id("local-diagnostics")
-
-                    // Backup & Restore
-                    backupSection
-
-                    // Privacy, terms, and support
-                    legalAndSupportSection
-
-                    // Status
-                    if viewModel.showStatus {
-                        statusCard
-                            .transition(.opacity.combined(with: .move(edge: .top)))
-                    }
-
-                    // Help & About
-                    helpSection
-                }
-                .padding(.horizontal, 22).padding(.top, 14).padding(.bottom, 40)
+                settingsContent(wide: geometry.size.width >= 720 && !dynamicTypeSize.isAccessibilitySize)
+                    .padding(.horizontal, 22).padding(.top, 14).padding(.bottom, 40)
+                    .frame(maxWidth: 1080).frame(maxWidth: .infinity)
             }
             .background(Color.maeusBackground)
+            .accessibilityIdentifier("settings-scroll")
             #if targetEnvironment(simulator)
             .onAppear {
                 if ProcessInfo.processInfo.arguments.contains("--settings-local-diagnostic") {
@@ -67,9 +48,11 @@ struct SettingsSheet: View {
             #endif
             }
         }
+        }
         .fontDesign(.rounded)
         .background(Color.maeusBackground.ignoresSafeArea())
         .preferredColorScheme(resolvedColorScheme)
+        .modifier(MaeusePagePresentation())
         .presentationDetents([.large])
         .presentationDragIndicator(.hidden)
         .presentationCornerRadius(30)
@@ -133,15 +116,45 @@ struct SettingsSheet: View {
         }
     }
 
+    @ViewBuilder
+    private func settingsContent(wide: Bool) -> some View {
+        if wide {
+            HStack(alignment: .top, spacing: 20) {
+                VStack(spacing: 16) {
+                    appSection
+                    backupSection
+                    legalAndSupportSection
+                    helpSection
+                    if viewModel.showStatus { statusCard }
+                }.frame(maxWidth: .infinity)
+                VStack(spacing: 16) {
+                    voiceSection
+                    diagnosticsSection.id("local-diagnostics")
+                }.frame(maxWidth: .infinity)
+            }.accessibilityIdentifier("settings-wide")
+        } else {
+            VStack(spacing: 16) {
+                appSection
+                voiceSection
+                diagnosticsSection.id("local-diagnostics")
+                backupSection
+                legalAndSupportSection
+                if viewModel.showStatus { statusCard }
+                helpSection
+            }
+        }
+    }
+
     private var settingsHeader: some View {
         HStack {
-            Text(loc("Settings")).font(.system(size: 20, weight: .heavy, design: .rounded)).foregroundStyle(Color.maeusForeground)
+            Text(loc("Settings")).font(.system(.title3, design: .rounded, weight: .heavy)).foregroundStyle(Color.maeusForeground)
             Spacer()
             Button { viewModel.isPresented = false; dismiss() } label: {
-                Text(loc("Done")).font(.system(size: 14, weight: .heavy, design: .rounded))
+                Text(loc("Done")).font(.system(.subheadline, design: .rounded, weight: .heavy))
                     .padding(.horizontal, 16).padding(.vertical, 8)
             }
                 .buttonStyle(StampedButtonStyle(fill: .maeusCheese, foreground: .maeusInk, cornerRadius: 18, borderColor: .maeusInk, shadow: 2.5))
+                .accessibilityIdentifier("settings-done")
         }
     }
 
@@ -173,32 +186,37 @@ struct SettingsSheet: View {
     }
 
     private func themeLabel(_ text: String) -> some View {
-        Text(text.uppercased()).font(.system(size: 11, weight: .heavy, design: .rounded)).tracking(1.5).foregroundStyle(Color.maeusTextSecondary)
+        Text(text.uppercased()).font(.system(.caption, design: .rounded, weight: .heavy)).tracking(1.5).foregroundStyle(Color.maeusTextSecondary)
     }
 
     private func choiceStrip(_ choices: [(String, String)], selection: Binding<String>) -> some View {
-        HStack(spacing: 0) {
+        let layout = dynamicTypeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(spacing: 6)) : AnyLayout(HStackLayout(spacing: 0))
+        return layout {
             ForEach(choices, id: \.1) { choice in
                 choiceButton(choice.0, selected: selection.wrappedValue == choice.1) { selection.wrappedValue = choice.1 }
             }
         }
-        .padding(3).background(Color.maeusInputBackground, in: Capsule()).overlay(Capsule().stroke(Color.maeusCardBorder, lineWidth: 2))
+        .padding(3).background(Color.maeusInputBackground, in: RoundedRectangle(cornerRadius: 18)).overlay(RoundedRectangle(cornerRadius: 18).stroke(Color.maeusCardBorder, lineWidth: 2))
     }
 
     private var languageChoiceStrip: some View {
         let current = LanguageManager.shared.languagePreference
-        return HStack(spacing: 0) {
+        let layout = dynamicTypeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(spacing: 6)) : AnyLayout(HStackLayout(spacing: 0))
+        return layout {
             choiceButton(loc("System"), selected: current == .system) { LanguageManager.shared.languagePreference = .system }
             choiceButton(loc("English"), selected: current == .english) { LanguageManager.shared.languagePreference = .english }
             choiceButton("Deutsch", selected: current == .german) { LanguageManager.shared.languagePreference = .german }
         }
-        .padding(3).background(Color.maeusInputBackground, in: Capsule()).overlay(Capsule().stroke(Color.maeusCardBorder, lineWidth: 2))
+        .padding(3).background(Color.maeusInputBackground, in: RoundedRectangle(cornerRadius: 18)).overlay(RoundedRectangle(cornerRadius: 18).stroke(Color.maeusCardBorder, lineWidth: 2))
     }
 
     private func choiceButton(_ title: String, selected: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            Text(title).font(.system(size: 13, weight: selected ? .heavy : .bold, design: .rounded))
-                .foregroundStyle(selected ? Color.maeusInk : Color.maeusTextSecondary).frame(maxWidth: .infinity).padding(.vertical, 8)
+            Text(title).font(.system(.subheadline, design: .rounded, weight: selected ? .heavy : .bold))
+                .foregroundStyle(selected ? Color.maeusInk : Color.maeusTextSecondary)
+                .fixedSize(horizontal: false, vertical: true).frame(maxWidth: .infinity, minHeight: 44).padding(.vertical, 4)
                 .background(selected ? Color.maeusCheese : Color.clear, in: Capsule())
                 .overlay(Capsule().stroke(selected ? Color.maeusInk : Color.clear, lineWidth: 2))
         }.buttonStyle(.plain)
@@ -454,12 +472,12 @@ struct SettingsSheet: View {
                 set: { viewModel.voiceAPIKeyText = $0 }
             ))
             .textFieldStyle(.plain)
-            .font(.system(size: 13, weight: .bold, design: .rounded))
+            .font(.system(.subheadline, design: .rounded, weight: .bold))
             .autocorrectionDisabled()
             .textInputAutocapitalization(.never)
         }
         .padding(.horizontal, 12)
-        .frame(height: 38)
+        .frame(minHeight: 44)
         .background(Color.maeusInputBackground, in: RoundedRectangle(cornerRadius: 10))
         .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.maeusCardBorder, lineWidth: 1.5))
     }
@@ -499,6 +517,7 @@ struct SettingsSheet: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel(loc("HelpAbout"))
+        .accessibilityIdentifier("settings-help")
     }
 
     // MARK: - Helpers
@@ -616,68 +635,101 @@ struct VoiceModeSelectionView: View {
     let onSelect: (VoiceProvider) -> Void
     let onCancel: () -> Void
     @State private var selection: VoiceProvider
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     init(viewModel: SettingsViewModel, onSelect: @escaping (VoiceProvider) -> Void, onCancel: @escaping () -> Void) {
         self.viewModel = viewModel; self.onSelect = onSelect; self.onCancel = onCancel
         _selection = State(initialValue: viewModel.voiceSettings.provider)
     }
+
     var body: some View {
-        VStack(spacing: 0) {
-            HStack {
-                Text(loc("VoiceMode")).font(.headline.weight(.heavy))
-                Spacer()
-                Button(action: onCancel) { Image(systemName: "xmark").font(.headline).frame(width: 44, height: 44) }
-                    .accessibilityLabel(loc("Close"))
-            }.padding(.horizontal, 22).padding(.top, 12)
-            ScrollView {
-                VStack(alignment: .leading, spacing: 18) {
-                    MouseCoin(size: 82, fill: .maeusCheese) {
-                        Image(systemName: "mic.fill").font(.system(size: 30, weight: .heavy)).foregroundStyle(Color.maeusInk)
-                    }.frame(maxWidth: .infinity).padding(.top, 8).accessibilityHidden(true)
-                    Text(loc("VoiceChooseTitle")).font(.system(.largeTitle, design: .rounded, weight: .heavy))
-                        .fixedSize(horizontal: false, vertical: true)
-                    Text(loc("VoiceChooseIntro")).font(.body).foregroundStyle(Color.maeusTextSecondary)
-                    ForEach(VoiceProvider.allCases) { provider in
-                        Button { selection = provider } label: {
-                            VStack(alignment: .leading, spacing: 10) {
-                                HStack {
-                                    Image(systemName: provider == .appleLocal ? "iphone" : "cloud").accessibilityHidden(true)
-                                    Text(loc(provider == .appleLocal ? "VoiceChoiceAppleExperience" : "VoiceChoiceCloudExperience"))
-                                        .font(.headline.weight(.heavy))
-                                    Spacer(minLength: 4)
-                                    Image(systemName: selection == provider ? "checkmark.circle.fill" : "circle").accessibilityHidden(true)
-                                }
-                                Text(provider.title).font(.subheadline.weight(.semibold))
-                                Text(loc(provider == .appleLocal ? "VoiceChoiceAppleBody" : "VoiceChoiceCloudBody"))
-                                    .font(.callout).fixedSize(horizontal: false, vertical: true)
-                                Text(loc(provider == .appleLocal ? "VoiceChoiceAppleNeeds" : "VoiceChoiceCloudNeeds"))
-                                    .font(.caption).foregroundStyle(Color.maeusTextSecondary)
-                                if provider == .appleLocal && viewModel.localAvailability != .available {
-                                    Label(loc("VoiceChoiceUnavailable"), systemImage: "exclamationmark.circle")
-                                        .font(.caption.weight(.semibold)).fixedSize(horizontal: false, vertical: true)
-                                }
-                            }.padding(18).frame(maxWidth: .infinity, alignment: .leading)
-                            .background(selection == provider ? Color.maeusCheese.opacity(0.2) : Color.maeusSurface, in: RoundedRectangle(cornerRadius: 20))
-                            .overlay(RoundedRectangle(cornerRadius: 20).stroke(selection == provider ? Color.maeusPrimaryHover : Color.maeusCardBorder, lineWidth: selection == provider ? 3 : 1.5))
-                        }.buttonStyle(.plain).accessibilityElement(children: .combine).accessibilityAddTraits(selection == provider ? .isSelected : [])
-                            .accessibilityIdentifier("voice-choice-\(provider.rawValue)")
+        GeometryReader { geometry in
+            let wide = geometry.size.width >= 720 && !dynamicTypeSize.isAccessibilitySize
+            VStack(spacing: 0) {
+                HStack {
+                    Text(loc("VoiceMode")).font(.headline.weight(.heavy))
+                    Spacer()
+                    Button(action: onCancel) { Image(systemName: "xmark").font(.headline).frame(width: 44, height: 44) }
+                        .accessibilityLabel(loc("Close"))
+                }.padding(.horizontal, 22).padding(.top, 12)
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 20) {
+                        if wide {
+                            HStack(spacing: 24) {
+                                modeEmblem
+                                introduction
+                            }
+                        } else {
+                            modeEmblem.frame(maxWidth: .infinity)
+                            introduction
+                        }
+                        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), alignment: .top), count: wide ? 2 : 1), spacing: 18) {
+                            ForEach(VoiceProvider.allCases) { provider in providerCard(provider) }
+                        }.accessibilityIdentifier("voice-choice-options")
+                        Text(loc("VoiceChoiceRemembered")).font(.footnote).foregroundStyle(Color.maeusTextSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
-                    Text(loc("VoiceChoiceRemembered")).font(.footnote).foregroundStyle(Color.maeusTextSecondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }.padding(.horizontal, 22).padding(.bottom, 20)
+                    .padding(.horizontal, 22).padding(.vertical, 20)
+                    .frame(maxWidth: 1040).frame(maxWidth: .infinity)
+                }.accessibilityIdentifier("voice-choice-scroll")
+                Button(loc("VoiceChoiceConfirm")) { onSelect(selection) }
+                    .buttonStyle(GlassPrimaryButtonStyle()).padding(22)
+                    .frame(maxWidth: 1040).frame(maxWidth: .infinity)
+                    .accessibilityIdentifier("voice-choice-confirm").disabled(viewModel.isVerifying)
             }
-            Button(loc("VoiceChoiceConfirm")) { onSelect(selection) }
-                .buttonStyle(GlassPrimaryButtonStyle()).padding(22)
-                .accessibilityIdentifier("voice-choice-confirm").disabled(viewModel.isVerifying)
-        }.foregroundStyle(Color.maeusForeground).fontDesign(.rounded)
-            .background(Color.maeusBackground.ignoresSafeArea())
-            .presentationDetents([.large]).presentationDragIndicator(.visible)
-            .onAppear {
-                viewModel.refreshLocalAvailability()
-                #if targetEnvironment(simulator)
-                if ProcessInfo.processInfo.arguments.contains("--screenshot-voice-choice") { viewModel.localAvailability = .available }
-                if ProcessInfo.processInfo.arguments.contains("--screenshot-voice-choice-unavailable") { viewModel.localAvailability = .deviceNotEligible }
-                #endif
-            }
+        }
+        .foregroundStyle(Color.maeusForeground).fontDesign(.rounded)
+        .background(Color.maeusBackground.ignoresSafeArea())
+        .modifier(MaeusePagePresentation())
+        .presentationDetents([.large]).presentationDragIndicator(.visible)
+        .onAppear {
+            viewModel.refreshLocalAvailability()
+            #if targetEnvironment(simulator)
+            if ProcessInfo.processInfo.arguments.contains("--screenshot-voice-choice") { viewModel.localAvailability = .available }
+            if ProcessInfo.processInfo.arguments.contains("--screenshot-voice-choice-unavailable") { viewModel.localAvailability = .deviceNotEligible }
+            #endif
+        }
+    }
+
+    private var modeEmblem: some View {
+        MouseCoin(size: 82, fill: .maeusCheese) {
+            Image(systemName: "mic.fill").font(.system(size: 30, weight: .heavy)).foregroundStyle(Color.maeusInk)
+        }.accessibilityHidden(true)
+    }
+
+    private var introduction: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(loc("VoiceChooseTitle")).font(.system(.largeTitle, design: .rounded, weight: .heavy))
+                .fixedSize(horizontal: false, vertical: true)
+            Text(loc("VoiceChooseIntro")).font(.body).foregroundStyle(Color.maeusTextSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    private func providerCard(_ provider: VoiceProvider) -> some View {
+        Button { selection = provider } label: {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(alignment: .top) {
+                    Image(systemName: provider == .appleLocal ? "iphone" : "cloud").accessibilityHidden(true)
+                    Text(loc(provider == .appleLocal ? "VoiceChoiceAppleExperience" : "VoiceChoiceCloudExperience"))
+                        .font(.headline.weight(.heavy)).fixedSize(horizontal: false, vertical: true)
+                    Spacer(minLength: 4)
+                    Image(systemName: selection == provider ? "checkmark.circle.fill" : "circle").accessibilityHidden(true)
+                }
+                Text(provider.title).font(.subheadline.weight(.semibold))
+                Text(loc(provider == .appleLocal ? "VoiceChoiceAppleBody" : "VoiceChoiceCloudBody"))
+                    .font(.callout).fixedSize(horizontal: false, vertical: true)
+                Text(loc(provider == .appleLocal ? "VoiceChoiceAppleNeeds" : "VoiceChoiceCloudNeeds"))
+                    .font(.caption).foregroundStyle(Color.maeusTextSecondary).fixedSize(horizontal: false, vertical: true)
+                if provider == .appleLocal && viewModel.localAvailability != .available {
+                    Label(loc("VoiceChoiceUnavailable"), systemImage: "exclamationmark.circle")
+                        .font(.caption.weight(.semibold)).fixedSize(horizontal: false, vertical: true)
+                }
+            }.padding(18).frame(maxWidth: .infinity, alignment: .leading)
+            .background(selection == provider ? Color.maeusCheese.opacity(0.2) : Color.maeusSurface, in: RoundedRectangle(cornerRadius: 20))
+            .overlay(RoundedRectangle(cornerRadius: 20).stroke(selection == provider ? Color.maeusPrimaryHover : Color.maeusCardBorder, lineWidth: selection == provider ? 3 : 1.5))
+        }.buttonStyle(.plain).accessibilityElement(children: .combine)
+            .accessibilityAddTraits(selection == provider ? .isSelected : [])
+            .accessibilityIdentifier("voice-choice-\(provider.rawValue)")
     }
 }

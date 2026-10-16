@@ -4,9 +4,11 @@ struct ExpenseRow: View {
     let expense: Expense
     let listVM: ExpenseListViewModel
 
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
     var body: some View {
         CheeseCard(cornerRadius: 18, borderWidth: 2, shadow: 3) {
-            HStack(spacing: 12) {
+            HStack(alignment: .top, spacing: 12) {
                 VStack(spacing: -1) {
                     Text(dayString).font(.system(size: 15, weight: .heavy, design: .rounded))
                     Text(monthString).font(.system(size: 8, weight: .heavy, design: .rounded)).tracking(1).foregroundStyle(Color.maeusTextSecondary)
@@ -15,16 +17,21 @@ struct ExpenseRow: View {
                 .background(Color.maeusInputBackground, in: RoundedRectangle(cornerRadius: 14))
                 .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.maeusCardBorder, lineWidth: 2))
 
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(expense.desc.isEmpty ? loc("Expense") : expense.desc)
-                        .font(.system(size: 15, weight: .heavy, design: .rounded)).lineLimit(1)
-                    Text(listVM.formatSplit(expense))
-                        .font(.system(size: 12, weight: .bold, design: .rounded)).foregroundStyle(Color.maeusTextSecondary)
-                }
-                Spacer()
-                VStack(alignment: .trailing, spacing: 2) {
-                    Text(expense.amount.euroFormatted).font(.system(size: 15, weight: .heavy, design: .rounded)).monospacedDigit()
-                    Text(expense.partnerShare.euroFormatted).font(.system(size: 12, weight: .heavy, design: .rounded)).monospacedDigit().foregroundStyle(Color.maeusPrimaryHover)
+                let layout = dynamicTypeSize.isAccessibilitySize
+                    ? AnyLayout(VStackLayout(alignment: .leading, spacing: 10))
+                    : AnyLayout(HStackLayout(spacing: 12))
+                layout {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(expense.desc.isEmpty ? loc("Expense") : expense.desc)
+                            .font(.system(.body, design: .rounded, weight: .heavy)).lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 2)
+                        Text(listVM.formatSplit(expense))
+                            .font(.system(.caption, design: .rounded, weight: .bold)).foregroundStyle(Color.maeusTextSecondary)
+                    }
+                    if !dynamicTypeSize.isAccessibilitySize { Spacer(minLength: 0) }
+                    VStack(alignment: dynamicTypeSize.isAccessibilitySize ? .leading : .trailing, spacing: 2) {
+                        Text(expense.amount.euroFormatted).font(.system(.body, design: .rounded, weight: .heavy)).monospacedDigit()
+                        Text(expense.partnerShare.euroFormatted).font(.system(.caption, design: .rounded, weight: .heavy)).monospacedDigit().foregroundStyle(Color.maeusPrimaryHover)
+                    }
                 }
             }.foregroundStyle(Color.maeusForeground).padding(.horizontal, 16).padding(.vertical, 12)
         }

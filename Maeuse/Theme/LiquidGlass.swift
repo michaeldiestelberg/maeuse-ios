@@ -229,18 +229,22 @@ struct FloatingCheeseHole: View {
 
 struct MaeusePlusIcon: View {
     var color: Color = .maeusInk
-    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
-        let strokeColor = color.resolved(for: colorScheme)
-        return Canvas { context, size in
-            var path = Path()
-            path.move(to: CGPoint(x: size.width / 2, y: size.height * 0.21))
-            path.addLine(to: CGPoint(x: size.width / 2, y: size.height * 0.79))
-            path.move(to: CGPoint(x: size.width * 0.21, y: size.height / 2))
-            path.addLine(to: CGPoint(x: size.width * 0.79, y: size.height / 2))
-            context.stroke(path, with: .color(strokeColor), style: StrokeStyle(lineWidth: 3, lineCap: .round))
-        }.frame(width: 24, height: 24)
+        MaeusePlusShape()
+            .stroke(color, style: StrokeStyle(lineWidth: 3, lineCap: .round))
+            .frame(width: 24, height: 24)
+    }
+}
+
+private struct MaeusePlusShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        path.move(to: CGPoint(x: rect.midX, y: rect.minY + rect.height * 0.21))
+        path.addLine(to: CGPoint(x: rect.midX, y: rect.minY + rect.height * 0.79))
+        path.move(to: CGPoint(x: rect.minX + rect.width * 0.21, y: rect.midY))
+        path.addLine(to: CGPoint(x: rect.minX + rect.width * 0.79, y: rect.midY))
+        return path
     }
 }
 
@@ -263,21 +267,26 @@ struct MaeuseSettingsIcon: View {
 
 struct MaeuseChevronIcon: View {
     var pointsRight = true
+
     var body: some View {
-        Canvas { context, size in
-            let sx = size.width / 24, sy = size.height / 24
-            var path = Path()
-            if pointsRight {
-                path.move(to: CGPoint(x: 10*sx, y: 7*sy))
-                path.addLine(to: CGPoint(x: 15*sx, y: 12*sy))
-                path.addLine(to: CGPoint(x: 10*sx, y: 17*sy))
-            } else {
-                path.move(to: CGPoint(x: 14*sx, y: 7*sy))
-                path.addLine(to: CGPoint(x: 9*sx, y: 12*sy))
-                path.addLine(to: CGPoint(x: 14*sx, y: 17*sy))
-            }
-            context.stroke(path, with: .color(.maeusInk), style: StrokeStyle(lineWidth: 2.8, lineCap: .round, lineJoin: .round))
-        }.frame(width: 26, height: 26)
+        MaeuseChevronShape(pointsRight: pointsRight)
+            .stroke(Color.maeusInk, style: StrokeStyle(lineWidth: 2.8, lineCap: .round, lineJoin: .round))
+            .frame(width: 26, height: 26)
+    }
+}
+
+private struct MaeuseChevronShape: Shape {
+    let pointsRight: Bool
+
+    func path(in rect: CGRect) -> Path {
+        let sx = rect.width / 24, sy = rect.height / 24
+        let outerX: CGFloat = pointsRight ? 10 : 14
+        let tipX: CGFloat = pointsRight ? 15 : 9
+        var path = Path()
+        path.move(to: CGPoint(x: rect.minX + outerX * sx, y: rect.minY + 7 * sy))
+        path.addLine(to: CGPoint(x: rect.minX + tipX * sx, y: rect.minY + 12 * sy))
+        path.addLine(to: CGPoint(x: rect.minX + outerX * sx, y: rect.minY + 17 * sy))
+        return path
     }
 }
 
@@ -341,5 +350,16 @@ extension Color {
         let style: UIUserInterfaceStyle = colorScheme == .dark ? .dark : .light
         let resolved = UIColor(self).resolvedColor(with: UITraitCollection(userInterfaceStyle: style))
         return Color(resolved)
+    }
+}
+
+/// A page-sized sheet can use an expanded phone window instead of remaining a narrow form.
+struct MaeusePagePresentation: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 18.0, *) {
+            content.presentationSizing(.page)
+        } else {
+            content
+        }
     }
 }
