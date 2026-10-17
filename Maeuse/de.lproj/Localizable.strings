@@ -182,14 +182,14 @@
 // Apple on-device voice capture
 "VoiceAppleTitle" = "Apple · Auf dem Gerät";
 "VoiceCloudTitle" = "OpenAI · Cloud";
-"LocalAvailable" = "Lokale Spracherfassung ist auf diesem iPhone verfügbar.";
+"LocalAvailable" = "Auf diesem iPhone bereit.";
 "LocalNeedsOS" = "Erfordert iOS 26 oder neuer. Du kannst Ausgaben weiterhin manuell erfassen oder OpenAI wählen.";
 "LocalDeviceUnsupported" = "Dieses iPhone unterstützt Apples lokales Modell nicht. Manuelle Erfassung und der optionale OpenAI-Modus bleiben verfügbar.";
 "LocalIntelligenceDisabled" = "Aktiviere Apple Intelligence in den iPhone-Einstellungen und prüfe erneut.";
 "LocalModelNotReady" = "Apples Modell ist noch nicht bereit. Warte, bis Apple Intelligence in den iPhone-Einstellungen fertig geladen ist, und prüfe erneut.";
 "LocalLanguageUnsupported" = "Apples Modell unterstützt die gewählte App-Sprache auf diesem iPhone derzeit nicht. Versuche Englisch oder Deutsch nach einem iOS-Update.";
 "LocalSpeechUnavailable" = "Die Spracherkennung auf dem Gerät ist für diese App-Sprache auf diesem iPhone nicht verfügbar. Es wurde kein Audio an die Cloud gesendet.";
-"LocalRequirements" = "Erfordert iOS 26+, ein mit Apple Intelligence kompatibles iPhone, aktiviertes Apple Intelligence und geladene Modelle für die App-Sprache. Der erste Download benötigt Internet; danach funktioniert die Erfassung offline.";
+"LocalRequirements" = "Benötigt iOS 26 oder neuer und ein iPhone mit aktiviertem Apple Intelligence.";
 "LocalCheckAgain" = "Verfügbarkeit erneut prüfen";
 "LocalPrivacyIntro" = "Erfasse Ausgaben mit Apples Foundation Models vollständig auf deinem iPhone.";
 "LocalPrivacyDataTitle" = "Deine Stimme bleibt hier";
@@ -252,7 +252,7 @@
 "ExpenseCountOne" = "1 Ausgabe";
 "VoiceChangeModeAccessibility" = "Sprachmodus ändern";
 "LocalDraftLimit" = "Du hast die Grenze von 10 Entwürfen erreicht. Speichere oder entferne Entwürfe, bevor du weitere hinzufügst.";
-"LocalSpeechModelMissing" = "Das Sprachmodell für diese App-Sprache ist noch nicht auf deinem iPhone. Lade es jetzt, oder es wird beim ersten Start der Apple-Spracherfassung automatisch geladen. Danach funktioniert die Erfassung offline.";
+"LocalSpeechModelMissing" = "Das Sprachmodell für diese Sprache wird einmal geladen und funktioniert danach offline.";
 "LocalDownloadSpeechModel" = "Sprachmodell laden";
 "LocalSpeechModelDownloading" = "Sprachmodell wird geladen …";
 "LocalSpeechModelPreparationFailed" = "Das Sprachmodell auf dem Gerät konnte nicht vorbereitet werden. Der erste Download braucht eine Internetverbindung; versuche es später erneut. Es wurde kein Audio an die Cloud gesendet.";

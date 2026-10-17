@@ -23,20 +23,14 @@ struct MainExpenseView: View {
                 let short = geometry.size.height < 500
                 VStack(spacing: 0) {
                     header(compactActions: short).padding(.horizontal, 22).padding(.top, 12)
-                    monthContent(wide: wide)
+                    monthContent(wide: wide, floatingActions: !short)
                 }
                 .frame(maxWidth: 1120)
-                .frame(maxWidth: .infinity)
-                .safeAreaInset(edge: .bottom, spacing: 0) {
-                    if !short {
-                        HStack {
-                            Spacer()
-                            fabStack
-                        }
-                        .padding(.horizontal, 22).padding(.top, 12).padding(.bottom, 16)
-                        .background(Color.maeusBackground)
-                    }
+                // The capture buttons float above the ledger; the list scrolls underneath them.
+                .overlay(alignment: .bottomTrailing) {
+                    if !short { fabStack.padding(.trailing, 22).padding(.bottom, 30) }
                 }
+                .frame(maxWidth: .infinity)
             }
         }
         .fontDesign(.rounded)
@@ -80,7 +74,7 @@ struct MainExpenseView: View {
         }
     }
 
-    private func monthContent(wide: Bool) -> some View {
+    private func monthContent(wide: Bool, floatingActions: Bool) -> some View {
         // All navigation and draft state belongs to the models above this
         // stateless arrangement; rebuilding columns cannot reset an entry.
         ScrollView {
@@ -101,7 +95,8 @@ struct MainExpenseView: View {
                     }
                 }
             }
-            .padding(.horizontal, 22).padding(.top, 20).padding(.bottom, 24)
+            // Room for the last row to scroll clear of the floating capture buttons.
+            .padding(.horizontal, 22).padding(.top, 20).padding(.bottom, floatingActions ? 120 : 24)
         }
         .accessibilityIdentifier("expense-ledger")
     }

@@ -290,16 +290,18 @@ struct SettingsSheet: View {
                     .accessibilityLabel(loc("VoiceChangeModeAccessibility"))
                     .accessibilityIdentifier("voice-change-mode").disabled(viewModel.isVerifying)
             }
-            Text(loc(viewModel.voiceSettings.provider == .appleLocal ? "VoiceChoiceAppleBody" : "VoiceChoiceCloudBody"))
-                .font(.caption).foregroundStyle(Color.maeusTextSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-
             if viewModel.voiceSettings.provider == .appleLocal {
+                // How Apple mode behaves is explained in the mode chooser; here only the
+                // device state matters, with requirements shown when something is missing.
                 Text(viewModel.localAvailability.message)
                     .font(.footnote.weight(.semibold))
                     .foregroundStyle(Color.maeusTextSecondary)
                     .fixedSize(horizontal: false, vertical: true)
-                Text(loc("LocalRequirements")).font(.caption).foregroundStyle(Color.maeusTextSecondary)
+                    .task(id: viewModel.voiceSettings.provider) { await viewModel.refreshSpeechAvailability() }
+                if !viewModel.localAvailability.allowsCapture {
+                    Text(loc("LocalRequirements")).font(.caption).foregroundStyle(Color.maeusTextSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
                 if viewModel.localAvailability == .speechModelMissing {
                     Button {
                         Task { await viewModel.downloadSpeechModel() }
@@ -313,10 +315,14 @@ struct SettingsSheet: View {
                     .disabled(viewModel.isDownloadingSpeechModel)
                     .accessibilityIdentifier("local-download-speech-model")
                 }
-                Button(loc("LocalCheckAgain")) { Task { await viewModel.refreshSpeechAvailability() } }
-                    .buttonStyle(GlassSecondaryButtonStyle())
-                    .task(id: viewModel.voiceSettings.provider) { await viewModel.refreshSpeechAvailability() }
+                if !viewModel.localAvailability.allowsCapture {
+                    Button(loc("LocalCheckAgain")) { Task { await viewModel.refreshSpeechAvailability() } }
+                        .buttonStyle(GlassSecondaryButtonStyle())
+                }
             } else {
+                Text(loc("VoiceChoiceCloudBody"))
+                    .font(.caption).foregroundStyle(Color.maeusTextSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
             if viewModel.hasSavedVoiceAPIKey {
                 savedVoiceKeyRow
             } else {
