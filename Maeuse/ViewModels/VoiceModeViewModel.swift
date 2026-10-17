@@ -96,6 +96,21 @@ final class VoiceModeViewModel {
         !drafts.isEmpty && drafts.allSatisfy(\.isReadyForSaving)
     }
 
+    /// Apple mode resumes listening after each phrase. Only speech actually in flight is
+    /// finished for review before saving; an idle, resumed microphone holds nothing unheard.
+    var localSaveNeedsReview: Bool {
+        provider == .appleLocal && microphoneIsActive &&
+            (!localTranscript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || microphoneLevel >= 0.10)
+    }
+
+    /// Whether Save is available now (it may first finish a phrase; see `localSaveNeedsReview`).
+    var canSaveNow: Bool {
+        guard canSaveDrafts, !isProcessingRequest else { return false }
+        if canEndSession { return true }
+        // Apple mode: listening again, or restarting the microphone between phrases.
+        return provider == .appleLocal && (microphoneIsActive || phase == .connecting)
+    }
+
     var totalAmount: Double {
         drafts.reduce(0) { $0 + $1.normalizedAmount }.roundedMoney
     }

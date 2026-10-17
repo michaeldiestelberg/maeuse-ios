@@ -186,16 +186,13 @@ struct VoiceSheet: View {
                 cornerRadius: 20, borderColor: .maeusInk, shadow: 2.5))
             .opacity(canSave ? 1 : 0.4)
             .disabled(!canSave)
-            .accessibilityHint(viewModel.provider == .appleLocal && viewModel.microphoneIsActive ? loc("LocalSaveReviewHint") : "")
+            .accessibilityHint(viewModel.localSaveNeedsReview ? loc("LocalSaveReviewHint") : "")
             .accessibilityIdentifier("voice-save")
         }
         .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
     }
 
-    private var canSave: Bool {
-        viewModel.canSaveDrafts && (viewModel.canEndSession ||
-            (viewModel.provider == .appleLocal && viewModel.microphoneIsActive && !viewModel.isProcessingRequest))
-    }
+    private var canSave: Bool { viewModel.canSaveNow }
 
     private var connectionEmblem: some View {
         Group {
@@ -287,7 +284,7 @@ struct VoiceSheet: View {
 
     private func endAndSave() {
         guard canSave else { return }
-        if viewModel.provider == .appleLocal && viewModel.microphoneIsActive {
+        if viewModel.localSaveNeedsReview {
             viewModel.pauseLocalForReview()
             return
         }

@@ -1154,6 +1154,53 @@ final class LocalVoiceTests: XCTestCase {
         service.disconnect()
     }
 
+    // MARK: - Save after automatic resume
+
+    func testSaveAfterAutomaticResumeCommitsWithoutAnotherPause() async {
+        var services: [StubVoiceService] = []
+        let vm = VoiceModeViewModel(serviceFactory: { _ in
+            let service = StubVoiceService(); services.append(service); return service
+        })
+        vm.open(provider: .appleLocal)
+        vm.drafts = [draft("coffee", "Coffee", 4)]
+        vm.startSession()
+        for _ in 0..<20 { await Task.yield() }
+        // The phrase was processed and listening resumed; nothing has been said since.
+        XCTAssertTrue(vm.microphoneIsActive)
+        XCTAssertTrue(vm.canSaveNow)
+        XCTAssertFalse(vm.localSaveNeedsReview, "Save must commit instead of pausing an idle microphone")
+        // Words in flight are finished for review first, so nothing unheard is lost.
+        services.last!.onEvent?(.localTranscript("Und Brot"))
+        XCTAssertTrue(vm.localSaveNeedsReview)
+        vm.cancelSession()
+    }
+
+    func testSaveDuringSpeechWithoutTranscriptStillFinishesThePhrase() async {
+        let service = StubVoiceService()
+        let vm = VoiceModeViewModel(serviceFactory: { _ in service })
+        vm.open(provider: .appleLocal)
+        vm.drafts = [draft("coffee", "Coffee", 4)]
+        vm.startSession()
+        for _ in 0..<20 { await Task.yield() }
+        vm.handleVoiceEvent(.microphoneLevel(0.6))
+        XCTAssertTrue(vm.localSaveNeedsReview)
+        vm.cancelSession()
+    }
+
+    func testSaveIsAvailableWhileTheMicrophoneRestartsBetweenPhrases() {
+        let vm = VoiceModeViewModel()
+        vm.open(provider: .appleLocal)
+        vm.drafts = [draft("coffee", "Coffee", 4)]
+        vm.phase = .connecting
+        XCTAssertFalse(vm.microphoneIsActive)
+        XCTAssertTrue(vm.canSaveNow)
+        XCTAssertFalse(vm.localSaveNeedsReview)
+        vm.drafts = [VoiceExpenseDraft(id: "open", title: "Coffee", amount: nil, dateISO: nil, splitMode: nil,
+                                       splitValue: nil, confidence: 1, missingFields: [.amount])]
+        XCTAssertFalse(vm.canSaveNow, "Incomplete drafts are never saved")
+        vm.cancelSession()
+    }
+
     // MARK: - On-device speech model (SpeechAnalyzer)
 
     func testMissingSpeechModelIsDownloadableNotADeadEnd() async {
