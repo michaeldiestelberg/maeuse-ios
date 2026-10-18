@@ -1,3 +1,9 @@
+## 1.5.0 (60) — internal TestFlight candidate, 2026-10-18
+- The main screen no longer has the opaque bar from build 58: the microphone and plus buttons float over the expense list again, the list scrolls underneath with room for the last row, and short windows such as landscape still move them into the header.
+- Settings → Voice Mode in Apple mode is much shorter. When everything is ready it shows only “Auf diesem iPhone bereit.” / “Ready on this iPhone.” Requirements and “Check availability again” appear only when Apple capture is unavailable; a missing speech model shows one line and the “Sprachmodell laden” button. OpenAI mode keeps its cloud-audio notice.
+- In Apple mode, Save now saves right away and returns to the list once speaking and processing are done, even though the microphone has started listening again. Save also works while the microphone restarts between phrases. If you are still speaking, Save finishes that phrase first so nothing is lost.
+- 145 unit tests (3 new regression tests for Save) and 6 UI tests pass on the iPhone 18 Pro simulator. Real speech recognition still needs a physical iPhone check.
+
 ## 1.5.0 (59) — internal TestFlight candidate, 2026-10-16
 - Apple voice capture uses Apple's iOS 26 SpeechAnalyzer with the on-device SpeechTranscriber model (DictationTranscriber where the newer model is unavailable). If the speech model for the app language is missing, it downloads in the app: from Settings → Voice Mode, or automatically on the first capture. Afterwards capture works offline. Audio never leaves the iPhone in Apple mode.
 - Updating from 1.4 no longer silently selects OpenAI: installations without any cloud setup move to Apple and see the mode chooser, and cloud users keep OpenAI. Fresh installations keep the chooser until a mode is actually chosen.
