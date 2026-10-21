@@ -1,0 +1,15 @@
+#!/bin/bash
+set -euo pipefail
+
+# Requires macOS 26+, Xcode 26+, and a downloaded Apple Intelligence model.
+# Runs the actual interpreter and expense models; no audio or network API usage.
+cd "$(dirname "$0")/.."
+check_dir="$(mktemp -d "${TMPDIR:-/tmp}/maeuse-apple-check.XXXXXX")"
+export DEVELOPER_DIR="${DEVELOPER_DIR:-/Applications/Xcode.app/Contents/Developer}"
+xcrun swiftc -D MODEL_EVALUATION -parse-as-library -module-cache-path "$check_dir/module-cache" \
+  -sdk "$(xcrun --sdk macosx --show-sdk-path)" \
+  -plugin-path "$DEVELOPER_DIR/Platforms/MacOSX.platform/Developer/usr/lib/swift/host/plugins" \
+  Maeuse/Services/AppleExpenseInterpreter.swift Maeuse/Services/LocalVoiceDiagnostics.swift \
+  Maeuse/Models/Expense.swift Maeuse/Models/VoiceWorkspace.swift \
+  scripts/check-apple-model-suite.swift -o "$check_dir/check-apple-model-suite"
+"$check_dir/check-apple-model-suite" "$@"

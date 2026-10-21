@@ -1,3 +1,11 @@
+## 1.5.0 (61) — internal TestFlight candidate, 2026-10-21
+- Apple mode reads prices as dictation writes them: “€4.50”, “4,50 €” and “4 Euro 80” are one price each. Before, “Dinner €64” could lose its price, and “Kaffee für 4,50 € und Blumen für 12 €” could give both purchases the same €12.
+- A price said once now belongs to one purchase only, and a purchase price is never mistaken for someone’s share.
+- Shares without a number work: “my partner pays everything”, “das zahlt mein Partner komplett”, “just for me” and “das zahle ich alleine” set the partner’s part to 100% or 0% instead of falling back to 50/50. “Die Hälfte” is read as 50%.
+- Saying the partner paid in full no longer deletes the expense: deleting needs an explicit request.
+- If Apple’s model fails on a phrase, it tries once more with a different reading before showing the error.
+- New accuracy suite: 78 of 90 dictation-style requests pass on the Mac model (build 60: 58); the misses are shares left open for the user and some weekday dates. Build 60’s own model check passes 18/18, and 147 unit tests pass on the iPhone 18 Pro simulator. Real speech recognition still needs a physical iPhone check.
+
 ## 1.5.0 (60) — internal TestFlight candidate, 2026-10-18
 - The main screen no longer has the opaque bar from build 58: the microphone and plus buttons float over the expense list again, the list scrolls underneath with room for the last row, and short windows such as landscape still move them into the header.
 - Settings → Voice Mode in Apple mode is much shorter. When everything is ready it shows only “Auf diesem iPhone bereit.” / “Ready on this iPhone.” Requirements and “Check availability again” appear only when Apple capture is unavailable; a missing speech model shows one line and the “Sprachmodell laden” button. OpenAI mode keeps its cloud-audio notice.

@@ -1240,6 +1240,31 @@ final class LocalVoiceTests: XCTestCase {
         XCTAssertFalse(LocalVoiceAvailability.speechUnavailable.allowsCapture)
     }
 
+    func testDictatedCurrencyFormatsAreNormalizedForTheModel() {
+        XCTAssertEqual(LocalTranscript.normalized("Coffee €4.50 and flowers 12€", language: "en"),
+                       "Coffee 4.50 euros and flowers 12 euros")
+        XCTAssertEqual(LocalTranscript.normalized("Brötchen 4 Euro 80 und Kaffee 3 € 5", language: "de"),
+                       "Brötchen 4,80 Euro und Kaffee 3,05 Euro")
+        XCTAssertEqual(LocalTranscript.normalized("Bakery 6 euros and 5 cents", language: "en"), "Bakery 6.05 euros")
+        // Shares and unrelated numbers stay as spoken.
+        XCTAssertEqual(LocalTranscript.normalized("Lunch 15 euros 20% for my partner", language: "en"),
+                       "Lunch 15 euros 20% for my partner")
+        XCTAssertEqual(LocalTranscript.normalized("Aufteilung 6040", language: "de"), "Aufteilung 6040")
+    }
+
+    @available(iOS 26.0, *)
+    func testAPriceSpokenOnceBacksOnlyOnePurchase() {
+        let request = "Coffee for 4.50 euros and flowers for 12 euros"
+        XCTAssertTrue(AppleExpenseInterpreter.isAvailable("12 euros", in: request, taken: []))
+        XCTAssertFalse(AppleExpenseInterpreter.isAvailable("12 euros", in: request, taken: ["12 euros"]))
+        XCTAssertTrue(AppleExpenseInterpreter.isAvailable("4.50 euros", in: request, taken: ["12 euros"]))
+        let repeated = "Coffee 3 euros and another coffee 3 euros"
+        XCTAssertTrue(AppleExpenseInterpreter.isAvailable("3 euros", in: repeated, taken: ["3 euros"]))
+        XCTAssertFalse(AppleExpenseInterpreter.isAvailable("3 euros", in: repeated, taken: ["3 euros", "3 euros"]))
+        // "2,50 €" inside "12,50 €" is not a separate mention.
+        XCTAssertFalse(AppleExpenseInterpreter.isAvailable("2,50 Euro", in: "Kino 12,50 Euro", taken: []))
+    }
+
     func testMicrophoneAudioIsConvertedToTheAnalyzerFormat() async throws {
         guard #available(iOS 27.0, *) else { throw XCTSkip("Input format inspection needs iOS 27") }
         let target = try XCTUnwrap(AVAudioFormat(commonFormat: .pcmFormatInt16, sampleRate: 16_000, channels: 1, interleaved: true))
