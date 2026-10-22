@@ -227,7 +227,7 @@ final class LocalSpeechAudioFeeder: @unchecked Sendable {
 @MainActor
 final class AppleLocalVoiceService: VoiceSessionService {
     var onEvent: ((RealtimeVoiceServiceEvent) -> Void)?
-    private static let audioSessionQueue = DispatchQueue(label: "maeuse.local.audio-session", qos: .userInitiated)
+    private static let audioSession = LocalAudioSessionOwner()
     static var locale: Locale {
         Locale(identifier: LanguageManager.shared.activeLanguageCode == "de" ? "de-DE" : "en-US")
     }
@@ -245,7 +245,7 @@ final class AppleLocalVoiceService: VoiceSessionService {
     private var context: String?
     private var finishing = false
     private var generating = false
-    private var ownsAudioSession = false
+    private var audioSessionToken: UUID?
     private var endpoint = LocalSpeechEndpoint()
     private var trace: LocalVoiceTrace?
     private var captureEndReason = "asr-final"
@@ -323,16 +323,9 @@ final class AppleLocalVoiceService: VoiceSessionService {
         transcription = speech
         try checkIdentity(id)
         trace?.begin("speech")
-        // Serialized with the asynchronous deactivation of the previous turn, so a late
-        // deactivation can never stop this recording.
-        try Self.audioSessionQueue.sync {
-            let session = AVAudioSession.sharedInstance()
-            try session.setCategory(.record, mode: .measurement, options: [.allowBluetoothHFP])
-            // Otherwise iOS mutes the "listening again" haptic while the microphone records.
-            try? session.setAllowHapticsAndSystemSoundsDuringRecording(true)
-            try session.setActive(true)
-        }
-        ownsAudioSession = true
+        // Activation waits off the main thread for the previous turn's deactivation.
+        audioSessionToken = try await Self.audioSession.activate()
+        try checkIdentity(id)
         let engine = AVAudioEngine()
         let input = engine.inputNode
         let format = input.outputFormat(forBus: 0)
@@ -508,12 +501,10 @@ final class AppleLocalVoiceService: VoiceSessionService {
             engine.inputNode.removeTap(onBus: 0)
             engine.stop()
         }
-        if ownsAudioSession {
+        if let token = audioSessionToken {
             // Deactivation can block for a noticeable time; keep it off the main thread.
-            Self.audioSessionQueue.async {
-                try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
-            }
-            ownsAudioSession = false
+            Self.audioSession.deactivate(token)
+            audioSessionToken = nil
         }
         onEvent?(.microphoneStopped)
     }
@@ -606,5 +597,40 @@ struct LocalEndpointIndicator {
         guard value.isFinite, value > 0 else { isVisible = false; return }
         progress = min(1, value)
         isVisible = true
+    }
+}
+
+/// Serializes audio-session changes off the main thread. A deactivation applies only to the
+/// activation it belongs to, so a late one from a previous turn never stops a newer recording.
+private final class LocalAudioSessionOwner: @unchecked Sendable {
+    private let queue = DispatchQueue(label: "maeuse.local.audio-session", qos: .userInitiated)
+    /// The current activation; read and written only on `queue`.
+    private var owner: UUID?
+
+    func activate() async throws -> UUID {
+        try await withCheckedThrowingContinuation { continuation in
+            queue.async {
+                do {
+                    let session = AVAudioSession.sharedInstance()
+                    try session.setCategory(.record, mode: .measurement, options: [.allowBluetoothHFP])
+                    // Otherwise iOS mutes the "listening again" haptic while the microphone records.
+                    try? session.setAllowHapticsAndSystemSoundsDuringRecording(true)
+                    try session.setActive(true)
+                    let token = UUID()
+                    self.owner = token
+                    continuation.resume(returning: token)
+                } catch {
+                    continuation.resume(throwing: error)
+                }
+            }
+        }
+    }
+
+    func deactivate(_ token: UUID) {
+        queue.async {
+            guard self.owner == token else { return }
+            self.owner = nil
+            try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+        }
     }
 }

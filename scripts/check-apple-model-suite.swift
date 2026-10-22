@@ -85,6 +85,11 @@ let cases: [(String, String, String?, [Exp])] = [
     ("de", "Fahrkarte 3,40 € vorgestern", nil, [e("fahrkarte", 3.4, d: "2026-09-25")]),
     ("de", "Ich habe 23 € für Wein ausgegeben", nil, [e("wein", 23)]),
     // Corrections against an existing workspace
+    // 1.5.0 release review: corrections naming two numbers, hyphenated ratios, counts after a price
+    ("de", "Die Blumen haben 13,50 Euro gekostet, nicht 12 Euro.", deCtx, [e("kaffee", 4), e("blume", 13.5)]),
+    ("en", "The 2nd one was 13.50 euros.", enCtx, [e("coffee", 4), e("flower", 13.5)]),
+    ("en", "Pizza 12 euros 2 days ago", nil, [e("pizza", 12, d: "2026-09-25")]),
+    ("en", "Taxi 30 euros, split it 50-50", nil, [e("taxi", 30)]),
     ("en", "Actually the flowers were €15", enCtx, [e("coffee", 4), e("flower", 15)]),
     ("en", "Change the date of the coffee to yesterday", enCtx, [e("coffee", 4, d: "2026-09-26"), e("flower", 12)]),
     ("en", "My partner pays all of the flowers", enCtx, [e("coffee", 4), e("flower", 12, 100)]),

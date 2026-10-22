@@ -684,8 +684,6 @@ struct VoiceModeSelectionView: View {
                             // Recommended provider first: the cloud mode is far more accurate.
                             ForEach([VoiceProvider.openAI, .appleLocal]) { provider in providerCard(provider) }
                         }.accessibilityIdentifier("voice-choice-options")
-                        Text(loc("VoiceChoiceRemembered")).font(.footnote).foregroundStyle(Color.maeusTextSecondary)
-                            .fixedSize(horizontal: false, vertical: true)
                     }
                     .padding(.horizontal, 22).padding(.vertical, 20)
                     .frame(maxWidth: 1040).frame(maxWidth: .infinity)

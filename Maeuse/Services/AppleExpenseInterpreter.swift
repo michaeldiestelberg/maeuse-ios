@@ -15,7 +15,9 @@ enum LocalTranscript {
         result = replacing(#"(?<![0-9.,])([0-9]+) euros? (?:(?:and|und) )?([0-9]{1,2}) cents?\b"#, in: result) {
             "\($0[1])\(decimal)\(cents($0[2])) \(unit)"
         }
-        return replacing(#"(?<![0-9.,])([0-9]+) euros? ([0-9]{1,2})(?![0-9.,]|\s*(?:%|percent|prozent|euro|cent))"#, in: result) {
+        // "12 euros 2 days ago" or "4 Euro 3 Mal": a number followed by a count or time
+        // unit belongs to that unit, not to the price's cents.
+        return replacing(#"(?<![0-9.,])([0-9]+) euros? ([0-9]{1,2})(?![0-9.,]|\s*(?:%|percent|prozent|euro|cent|(?:days?|tagen?|weeks?|wochen?|months?|monaten?|monate|years?|jahren?|jahre|hours?|stunden?|minutes?|minuten|times|mal|x|stück|pieces?|items?|people|personen|leute)\b))"#, in: result) {
             "\($0[1])\(decimal)\(cents($0[2])) \(unit)"
         }
     }
@@ -29,37 +31,6 @@ enum LocalTranscript {
         }
         return result as String
     }
-}
-
-@available(iOS 26.0, *)
-@Generable
-enum LocalWorkspaceAction { case add, correct, remove, rename }
-
-@available(iOS 26.0, *)
-@Generable
-enum LocalShareKind {
-    case unchanged, notMentioned, uncertain, partnerPercent, userPercent, partnerFixed, userFixed, unassignedRatio
-}
-
-@available(iOS 26.0, *)
-struct LocalExpenseUpdate {
-    var action: LocalWorkspaceAction
-    var expenseNumber: Int
-    var title: String?
-    var amount: Double?
-    var dateISO: String?
-    var dayOffset: Int?
-    var dateUnclear: Bool
-    var shareKind: LocalShareKind
-    var shareValue: Double?
-    var secondShareValue: Double?
-    var amountUnclear: Bool = false
-}
-
-@available(iOS 26.0, *)
-struct LocalExpenseInterpretation {
-    var updates: [LocalExpenseUpdate]
-    var clarificationQuestion: String
 }
 
 @available(iOS 26.0, *)
@@ -165,11 +136,8 @@ private struct LocalSourcePurchase {
     @Guide(description: "How much the partner pays. all when the partner pays everything (my partner pays all of it, mein Partner zahlt komplett). nothing when the speaker keeps the whole cost (just for me, das zahle ich alleine, I pay everything, my partner owes nothing). unclear otherwise.") var partnerPays: PartnerPays
 }
 @available(iOS 26.0, *) @Generable private struct LocalRatioPlan {
-    @Generable enum Format { case separateValues, concatenatedPercentages }
-    @Guide(description: "concatenatedPercentages when speech produced ONE uninterrupted digit token encoding two percentage values; separateValues for two explicitly separate ratio numbers.") var format: Format
-    @Guide(description: "Exact uninterrupted digit token for concatenatedPercentages, otherwise empty. Do not split or calculate it.") var digits: String
-    @Guide(description: "First separately stated ratio number; zero for concatenatedPercentages.") var first: Double
-    @Guide(description: "Second separately stated ratio number; zero for concatenatedPercentages.") var second: Double
+    @Guide(description: "First separately stated ratio number.") var first: Double
+    @Guide(description: "Second separately stated ratio number.") var second: Double
 }
 @available(iOS 26.0, *) @Generable private struct LocalTitlePlan { var title: String }
 @available(iOS 26.0, *) @Generable private struct LocalQuotePlan {
@@ -247,11 +215,13 @@ enum AppleExpenseInterpreter {
             let missing_fields: [VoiceExpenseMissingField]?
             let split_intent: String?
             let pending_user_fixed_share: Double?
+            let speaker_fixed_share: Double?
 
             var payload: VoiceExpenseDraftPayload {
                 VoiceExpenseDraftPayload(id: id, title: title, amount: amount, dateISO: date_iso,
                     splitMode: split_mode, splitValue: split_value, confidence: 1,
-                    missingFields: missing_fields ?? [], splitIntent: split_intent, pendingUserFixedShare: pending_user_fixed_share)
+                    missingFields: missing_fields ?? [], splitIntent: split_intent, pendingUserFixedShare: pending_user_fixed_share,
+                    speakerFixedShare: speaker_fixed_share)
             }
         }
         let expenses: [Row]
@@ -284,9 +254,9 @@ enum AppleExpenseInterpreter {
         }
     }
 
-    private static var generationOptions: GenerationOptions {
-        isSampledRetry ? GenerationOptions(samplingMode: .random(probabilityThreshold: 0.9), temperature: 0.7, maximumResponseTokens: 800)
-                       : GenerationOptions(samplingMode: .greedy, maximumResponseTokens: 800)
+    private static func generationOptions(maximumResponseTokens: Int = 800) -> GenerationOptions {
+        isSampledRetry ? GenerationOptions(samplingMode: .random(probabilityThreshold: 0.9), temperature: 0.7, maximumResponseTokens: maximumResponseTokens)
+                       : GenerationOptions(samplingMode: .greedy, maximumResponseTokens: maximumResponseTokens)
     }
 
     private static func interpretTurn(_ request: String, context: String?) async throws -> VoiceWorkspaceSyncPayload {
@@ -297,8 +267,8 @@ enum AppleExpenseInterpreter {
         let text = LocalTranscript.normalized(request)
         let today = VoiceModeViewModel.todayISOString()
         let timeZone = TimeZone.current
-        let rows = try contextRows(context)
         let state = try context.map { try decodeContext($0) }
+        let rows = state?.expenses ?? []
         let inventory = rows.enumerated().map { index, row in "\(index + 1): \(row.title) [needs \((row.missing_fields ?? []).map(\.rawValue).joined(separator: ","))]" }.joined(separator: "\n")
         var intent = LocalWorkspaceIntent(action: .add, expenseNumber: 0)
         if !rows.isEmpty {
@@ -408,7 +378,13 @@ enum AppleExpenseInterpreter {
         case .remove: plan = .init(actions: [.remove(expenseNumber: intent.expenseNumber)])
         case .clarify: plan = .init(actions: [])
         case .totalPrice:
-            let amount = try await interpretMoney(text)
+            // A correction often names the old value or the expense number too
+            // ("13,50, nicht 12", "the 2nd one was 13.50"); select the new total first.
+            var amount = LocalPlanMoney(euros: 0, cents: 0)
+            if VoiceWorkspaceDomain.literalNumericTokens(in: text).count > 1 {
+                let quote = try await extractGroundedPrice(text, title: rows[intent.expenseNumber - 1].title, isCorrection: true)
+                if !quote.isEmpty { amount = try await interpretMoney(quote) }
+            } else { amount = try await interpretMoney(text) }
             plan = .init(actions: [.edit(.init(expenseNumber: intent.expenseNumber, title: nil, amount: amount, date: .notMentioned, share: .notMentioned))])
         case .date:
             let date = try await interpretDate(text, today: today, timeZone: timeZone)
@@ -446,7 +422,7 @@ enum AppleExpenseInterpreter {
         do {
             let locale = LanguageManager.shared.activeLanguageCode == "de" ? "de_DE" : "en_US"
             let session = LanguageModelSession(model: SystemLanguageModel.default, instructions: "The person's locale is \(locale).\n\(instructions)")
-            let response = try await session.respond(to: quote, generating: type, options: generationOptions)
+            let response = try await session.respond(to: quote, generating: type, options: generationOptions())
             try Task.checkCancellation()
             trace?.endStep()
             #if MODEL_EVALUATION
@@ -491,7 +467,7 @@ enum AppleExpenseInterpreter {
         return ""
     }
 
-    private static func extractGroundedPrice(_ text: String, title: String, taken: [String] = []) async throws -> String {
+    private static func extractGroundedPrice(_ text: String, title: String, taken: [String] = [], isCorrection: Bool = false) async throws -> String {
         // Runtime guided choices contain only actual numeric/currency source spans.
         // The model associates a purchase with a quote; it cannot rewrite the number.
         let candidates = Array(Set(VoiceWorkspaceDomain.literalNumericTokens(in: text)
@@ -502,14 +478,16 @@ enum AppleExpenseInterpreter {
             trace?.begin("LocalGroundedPrice")
             do {
                 let schema = try GenerationSchema(root: DynamicGenerationSchema(name: "GroundedPrice", properties: [
-                    .init(name: "quote", description: "Select the TOTAL purchase price for the named purchase, never a personal contribution. Empty if absent.",
+                    .init(name: "quote", description: isCorrection
+                          ? "Select the NEW total purchase price the request corrects the named purchase to, never the old value, an expense number or a personal contribution. Empty if absent."
+                          : "Select the TOTAL purchase price for the named purchase, never a personal contribution. Empty if absent.",
                           schema: DynamicGenerationSchema(name: "PriceQuote", anyOf: [""] + candidates))
                 ]), dependencies: [])
                 let locale = LanguageManager.shared.activeLanguageCode == "de" ? "de_DE" : "en_US"
                 let session = LanguageModelSession(model: SystemLanguageModel.default,
                     instructions: "The person's locale is \(locale). Select only the source price belonging to the named purchase. Do not calculate or invent values.")
                 let response = try await session.respond(to: "Purchase: \(title)\nRequest: \(text)", schema: schema,
-                    options: GenerationOptions(samplingMode: .greedy, maximumResponseTokens: 100))
+                    options: generationOptions(maximumResponseTokens: 100))
                 try Task.checkCancellation()
                 let quote = try response.content.value(String.self, forProperty: "quote")
                 trace?.endStep()
@@ -851,7 +829,7 @@ enum AppleExpenseInterpreter {
         case .speakerEuros: valid = share.value.isFinite && (0...ExpenseValidation.maximumAmount).contains(share.value) && (total.map { share.value <= $0 } ?? true)
         case .unassignedRatio: valid = share.value.isFinite && share.secondValue.isFinite && share.value >= 0 && share.secondValue >= 0 && (share.value + share.secondValue).isFinite && share.value + share.secondValue > 0
         }
-        guard valid else { return .unresolved(share.intent ?? loc("VoiceCheckSplit")) }
+        guard valid else { return .unresolved(splitNote(share.intent)) }
         switch share.kind {
         case .notMentioned: return .unchanged
         case .partnerEuros: return .partnerFixed(share.value)
@@ -860,66 +838,22 @@ enum AppleExpenseInterpreter {
         case .partnerPercent: return .partnerPercent(share.value)
         case .speakerPercent: return .userPercent(share.value)
         case .unassignedRatio: return .unassignedRatio(share.value, share.secondValue)
-        case .unresolved: return .unresolved(share.intent ?? loc("VoiceCheckSplit"))
+        case .unresolved: return .unresolved(splitNote(share.intent))
         }
     }
+
+    /// The open split note is shown on the card and sent back with every later turn, so a
+    /// long quote (often the whole request) is replaced by the generic prompt.
+    static func splitNote(_ intent: String?) -> String {
+        guard let note = intent?.trimmingCharacters(in: .whitespacesAndNewlines), !note.isEmpty,
+              note.count <= maxSplitNoteLength else { return loc("VoiceCheckSplit") }
+        return note
+    }
+    static let maxSplitNoteLength = 60
 
     private static func decodeContext(_ context: String) throws -> Context {
         guard let start = context.firstIndex(of: "{") else { throw invalidOutput }
         return try JSONDecoder().decode(Context.self, from: Data(context[start...].utf8))
-    }
-
-    private static func contextRows(_ context: String?) throws -> [Context.Row] {
-        guard let context, let start = context.firstIndex(of: "{") else { return [] }
-        return try decodeContext(String(context[start...])).expenses
-    }
-
-    static func payload(_ output: LocalExpenseInterpretation, transcript: String, context: String?,
-                        today: String = VoiceModeViewModel.todayISOString(), timeZone: TimeZone = .current) throws -> VoiceWorkspaceSyncPayload {
-        let rows = try contextRows(context)
-        var changes: [VoiceExpenseChange] = []
-        for update in output.updates {
-            let id: String?
-            switch update.action {
-            case .add:
-                guard update.expenseNumber == 0 else { throw invalidOutput }
-                id = nil
-            case .correct, .remove, .rename:
-                guard rows.indices.contains(update.expenseNumber - 1) else { throw invalidOutput }
-                id = rows[update.expenseNumber - 1].id
-            }
-            var change = VoiceExpenseChange(existingID: id, remove: update.action == .remove, title: update.title)
-            if change.remove { changes.append(change); continue }
-            if let amount = update.amount { change.amount = .value(amount) }
-            else if update.amountUnclear { change.amount = .uncertain }
-            if update.dateUnclear { change.date = .uncertain }
-            else if let offset = update.dayOffset { change.date = .relativeDays(offset) }
-            else if let iso = update.dateISO { change.date = .absolute(iso) }
-            switch update.shareKind {
-            case .unchanged, .notMentioned: break
-            case .uncertain: change.share = .equalDefault
-            case .partnerPercent, .userPercent, .partnerFixed, .userFixed, .unassignedRatio:
-                guard let value = update.shareValue else { throw invalidOutput }
-                switch update.shareKind {
-                case .partnerPercent: change.share = .partnerPercent(value)
-                case .userPercent: change.share = .userPercent(value)
-                case .partnerFixed: change.share = .partnerFixed(value)
-                case .userFixed: change.share = .userFixed(value)
-                case .unassignedRatio:
-                    guard let second = update.secondShareValue else { throw invalidOutput }
-                    change.share = .unassignedRatio(value, second)
-                default: break
-                }
-            }
-            changes.append(change)
-        }
-        var result = try VoiceWorkspaceDomain.apply(changes, to: rows.map(\.payload),
-            understanding: transcript, question: output.clarificationQuestion, todayISO: today, timeZone: timeZone)
-        if !changes.isEmpty, result.expenses.allSatisfy({ $0.draft.isReadyForSaving }) {
-            result = VoiceWorkspaceSyncPayload(userUnderstanding: transcript, clarificationQuestion: "",
-                expenses: result.expenses, changedExpenseIDs: result.changedExpenseIDs, removedExpenseIDs: result.removedExpenseIDs)
-        }
-        return result
     }
 
     private static var invalidOutput: LocalVoiceFailure { LocalVoiceFailure(issue: .init(.invalidPlan, reason: "invalid-value-or-target")) }

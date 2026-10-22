@@ -159,6 +159,13 @@ final class SettingsViewModel {
         voiceSettings.hasCurrentConsent
     }
 
+    /// Whether the microphone may open a voice session now. Voice Mode can stay on while the
+    /// selected mode is still being set up (no verified key, Apple Intelligence unavailable);
+    /// the microphone then leads to setup instead of a session that fails immediately.
+    var canStartVoice: Bool {
+        voiceSettings.isReady && (voiceSettings.provider != .appleLocal || localAvailability.allowsCapture)
+    }
+
     /// Voice Mode is switched on but the selected provider is not set up yet.
     var isVoiceSetupPending: Bool {
         guard voiceSettings.enabled else { return false }

@@ -61,6 +61,8 @@ struct ContentView: View {
         }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
+                // Apple Intelligence may have been turned on or off while the app was away.
+                settingsVM.refreshLocalAvailability()
                 consumeCaptureLaunchIfNeeded()
             }
         }
@@ -124,7 +126,7 @@ struct ContentView: View {
 
         case .dictateExpense:
             guard !settingsVM.isChoosingVoiceMode else { return }
-            if settingsVM.voiceSettings.isReady {
+            if settingsVM.canStartVoice {
                 guard !voiceVM.isPresented else { return }
                 if editorVM.isPresented || settingsVM.isPresented {
                     deferredCaptureLaunch = destination

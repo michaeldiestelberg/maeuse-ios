@@ -1,3 +1,16 @@
+## 1.5.0 (63) — internal TestFlight candidate, 2026-10-23
+Fixes from the 1.5.0 release code review.
+- Apple mode keeps what you said you pay across phrases: “Dinner 73 €, I pay 20” followed by “actually it was 80” gives your partner 60, not 53. Untouched cards no longer show as updated after each phrase.
+- Price corrections that name two numbers work: “Die Blumen haben 13,50 € gekostet, nicht 12 €” or “the 2nd one was 13.50” set the new price instead of leaving the card without an amount.
+- “Split it 50-50” or “70-30” is read as a ratio instead of a negative number.
+- “Pizza 12 euros 2 days ago” stays €12 dated two days ago (before: €12.02 today); “4 Euro 3 Mal” is no longer €4.03.
+- When Apple mode is selected but not available on this iPhone, the microphone opens setup instead of a voice screen that fails immediately. Availability is rechecked when the app returns to the foreground.
+- An unclear split shows “Check split” instead of the whole spoken sentence, so long requests no longer fill the session.
+- Starting the microphone between phrases no longer waits on the main thread; a late audio shutdown from the previous phrase can never stop the next recording.
+- The retry after a failed phrase can choose a different price; the workspace is read once per phrase; unused interpreter code is removed, and its tests now run through the production path.
+- The voice mode chooser no longer shows the “Your choice is remembered…” note.
+- 157 unit tests and 6 UI tests pass on the iPhone 18 Pro simulator; the Release device build has no warnings. Apple model check 18/18; accuracy suite 83/94 with 4 new regression cases, the 11 misses being the known model limits.
+
 ## 1.5.0 (62) — internal TestFlight candidate, 2026-10-23
 - The voice mode chooser recommends OpenAI · Cloud, lists it first and preselects it until a mode is chosen. Each mode shows accuracy, how you speak, cost and privacy side by side, including about $1–2 per 100 dictated expenses for OpenAI and an honest accuracy caveat for Apple. Only the selected card is highlighted; “Recommended” and “Free” are badges.
 - Switching modes keeps Voice Mode on. Switching to OpenAI shows its disclosure first unless it was already accepted (“Not now” keeps the current mode). If the new mode still needs its API key or Apple Intelligence, Voice Mode stays on and Settings says it starts working once setup is complete.

@@ -217,7 +217,7 @@ struct MainExpenseView: View {
 
     private var fabStack: some View {
         HStack(alignment: .bottom, spacing: 12) {
-            if settingsVM.voiceSettings.isReady {
+            if settingsVM.canStartVoice {
                 Button { editorVM.prepareForNew() } label: {
                     MaeusePlusIcon(color: Color(light: .maeusInk, dark: .white))
                 }.buttonStyle(FABStyle(isPrimary: false)).accessibilityLabel(loc("AddExpense"))

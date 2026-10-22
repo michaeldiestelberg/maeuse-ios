@@ -356,7 +356,10 @@ enum VoiceWorkspaceDomain {
         var index = 0
         func digit(_ c: Character) -> Bool { c.isASCII && c.isNumber }
         while index < characters.count {
-            let sign = (characters[index] == "-" || characters[index] == "+") && index + 1 < characters.count && digit(characters[index + 1])
+            // A hyphen between digits joins a ratio ("50-50", "70-30"); it is not a minus sign.
+            let follows = index > 0 && (digit(characters[index - 1]) || characters[index - 1].isLetter)
+            let sign = (characters[index] == "-" || characters[index] == "+") && !follows
+                && index + 1 < characters.count && digit(characters[index + 1])
             guard digit(characters[index]) || sign else { index += 1; continue }
             let start = index
             index += 1
@@ -366,22 +369,6 @@ enum VoiceWorkspaceDomain {
             tokens.append(String(characters[start..<end]))
         }
         return tokens
-    }
-
-    /// Check a model-provided literal numeric token's boundaries; no spoken-language parsing.
-    static func numericToken(_ token: String, occursIn source: String) -> Bool {
-        guard !token.isEmpty, token.allSatisfy({ $0.isASCII && ($0.isNumber || $0 == "." || $0 == ",") }),
-              Double(token.replacingOccurrences(of: ",", with: ".")) != nil else { return false }
-        var remaining = source.startIndex..<source.endIndex
-        while let range = source.range(of: token, range: remaining) {
-            func numeric(_ character: Character) -> Bool { character.isASCII && (character.isNumber || character == "." || character == ",") }
-            let left = range.lowerBound == source.startIndex || !numeric(source[source.index(before: range.lowerBound)])
-            let right = range.upperBound == source.endIndex || !numeric(source[range.upperBound])
-            if left && right { return true }
-            guard range.upperBound < source.endIndex else { return false }
-            remaining = range.upperBound..<source.endIndex
-        }
-        return false
     }
 
     /// Normalize a model-declared concatenated numeric percentage token, not spoken language.

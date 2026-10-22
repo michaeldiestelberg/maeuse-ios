@@ -240,7 +240,6 @@
 "VoicePendingSetup" = "Der Sprachmodus bleibt aktiv und funktioniert, sobald dieser Modus eingerichtet ist.";
 "AgreeSwitchVoice" = "Zustimmen & wechseln";
 "VoicePrivacyControl" = "Deaktiviere den Sprachmodus, um keine Audiodaten mehr zu senden. Lösche deinen API-Schlüssel, um diese Einwilligung zu widerrufen.";
-"VoiceChoiceRemembered" = "Deine Wahl bleibt gespeichert und ist in den Einstellungen änderbar. Die Auswahl startet keine Aufnahme.";
 "VoiceChoiceConfirm" = "Diesen Modus wählen";
 "LocalDiagnosisEmpty" = "Nach einer Apple-Sprachaufnahme findest du hier technische Angaben zum letzten Vorgang. Sie bleiben nur bis zum Beenden der App erhalten.";
 "LocalClearDiagnosis" = "Diagnose löschen";

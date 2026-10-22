@@ -386,11 +386,15 @@ final class VoiceModeViewModel {
     func resumeWorkspaceContext() -> String? {
         guard !drafts.isEmpty || !removedDraftIDs.isEmpty || !clarificationQuestion.isEmpty else { return nil }
         let rows: [[String: Any]] = drafts.map { draft in
-            ["id": draft.id, "title": draft.title, "amount": draft.amount as Any? ?? NSNull(),
+            var row: [String: Any] = ["id": draft.id, "title": draft.title, "amount": draft.amount as Any? ?? NSNull(),
              "date_iso": draft.dateISO as Any? ?? NSNull(), "split_mode": draft.splitMode?.rawValue as Any? ?? NSNull(),
              "split_value": draft.splitValue as Any? ?? NSNull(), "missing_fields": draft.missingFields.map(\.rawValue),
              "split_intent": draft.splitIntent as Any? ?? NSNull(),
              "pending_user_fixed_share": draft.pendingUserFixedShare as Any? ?? NSNull()]
+            // Each Apple phrase starts a fresh session from this workspace; what the speaker
+            // said they pay must survive it so a later total correction keeps that amount.
+            if provider == .appleLocal, let own = draft.speakerFixedShare { row["speaker_fixed_share"] = own }
+            return row
         }
         guard let data = try? JSONSerialization.data(withJSONObject: ["expenses": rows, "removed_ids": removedDraftIDs.sorted(), "clarification_question": clarificationQuestion, "last_request": understandingHistory.last?.text ?? ""]),
               let text = String(data: data, encoding: .utf8) else { return nil }

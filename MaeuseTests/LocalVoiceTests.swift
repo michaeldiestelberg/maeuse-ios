@@ -583,27 +583,69 @@ final class LocalVoiceTests: XCTestCase {
         let isoDate: String?
         let dayOffset: Int?
     }
-    @available(iOS 26.0, *)
+    private enum LocalShareKind {
+        case notMentioned, uncertain, partnerPercent, userPercent, partnerFixed, userFixed, unassignedRatio
+    }
     private struct LocalExpenseShare {
         let kind: LocalShareKind
         let value: Double?
         let otherValue: Double?
     }
-    @available(iOS 26.0, *)
+    /// One test-side change. `result` turns it into the `LocalTurnPlan` the interpreter builds
+    /// and runs it through `applyPlan`, the production path after the model steps.
+    private struct LocalExpenseUpdate {
+        enum Action { case add, correct, remove }
+        var action: Action
+        var expenseNumber: Int
+        var title: String?
+        var amount: Double?
+        var date: LocalExpenseDate
+        var share: LocalExpenseShare
+    }
     private func update(_ number: Int = 0, title: String? = nil, amount: Double? = nil,
                         date: LocalExpenseDate = .init(kind: .notMentioned, isoDate: nil, dayOffset: nil),
                         share: LocalExpenseShare = .init(kind: .notMentioned, value: nil, otherValue: nil)) -> LocalExpenseUpdate {
-        .init(action: number == 0 ? .add : .correct, expenseNumber: number, title: title, amount: amount,
-            dateISO: date.isoDate, dayOffset: date.dayOffset, dateUnclear: date.kind == .uncertain,
-            shareKind: share.kind, shareValue: share.value, secondShareValue: share.otherValue)
+        .init(action: number == 0 ? .add : .correct, expenseNumber: number, title: title, amount: amount, date: date, share: share)
     }
 
     @available(iOS 26.0, *)
-    private func result(_ updates: [LocalExpenseUpdate], context: String? = nil,
-                        text: String = "Request", question: String = "", today: String = "2026-10-10") throws -> VoiceWorkspaceSyncPayload {
-        try AppleExpenseInterpreter.payload(.init(updates: updates,
-            clarificationQuestion: question), transcript: text, context: context, today: today,
-            timeZone: TimeZone(identifier: "Europe/Berlin")!)
+    private func result(_ updates: [LocalExpenseUpdate], context: String? = nil, text: String = "Request",
+                        today: String = "2026-10-10", timeZone: TimeZone = TimeZone(identifier: "Europe/Berlin")!) throws -> VoiceWorkspaceSyncPayload {
+        var rows: [VoiceExpenseDraftPayload] = []
+        if let context, let start = context.firstIndex(of: "{") {
+            rows = try JSONDecoder().decode(AppleExpenseInterpreter.Context.self, from: Data(context[start...].utf8)).expenses.map(\.payload)
+        }
+        let actions: [LocalPlanAction] = updates.map { change in
+            if change.action == .remove { return .remove(expenseNumber: change.expenseNumber) }
+            let money = change.amount.map { value -> LocalPlanMoney in
+                let cents = Int((value * 100).rounded())
+                return LocalPlanMoney(euros: cents / 100, cents: abs(cents % 100))
+            }
+            let date: LocalPlanDate
+            switch change.date.kind {
+            case .notMentioned: date = .notMentioned
+            case .uncertain: date = .unclear
+            case .relativeDays: date = .relativeDays(change.date.dayOffset ?? 0)
+            case .absolute:
+                let parts = (change.date.isoDate ?? "").split(separator: "-").compactMap { Int($0) }
+                date = parts.count == 3 ? .calendarDate(year: parts[0], month: parts[1], day: parts[2]) : .unclear
+            }
+            let value = change.share.value ?? 0
+            let share: LocalPlanShare
+            switch change.share.kind {
+            case .notMentioned, .uncertain: share = .notMentioned
+            case .partnerPercent: share = .init(kind: .partnerPercent, value: value, secondValue: 0)
+            case .userPercent: share = .init(kind: .speakerPercent, value: value, secondValue: 0)
+            case .partnerFixed: share = .init(kind: .partnerEuros, value: value, secondValue: 0)
+            case .userFixed: share = .init(kind: .speakerEuros, value: value, secondValue: 0)
+            case .unassignedRatio: share = .init(kind: .unassignedRatio, value: value, secondValue: change.share.otherValue ?? 0)
+            }
+            if change.action == .add {
+                return .add(.init(title: change.title ?? "", amount: money ?? .init(euros: 0, cents: 0), date: date, share: share))
+            }
+            return .edit(.init(expenseNumber: change.expenseNumber, title: change.title, amount: money, date: date, share: share))
+        }
+        return try AppleExpenseInterpreter.applyPlan(.init(actions: actions), to: rows, transcript: text, today: today, timeZone: timeZone)
     }
 
     @available(iOS 26.0, *)
@@ -732,21 +774,23 @@ final class LocalVoiceTests: XCTestCase {
     func testAmbiguousTargetAsksWithoutMutatingExistingCards() throws {
         let vm = VoiceModeViewModel(); vm.open(provider: .appleLocal)
         vm.drafts = [draft("coffee", "Coffee", 4), draft("flowers", "Flowers", 12)]
-        vm.handleVoiceEvent(.workspaceSync(try result([], context: vm.resumeWorkspaceContext(), question: "Welche Ausgabe?")))
+        vm.handleVoiceEvent(.workspaceSync(try result([], context: vm.resumeWorkspaceContext())))
         XCTAssertEqual(vm.drafts.map(\.id), ["coffee", "flowers"])
         XCTAssertEqual(vm.drafts.map(\.amount), [4,12])
-        XCTAssertEqual(vm.clarificationQuestion, "Welche Ausgabe?")
+        XCTAssertEqual(vm.clarificationQuestion, loc("LocalAmbiguousCorrection"))
         vm.cancelSession()
     }
 
     @available(iOS 26.0, *)
     func testInvalidGeneratedValuesAndUnknownTargetsAreRejectedAtomically() {
         for change in [update(title: "Coffee", amount: -4), update(title: "Coffee", amount: 1e12),
-                       update(title: "Coffee", amount: 4, share: .init(kind: .partnerPercent, value: 101, otherValue: nil)),
                        update(1, title: "Unknown", amount: 4)] {
             XCTAssertThrowsError(try result([update(title: "Valid", amount: 5), change]))
         }
-        XCTAssertThrowsError(try result([update(title: "Coffee", amount: .infinity)]))
+        // An impossible share keeps the purchase and asks for the split instead.
+        let share = try? result([update(title: "Coffee", amount: 4, share: .init(kind: .partnerPercent, value: 101, otherValue: nil))])
+        XCTAssertEqual(share?.expenses.first?.missingFields, [.split])
+        XCTAssertNil(share?.expenses.first?.splitValue)
     }
 
     @available(iOS 26.0, *)
@@ -756,11 +800,17 @@ final class LocalVoiceTests: XCTestCase {
         XCTAssertEqual(payload.expenses.first?.splitValue, 53)
         let vm = VoiceModeViewModel(); vm.open(provider: .appleLocal)
         vm.handleVoiceEvent(.workspaceSync(payload))
+        // The speaker still pays 20 after the total changes.
         vm.handleVoiceEvent(.workspaceSync(try result([update(1, amount: 40)], context: vm.resumeWorkspaceContext())))
-        XCTAssertEqual(vm.drafts[0].amount, 40); XCTAssertFalse(vm.canSaveDrafts)
+        XCTAssertEqual(vm.drafts[0].amount, 40); XCTAssertEqual(vm.drafts[0].splitValue, 20)
+        XCTAssertTrue(vm.canSaveDrafts)
+        // A total below what the speaker pays cannot be split and asks again.
+        vm.handleVoiceEvent(.workspaceSync(try result([update(1, amount: 15)], context: vm.resumeWorkspaceContext())))
+        XCTAssertFalse(vm.canSaveDrafts)
         XCTAssertEqual(vm.drafts[0].missingFields, [.split])
         vm.handleVoiceEvent(.workspaceSync(try result([update(1,
             share: .init(kind: .partnerFixed, value: 10, otherValue: nil))], context: vm.resumeWorkspaceContext())))
+        XCTAssertEqual(vm.drafts[0].splitValue, 10)
         XCTAssertTrue(vm.canSaveDrafts)
         vm.cancelSession()
     }
@@ -793,10 +843,9 @@ final class LocalVoiceTests: XCTestCase {
     @available(iOS 26.0, *)
     func testRelativeDatesUseCalendarAcrossLeapDayAndTimeZones() throws {
         for zone in ["Europe/Berlin", "America/Los_Angeles", "Pacific/Kiritimati"] {
-            let value = try AppleExpenseInterpreter.payload(.init(updates: [
+            let value = try result([
                 update(title: "Coffee", amount: 4, date: .init(kind: .relativeDays, isoDate: nil, dayOffset: -1))
-            ], clarificationQuestion: ""), transcript: "Yesterday", context: nil, today: "2024-03-01",
-                timeZone: TimeZone(identifier: zone)!)
+            ], text: "Yesterday", today: "2024-03-01", timeZone: TimeZone(identifier: zone)!)
             XCTAssertEqual(value.expenses[0].dateISO, "2024-02-29", zone)
         }
     }
@@ -812,17 +861,12 @@ final class LocalVoiceTests: XCTestCase {
         vm.cancelSession()
     }
 
-    func testLiteralRatioTokensRequireUniqueSplitAndExactNumericBoundaries() {
+    func testConcatenatedRatioTokensRequireUniqueSplit() {
         let pair = VoiceWorkspaceDomain.concatenatedPercentages("7030")
         XCTAssertEqual(pair?.0, 70); XCTAssertEqual(pair?.1, 30)
         XCTAssertEqual(VoiceWorkspaceDomain.concatenatedPercentages("9010")?.0, 90)
         XCTAssertNil(VoiceWorkspaceDomain.concatenatedPercentages("991"))
         XCTAssertNil(VoiceWorkspaceDomain.concatenatedPercentages("seventy thirty"))
-        XCTAssertTrue(VoiceWorkspaceDomain.numericToken("7030", occursIn: "7030 teilen"))
-        XCTAssertFalse(VoiceWorkspaceDomain.numericToken("70", occursIn: "7030 teilen"))
-        XCTAssertFalse(VoiceWorkspaceDomain.numericToken("30", occursIn: "7030 teilen"))
-        XCTAssertTrue(VoiceWorkspaceDomain.numericToken("9,80", occursIn: "Preis 9,80 Euro"))
-        XCTAssertFalse(VoiceWorkspaceDomain.numericToken("80", occursIn: "Preis 9,80 Euro"))
     }
 
     @available(iOS 26.0, *)
@@ -1339,6 +1383,76 @@ final class LocalVoiceTests: XCTestCase {
         // The resampler keeps a short filter tail for the next buffer, so audio is not lost
         // between buffers; only the last few milliseconds of a phrase stay unflushed.
         XCTAssertEqual(inputs.map(\.bufferDuration.seconds).reduce(0, +), 0.3, accuracy: 0.02)
+    }
+
+    // MARK: - 1.5.0 release review fixes
+
+    @available(iOS 26.0, *)
+    func testSpeakerShareSurvivesNextAppleTurnThroughWorkspaceContext() throws {
+        let vm = VoiceModeViewModel(); vm.open(provider: .appleLocal)
+        vm.handleVoiceEvent(.workspaceSync(try result([
+            update(title: "Dinner", amount: 73, share: .init(kind: .userFixed, value: 20, otherValue: nil)),
+            update(title: "Coffee", amount: 4)])))
+        XCTAssertEqual(vm.drafts[0].splitValue, 53)
+        // Every Apple phrase starts a fresh session from the resumed workspace.
+        let next = try result([update(1, amount: 80)], context: vm.resumeWorkspaceContext(), text: "Actually it was 80")
+        vm.handleVoiceEvent(.workspaceSync(next))
+        XCTAssertEqual(vm.drafts[0].splitValue, 60, "the speaker still pays 20")
+        XCTAssertEqual(vm.drafts[0].speakerFixedShare, 20)
+        XCTAssertEqual(next.changedExpenseIDs, [vm.drafts[0].id], "the untouched card is not marked as updated")
+        vm.cancelSession()
+    }
+
+    func testCloudContextDoesNotCarryAppleOnlySpeakerShare() throws {
+        let vm = VoiceModeViewModel(); vm.open(provider: .openAI)
+        var dinner = draft("dinner", "Dinner", 73); dinner.speakerFixedShare = 20
+        vm.drafts = [dinner]
+        XCTAssertFalse(try XCTUnwrap(vm.resumeWorkspaceContext()).contains("speaker_fixed_share"))
+        vm.cancelSession()
+    }
+
+    @available(iOS 26.0, *)
+    func testHyphenatedRatioIsTwoValuesNotANegativeNumber() {
+        XCTAssertEqual(VoiceWorkspaceDomain.literalNumericTokens(in: "Split it 50-50"), ["50", "50"])
+        XCTAssertEqual(VoiceWorkspaceDomain.literalNumericTokens(in: "teilen 70-30"), ["70", "30"])
+        XCTAssertEqual(VoiceWorkspaceDomain.literalNumericTokens(in: "-5 Euro"), ["-5"])
+        XCTAssertTrue(AppleExpenseInterpreter.hasLiteralRatioWitness("50-50"))
+        XCTAssertTrue(AppleExpenseInterpreter.hasLiteralRatioWitness("70-30"))
+    }
+
+    func testPriceNormalizationLeavesCountsAndTimeUnitsAlone() {
+        XCTAssertEqual(LocalTranscript.normalized("Pizza 12 euros 2 days ago", language: "en"), "Pizza 12 euros 2 days ago")
+        XCTAssertEqual(LocalTranscript.normalized("Coffee 4 euros 3 times", language: "en"), "Coffee 4 euros 3 times")
+        XCTAssertEqual(LocalTranscript.normalized("Kaffee 4 Euro 3 Mal", language: "de"), "Kaffee 4 Euro 3 Mal")
+        XCTAssertEqual(LocalTranscript.normalized("Pizza 12 Euro vor 2 Tagen", language: "de"), "Pizza 12 Euro vor 2 Tagen")
+        XCTAssertEqual(LocalTranscript.normalized("Kaffee 4 Euro 80", language: "de"), "Kaffee 4,80 Euro")
+        XCTAssertEqual(LocalTranscript.normalized("Coffee 4 euros 80 and flowers", language: "en"), "Coffee 4.80 euros and flowers")
+    }
+
+    func testMicrophoneLeadsToSetupWhileAppleModeIsUnavailable() {
+        var availability = LocalVoiceAvailability.deviceNotEligible
+        let settings = SettingsViewModel(availabilityProvider: { availability })
+        settings.selectProvider(.appleLocal)
+        settings.voiceSettings.enabled = true
+        XCTAssertTrue(settings.voiceSettings.isReady)
+        XCTAssertFalse(settings.canStartVoice, "an unavailable Apple mode must not open a failing session")
+        XCTAssertTrue(settings.isVoiceSetupPending)
+        availability = .available
+        settings.refreshLocalAvailability()
+        XCTAssertTrue(settings.canStartVoice)
+        XCTAssertFalse(settings.isVoiceSetupPending)
+    }
+
+    @available(iOS 26.0, *)
+    func testUnresolvedSplitNeverStoresTheWholeRequest() throws {
+        let request = String(repeating: "Ich weiß nicht genau, wie wir das teilen, vielleicht irgendwie anders als sonst. ", count: 4)
+        let plan = LocalTurnPlan(actions: [.add(.init(title: "Dinner", amount: .init(euros: 40, cents: 0), date: .notMentioned,
+            share: .init(kind: .unresolved, value: 0, secondValue: 0, intent: request)))])
+        let payload = try AppleExpenseInterpreter.applyPlan(plan, to: [], transcript: request, today: "2026-10-10", timeZone: .current)
+        XCTAssertEqual(payload.expenses[0].splitIntent, loc("VoiceCheckSplit"))
+        XCTAssertEqual(AppleExpenseInterpreter.splitNote("70/30"), "70/30")
+        XCTAssertEqual(AppleExpenseInterpreter.splitNote("  "), loc("VoiceCheckSplit"))
+        XCTAssertEqual(AppleExpenseInterpreter.splitNote(nil), loc("VoiceCheckSplit"))
     }
 
     private func draft(_ id: String, _ title: String, _ amount: Double) -> VoiceExpenseDraft {
