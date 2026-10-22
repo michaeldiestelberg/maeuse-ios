@@ -1,5 +1,15 @@
 # Mäuse release checklist
 
+## 1.5.0 (62) — internal TestFlight only
+
+- [x] Account holder asked for a new TestFlight build with the recommended-mode chooser, stay-on mode switching and the one-time OpenAI disclosure (October 23, 2026).
+- [x] Changes rebuilt on top of build 61 (`70d6b04`); unrelated dirty release documentation stays out of this commit.
+- [x] Marketing version remains 1.5.0; repository build number incremented to 62 with the release script.
+- [x] All 151 unit tests and 6 UI tests pass on the iPhone 18 Pro simulator; chooser and disclosure checked in English, German, light and dark.
+- [ ] Exact pushed commit succeeds in Xcode Cloud and the processed build is confirmed in the internal testing group.
+- [ ] On device: OpenAI disclosure accept/decline, voice off/on keeps consent, deleting the key withdraws it, Apple mode enables without a disclosure.
+- [ ] Privacy and support website wording from `1.5.0-website-updates.md` is published with the 1.5.0 App Store release, not before.
+
 ## 1.5.0 (58) — internal TestFlight only
 
 - [x] Account holder approved pushing the Duo changes to GitHub after disclosure that main pushes trigger Xcode Cloud and internal TestFlight distribution (October 16, 2026).

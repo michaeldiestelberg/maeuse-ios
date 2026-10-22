@@ -65,12 +65,13 @@ Latest App Store release (build 32): Lock Screen, Home Screen, and Control Cente
 
 Mäuse has no account system, app backend, advertising, or tracking SDK. Expenses are stored locally and manual entry works offline. Backup files are created only when the user exports them.
 
-Voice Mode is optional. Choose **Apple · On device** or **OpenAI · Cloud** in Settings, review the provider-specific disclosure, and enable it. Switching providers or disabling voice requires fresh consent. Existing cloud users keep their chosen provider; new installations start with Apple selected and voice disabled.
+Voice Mode is optional. Choose **OpenAI · Cloud** (recommended: by far the more accurate and flexible mode) or **Apple · On device** (free and private, but stricter and more error-prone) and enable it. OpenAI mode shows its privacy and cost disclosure once before first use; Apple mode needs none because nothing leaves the iPhone. Switching providers keeps Voice Mode on. Turning Voice Mode off stops all capture; deleting the API key withdraws OpenAI consent. Existing cloud users keep their chosen provider; the chooser preselects OpenAI until a mode is chosen.
 
 | | Apple · On device | OpenAI · Cloud |
 | --- | --- | --- |
 | Processing | On-device speech recognition and Apple Foundation Models; never OpenAI | Audio and expense context sent to OpenAI |
-| Cost | Free; no API key or per-request charge | Your own OpenAI API key and usage billing |
+| Accuracy | Stricter; misunderstands more often, so check every draft | Most accurate; handles several expenses and corrections in one request |
+| Cost | Free; no API key or per-request charge | Your own OpenAI API key and usage billing; roughly $1–2 per 100 dictated expenses |
 | Internet | Only needed to download Apple resources initially | Required for capture |
 | Experience | Dictate, tap **Process phrase**, review, then **Record more**; up to 50 seconds per turn and 10 drafts per session | Continuous capture with automatic turn detection and more flexible requests |
 | Availability | iOS 26+, Apple Intelligence compatible device, enabled Intelligence, downloaded speech/model resources in the app language | Any supported iPhone with a compatible API key |

@@ -4,12 +4,12 @@ TestFlight is strongly recommended before App Store submission, especially for m
 
 ## Build 49 / 1.5.0 focus
 
-- Settings → Voice Mode → Apple · On device → Enable. No OpenAI key should be needed. Read the local disclosure and grant microphone/speech recognition access.
+- Settings → Voice Mode → Apple · On device → Enable. No OpenAI key should be needed. No disclosure should appear; grant microphone/speech recognition access.
 - With Apple Intelligence and speech resources already downloaded, enable Airplane Mode. Dictate “Coffee four euros fifty and flowers twelve euros yesterday”, tap Process phrase, and check both amounts, dates, and default 50% shares. Try the equivalent German request with the app in German.
 - Record more to correct an amount, give a fixed partner euro share or a percentage, remove a draft by voice, and answer a missing-price question. Review the values before saving.
 - Deny microphone/speech permission; disable Apple Intelligence; try an unsupported device/language. The app must explain why local capture is unavailable and must never switch to OpenAI.
 - Close during recognition/processing; remove a draft while processing; interrupt capture with a call, Siri, Bluetooth change, or backgrounding. Preserve previous drafts and ignore stale callbacks.
-- Switch to OpenAI and back. Each switch must disable voice and ask for the newly selected provider’s disclosure before re-enabling. Cloud mode still requires a verified key.
+- With voice on, switch to OpenAI and back. Voice stays on: the first switch to OpenAI shows its disclosure (Not now keeps Apple), switching to Apple shows none. Without a verified key, Settings shows the pending-setup note and the mic button stays hidden until the key verifies.
 - Local mode pauses recording while processing, limits a recording to 50 seconds, and supports at most 10 drafts per session. Save a full session before starting another.
 
 ### Build 49 — Deutsch
@@ -120,7 +120,7 @@ Please focus on these flows:
 6. Test without a network connection. Manual tracking, backups, and configured Apple voice mode should work; OpenAI voice requires internet.
 7. For Voice Mode, use a compatible OpenAI API project and key. Verify the key, review the disclosure, accept consent, and enable Voice Mode.
 8. Dictate several expenses in one sentence. Review, remove, correct, and save drafts. Confirm that ending the session stops microphone use.
-9. Turn Voice Mode off, then on again, and verify that the disclosure reappears and consent must be accepted before it re-enables. Then remove the saved key.
+9. Turn Voice Mode off, then on again, and verify that it re-enables without showing the disclosure again. Then remove the saved key: Voice Mode turns off, and enabling OpenAI mode again shows the disclosure first.
 10. Test microphone allow, deny, and later-enable flows through iOS Settings.
 
 Never include a real API key, private expense backup, or other secret in TestFlight feedback screenshots or comments.

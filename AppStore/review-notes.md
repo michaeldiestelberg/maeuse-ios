@@ -12,7 +12,7 @@ This update introduces GPT-Realtime-2.1 voice capture without a separate transcr
 
 VOICE MODE AND PRIVACY
 
-Voice Mode is optional. Before enabling it, users must accept a disclosure explaining that microphone audio, spoken expense details, and voice-draft context are sent directly to OpenAI. The disclosure covers default retention and possible OpenAI API charges. Turning Voice Mode off revokes consent; enabling it again presents the disclosure again. Users can independently remove their saved API key.
+Voice Mode is optional and offers two modes. OpenAI · Cloud sends microphone audio, spoken expense details, and voice-draft context directly to OpenAI; before it is used for the first time, users must accept a disclosure covering that data sharing, OpenAI's default retention, and estimated API charges. Turning Voice Mode off stops all capture and transmission; deleting the saved API key withdraws consent, and the disclosure is shown again before OpenAI mode is used next. Apple · On device processes speech and expenses entirely on the iPhone and shares nothing with a third party, so it needs only the system microphone and speech recognition permissions.
 
 The user supplies a compatible OpenAI API key, stored in iOS Keychain. Mäuse does not sell API access, receive revenue from OpenAI, or link to a purchase of API credits. Manual expense entry remains available without a key, microphone access, or internet connection.
 

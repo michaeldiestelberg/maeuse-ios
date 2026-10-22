@@ -205,13 +205,16 @@ struct VoiceSettings: Codable {
     var hapticsEnabled: Bool
     var consentVersion: Int?
     var consentedAt: Date?
+    /// Providers whose disclosure the user accepted. Only providers that share data with a
+    /// third party need one; see `requiresConsent(for:)`.
+    var consentedProviders: Set<VoiceProvider>
 
     static let storageKey = "maeuse.voice-settings"
     static let currentConsentVersion = 1
 
     static var `default`: VoiceSettings {
         VoiceSettings(
-            provider: .appleLocal,
+            provider: .openAI,
             apiKeySuffix: nil,
             verifiedAt: nil,
             enabled: false,
@@ -228,7 +231,8 @@ struct VoiceSettings: Codable {
         enabled: Bool,
         hapticsEnabled: Bool = true,
         consentVersion: Int?,
-        consentedAt: Date?
+        consentedAt: Date?,
+        consentedProviders: Set<VoiceProvider>? = nil
     ) {
         self.provider = provider
         self.apiKeySuffix = apiKeySuffix
@@ -237,6 +241,7 @@ struct VoiceSettings: Codable {
         self.hapticsEnabled = hapticsEnabled
         self.consentVersion = consentVersion
         self.consentedAt = consentedAt
+        self.consentedProviders = consentedProviders ?? (consentVersion == nil ? [] : [provider])
     }
 
     enum CodingKeys: String, CodingKey {
@@ -247,6 +252,7 @@ struct VoiceSettings: Codable {
         case hapticsEnabled
         case consentVersion
         case consentedAt
+        case consentedProviders
     }
 
     init(from decoder: Decoder) throws {
@@ -259,6 +265,9 @@ struct VoiceSettings: Codable {
         hapticsEnabled = try container.decodeIfPresent(Bool.self, forKey: .hapticsEnabled) ?? true
         consentVersion = try container.decodeIfPresent(Int.self, forKey: .consentVersion)
         consentedAt = try container.decodeIfPresent(Date.self, forKey: .consentedAt)
+        // Consent stored before per-provider tracking covered only the provider selected then.
+        consentedProviders = try container.decodeIfPresent(Set<VoiceProvider>.self, forKey: .consentedProviders)
+            ?? (consentVersion == nil ? [] : [provider])
     }
 
     func encode(to encoder: Encoder) throws {
@@ -270,6 +279,7 @@ struct VoiceSettings: Codable {
         try container.encode(hapticsEnabled, forKey: .hapticsEnabled)
         try container.encodeIfPresent(consentVersion, forKey: .consentVersion)
         try container.encodeIfPresent(consentedAt, forKey: .consentedAt)
+        try container.encode(consentedProviders, forKey: .consentedProviders)
     }
 
     /// True for settings saved before providers existed (1.4 and earlier).
@@ -287,7 +297,30 @@ struct VoiceSettings: Codable {
     }
 
     var hasCurrentConsent: Bool {
-        consentVersion == Self.currentConsentVersion && consentedAt != nil
+        hasCurrentConsent(for: provider)
+    }
+
+    /// Apple's on-device mode never sends voice data off the iPhone, so it needs no disclosure.
+    static func requiresConsent(for provider: VoiceProvider) -> Bool {
+        provider == .openAI
+    }
+
+    func hasCurrentConsent(for provider: VoiceProvider) -> Bool {
+        guard Self.requiresConsent(for: provider) else { return true }
+        return consentVersion == Self.currentConsentVersion && consentedAt != nil && consentedProviders.contains(provider)
+    }
+
+    mutating func recordConsent(for provider: VoiceProvider, at date: Date = Date()) {
+        if consentVersion != Self.currentConsentVersion { consentedProviders = [] }
+        consentVersion = Self.currentConsentVersion
+        consentedAt = date
+        consentedProviders.insert(provider)
+    }
+
+    mutating func revokeConsent() {
+        consentVersion = nil
+        consentedAt = nil
+        consentedProviders = []
     }
 
     var maskedAPIKey: String {

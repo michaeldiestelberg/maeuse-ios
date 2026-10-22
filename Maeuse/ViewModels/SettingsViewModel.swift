@@ -42,6 +42,8 @@ final class SettingsViewModel {
     var showVoiceError: Bool = false
     var hasSavedVoiceAPIKey: Bool = false
     var localAvailability: LocalVoiceAvailability = .modelNotReady
+    /// Provider whose disclosure must be accepted before enabling or switching to it.
+    var pendingConsentProvider: VoiceProvider?
 
     private let apiKeyStore = OpenAIAPIKeyStore.shared
     private let clientSecretService = OpenAIRealtimeClientSecretService()
@@ -92,19 +94,19 @@ final class SettingsViewModel {
 
     // MARK: - Voice Settings
 
-    /// Consent is tied to the Voice Mode toggle: enabling requires the disclosure to be
-    /// accepted first, and turning it off revokes consent again, so re-enabling always
-    /// re-presents the disclosure. There is no separate withdrawal action.
+    /// OpenAI mode asks for its disclosure once. Turning Voice Mode off stops all capture but
+    /// keeps that consent, so turning it back on needs no second confirmation. Deleting the
+    /// API key withdraws it. Apple's on-device mode needs no disclosure.
     var voiceEnabled: Bool {
         get { voiceSettings.enabled }
         set {
             if newValue {
                 refreshLocalAvailability()
                 voiceSettings.enabled = canEnableVoice && voiceSettings.hasCurrentConsent
-                saveVoiceSettings()
             } else {
-                disableVoiceModeRevokingConsent()
+                voiceSettings.enabled = false
             }
+            saveVoiceSettings()
         }
     }
 
@@ -137,33 +139,70 @@ final class SettingsViewModel {
         }
     }
 
+    /// Switching providers keeps Voice Mode on when it was on. Switching to OpenAI asks for its
+    /// disclosure first unless it was already accepted. Voice Mode stays enabled while the new
+    /// provider is being set up and becomes usable once `isReady` holds.
     func selectProvider(_ provider: VoiceProvider) {
         guard voiceSettings.provider != provider else { return }
-        disableVoiceModeRevokingConsent()
-        voiceSettings.provider = provider
-        voiceAPIKeyText = ""
-        refreshLocalAvailability()
-        saveVoiceSettings()
+        if voiceSettings.enabled && !voiceSettings.hasCurrentConsent(for: provider) {
+            pendingConsentProvider = provider
+            return
+        }
+        switchProvider(to: provider)
+    }
+
+    var isSwitchingProvider: Bool {
+        pendingConsentProvider.map { $0 != voiceSettings.provider } ?? false
     }
 
     var hasVoiceConsent: Bool {
         voiceSettings.hasCurrentConsent
     }
 
+    /// Voice Mode is switched on but the selected provider is not set up yet.
+    var isVoiceSetupPending: Bool {
+        guard voiceSettings.enabled else { return false }
+        switch voiceSettings.provider {
+        case .appleLocal: return !voiceSettings.isReady || !localAvailability.allowsCapture
+        case .openAI: return !voiceSettings.isReady
+        }
+    }
+
     func acceptVoiceConsent() {
-        voiceSettings.consentVersion = VoiceSettings.currentConsentVersion
-        voiceSettings.consentedAt = Date()
+        voiceSettings.recordConsent(for: voiceSettings.provider)
         saveVoiceSettings()
     }
 
-    /// Turns Voice Mode off and clears the stored consent. Used both by the toggle and by
-    /// the paths that force Voice Mode off because the key is gone or no longer verifies —
-    /// consent must never outlive the enabled state, or re-enabling would skip the sheet.
-    private func disableVoiceModeRevokingConsent() {
-        voiceSettings.enabled = false
-        voiceSettings.consentVersion = nil
-        voiceSettings.consentedAt = nil
+    /// Accepts the disclosure shown for `pendingConsentProvider`, then either completes the
+    /// provider switch (keeping Voice Mode on) or enables Voice Mode for the current provider.
+    func acceptPendingConsent() {
+        guard let provider = pendingConsentProvider else { return }
+        pendingConsentProvider = nil
+        voiceSettings.recordConsent(for: provider)
+        if provider == voiceSettings.provider {
+            saveVoiceSettings()
+            voiceEnabled = true
+        } else {
+            switchProvider(to: provider)
+        }
+    }
+
+    func cancelPendingConsent() {
+        pendingConsentProvider = nil
+    }
+
+    private func switchProvider(to provider: VoiceProvider) {
+        voiceSettings.provider = provider
+        voiceAPIKeyText = ""
+        refreshLocalAvailability()
         saveVoiceSettings()
+    }
+
+    /// Deleting the API key (or losing it from the Keychain) withdraws OpenAI consent and turns
+    /// OpenAI mode off. Apple mode is unaffected. Turning Voice Mode off alone keeps consent.
+    private func withdrawCloudConsent() {
+        if voiceSettings.provider == .openAI { voiceSettings.enabled = false }
+        voiceSettings.revokeConsent()
     }
 
     func verifyVoiceAPIKey() {
@@ -190,6 +229,9 @@ final class SettingsViewModel {
         }
 
         isVerifying = true
+        // A failed key entered while setting up a newly selected provider keeps Voice Mode
+        // pending; only a setup that was working before is switched off.
+        let wasReady = voiceSettings.isReady
 
         Task { @MainActor in
             do {
@@ -207,7 +249,8 @@ final class SettingsViewModel {
                 showStatusMessage(loc("ApiKeyVerifiedKeychain"))
             } catch {
                 voiceSettings.verifiedAt = nil
-                if voiceSettings.provider == .openAI { disableVoiceModeRevokingConsent() }
+                if voiceSettings.provider == .openAI && wasReady { voiceSettings.enabled = false }
+                saveVoiceSettings()
                 showErrorMessage(loc("ApiKeyVerificationFailed", error.localizedDescription))
             }
             isVerifying = false
@@ -221,7 +264,7 @@ final class SettingsViewModel {
             hasSavedVoiceAPIKey = false
             voiceSettings.apiKeySuffix = nil
             voiceSettings.verifiedAt = nil
-            if voiceSettings.provider == .openAI { disableVoiceModeRevokingConsent() }
+            withdrawCloudConsent()
             saveVoiceSettings()
             showStatusMessage(loc("RemovedApiKeyMsg"))
         } catch {
@@ -294,14 +337,15 @@ final class SettingsViewModel {
     func reconcileStoredAPIKey() {
         guard let storedKey = try? apiKeyStore.readAPIKey(), !storedKey.isEmpty else {
             hasSavedVoiceAPIKey = false
-            // Persist only real changes; an untouched install must not gain stored settings.
-            let needsCloudReset = voiceSettings.apiKeySuffix != nil || voiceSettings.verifiedAt != nil ||
-                (voiceSettings.provider == .openAI && (voiceSettings.enabled || voiceSettings.consentVersion != nil))
-            guard needsCloudReset else { return }
+            // Only a key that went missing withdraws consent; OpenAI mode that is still waiting
+            // for its first key stays pending. Persist only real changes; an untouched install
+            // must not gain stored settings.
+            let lostKey = voiceSettings.apiKeySuffix != nil || voiceSettings.verifiedAt != nil
+            guard lostKey else { return }
             voiceSettings.apiKeySuffix = nil
             voiceSettings.verifiedAt = nil
-            if voiceSettings.provider == .openAI { disableVoiceModeRevokingConsent() }
-            else { saveVoiceSettings() }
+            withdrawCloudConsent()
+            saveVoiceSettings()
             return
         }
 

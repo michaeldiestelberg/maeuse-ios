@@ -816,8 +816,7 @@ final class RealtimeVoiceWorkspaceTests: XCTestCase {
         XCTAssertFalse(settings.hasCurrentConsent)
         XCTAssertFalse(settings.isReady)
 
-        settings.consentVersion = VoiceSettings.currentConsentVersion
-        settings.consentedAt = Date()
+        settings.recordConsent(for: .openAI)
 
         XCTAssertTrue(settings.hasCurrentConsent)
         XCTAssertTrue(settings.isReady)
@@ -842,9 +841,8 @@ final class RealtimeVoiceWorkspaceTests: XCTestCase {
 
     // MARK: - Voice consent lifecycle
     //
-    // Consent is tied to the Voice Mode toggle: there is no separate withdrawal action,
-    // so turning Voice Mode off must clear the stored consent. If consent ever outlived
-    // the enabled state, re-enabling would silently skip the disclosure sheet.
+    // OpenAI consent is asked once. Turning Voice Mode off stops capture but keeps consent;
+    // deleting the API key withdraws it.
 
     /// Builds a view model that already has a verified key, then restores whatever was in
     /// UserDefaults when the test finishes.
@@ -869,7 +867,7 @@ final class RealtimeVoiceWorkspaceTests: XCTestCase {
         }
     }
 
-    func testDisablingVoiceModeRevokesConsent() {
+    func testDisablingVoiceModeKeepsConsent() {
         let (viewModel, previous) = makeVoiceReadyViewModel()
         defer { restoreVoiceSettings(previous) }
 
@@ -881,7 +879,8 @@ final class RealtimeVoiceWorkspaceTests: XCTestCase {
         viewModel.voiceEnabled = false
 
         XCTAssertFalse(viewModel.voiceEnabled)
-        XCTAssertFalse(viewModel.hasVoiceConsent, "turning Voice Mode off must revoke consent")
+        XCTAssertFalse(viewModel.voiceSettings.isReady)
+        XCTAssertTrue(viewModel.hasVoiceConsent, "turning Voice Mode off keeps consent")
     }
 
     func testEnablingVoiceModeWithoutConsentDoesNotEnable() {
@@ -895,7 +894,7 @@ final class RealtimeVoiceWorkspaceTests: XCTestCase {
         XCTAssertFalse(viewModel.hasVoiceConsent)
     }
 
-    func testReEnablingAfterDisableRequiresConsentAgain() {
+    func testReEnablingAfterDisableNeedsNoNewConsent() {
         let (viewModel, previous) = makeVoiceReadyViewModel()
         defer { restoreVoiceSettings(previous) }
 
@@ -903,15 +902,9 @@ final class RealtimeVoiceWorkspaceTests: XCTestCase {
         viewModel.voiceEnabled = true
         viewModel.voiceEnabled = false
 
-        // Flipping the switch back on without re-accepting must not re-enable.
-        viewModel.voiceEnabled = true
-        XCTAssertFalse(viewModel.voiceEnabled)
-
-        // Accepting the disclosure again restores it.
-        viewModel.acceptVoiceConsent()
         viewModel.voiceEnabled = true
         XCTAssertTrue(viewModel.voiceEnabled)
-        XCTAssertTrue(viewModel.hasVoiceConsent)
+        XCTAssertTrue(viewModel.voiceSettings.isReady)
     }
 
     func testVoiceSettingsDecodeHapticsDisabled() throws {

@@ -376,15 +376,82 @@ final class LocalVoiceTests: XCTestCase {
         XCTAssertFalse(settings.canEnableVoice)
     }
 
-    func testSameModePreservesConsentButSwitchRequiresSetupAgain() {
+    func testSwitchingModeKeepsVoiceOnAndAsksCloudDisclosureOnce() {
         let settings = SettingsViewModel(availabilityProvider: { .available })
-        settings.acceptVoiceConsent(); settings.voiceEnabled = true
         settings.confirmVoiceMode(.appleLocal)
+        settings.voiceEnabled = true
+        XCTAssertTrue(settings.voiceSettings.isReady)
+
+        settings.confirmVoiceMode(.openAI)
+        XCTAssertEqual(settings.pendingConsentProvider, .openAI)
+        XCTAssertTrue(settings.isSwitchingProvider)
+        XCTAssertEqual(settings.voiceSettings.provider, .appleLocal, "switch waits for the OpenAI disclosure")
+        XCTAssertTrue(settings.voiceSettings.isReady)
+
+        settings.acceptPendingConsent()
+        XCTAssertNil(settings.pendingConsentProvider)
+        XCTAssertEqual(settings.voiceSettings.provider, .openAI)
+        XCTAssertTrue(settings.voiceEnabled, "Voice Mode stays on after switching")
+        XCTAssertFalse(settings.voiceSettings.isReady, "OpenAI still needs a verified key")
+        XCTAssertTrue(settings.isVoiceSetupPending)
+
+        settings.confirmVoiceMode(.appleLocal)
+        XCTAssertNil(settings.pendingConsentProvider, "Apple mode needs no disclosure")
         XCTAssertTrue(settings.voiceSettings.isReady)
         settings.confirmVoiceMode(.openAI)
-        XCTAssertFalse(settings.voiceSettings.isReady)
+        XCTAssertNil(settings.pendingConsentProvider, "OpenAI disclosure is asked only once")
+    }
+
+    func testDecliningCloudDisclosureKeepsLocalModeOn() {
+        let settings = makeLocalSettings()
+        settings.voiceEnabled = true
+        settings.selectProvider(.openAI)
+        settings.cancelPendingConsent()
+        XCTAssertNil(settings.pendingConsentProvider)
+        XCTAssertEqual(settings.voiceSettings.provider, .appleLocal)
+        XCTAssertTrue(settings.voiceSettings.isReady)
+    }
+
+    func testSwitchingWhileDisabledNeitherEnablesNorGrantsCloudConsent() {
+        let settings = SettingsViewModel(availabilityProvider: { .available })
+        settings.selectProvider(.appleLocal)
+        settings.selectProvider(.openAI)
+        XCTAssertNil(settings.pendingConsentProvider)
+        XCTAssertFalse(settings.voiceSettings.enabled)
         XCTAssertFalse(settings.hasVoiceConsent)
-        XCTAssertFalse(settings.canEnableVoice)
+    }
+
+    func testCloudConsentSurvivesTurningVoiceOff() {
+        let settings = makeLocalSettings()
+        settings.voiceEnabled = true
+        settings.selectProvider(.openAI)
+        settings.acceptPendingConsent()
+        settings.voiceEnabled = false
+        XCTAssertTrue(settings.voiceSettings.hasCurrentConsent(for: .openAI))
+    }
+
+    func testRevokingConsentClearsCloudOnlyAndLegacyLocalConsentDoesNotCoverCloud() throws {
+        var settings = VoiceSettings.default
+        settings.recordConsent(for: .openAI)
+        settings.revokeConsent()
+        XCTAssertFalse(settings.hasCurrentConsent(for: .openAI))
+        XCTAssertTrue(settings.hasCurrentConsent(for: .appleLocal))
+        let data = Data(#"{"provider":"appleLocal","enabled":true,"consentVersion":1,"consentedAt":1000}"#.utf8)
+        let local = try JSONDecoder().decode(VoiceSettings.self, from: data)
+        XCTAssertFalse(local.hasCurrentConsent(for: .openAI))
+    }
+
+    func testChooserPreselectsRecommendedCloudUntilAModeIsChosen() {
+        let settings = SettingsViewModel(availabilityProvider: { .available })
+        XCTAssertFalse(settings.hasSelectedVoiceMode)
+        XCTAssertEqual(VoiceSettings.default.provider, .openAI)
+    }
+
+    /// New installs default to OpenAI, so local-mode tests select Apple first.
+    private func makeLocalSettings(_ availability: @escaping () -> LocalVoiceAvailability = { .available }) -> SettingsViewModel {
+        let settings = SettingsViewModel(availabilityProvider: availability)
+        settings.selectProvider(.appleLocal)
+        return settings
     }
 
     func testTechnicalDiagnosisSurvivesVoiceCloseAndCanBeCleared() {
@@ -398,9 +465,9 @@ final class LocalVoiceTests: XCTestCase {
         XCTAssertNil(LocalVoiceDiagnosticStore.shared.displayed)
     }
 
-    func testNewInstallDefaultsToLocalWithoutEnablingCapture() {
+    func testNewInstallDefaultsToRecommendedCloudWithoutEnablingCapture() {
         let settings = VoiceSettings.default
-        XCTAssertEqual(settings.provider, .appleLocal)
+        XCTAssertEqual(settings.provider, .openAI)
         XCTAssertFalse(settings.isReady)
     }
 
@@ -412,7 +479,7 @@ final class LocalVoiceTests: XCTestCase {
     }
 
     func testLocalEnablesWithoutAnyAPIKeyAndPersistsAcrossLaunch() {
-        let vm = SettingsViewModel(availabilityProvider: { .available })
+        let vm = makeLocalSettings()
         vm.acceptVoiceConsent()
         vm.voiceEnabled = true
         XCTAssertTrue(vm.voiceSettings.isReady)
@@ -423,16 +490,18 @@ final class LocalVoiceTests: XCTestCase {
         XCTAssertTrue(reloaded.voiceSettings.isReady)
     }
 
-    func testLocalRequiresConsentEvenWhenAvailable() {
-        let vm = SettingsViewModel(availabilityProvider: { .available })
+    func testLocalEnablesWithoutDisclosure() {
+        let vm = makeLocalSettings()
+        XCTAssertTrue(vm.hasVoiceConsent, "on-device mode shares nothing, so it needs no disclosure")
         vm.voiceEnabled = true
-        XCTAssertFalse(vm.voiceSettings.isReady)
+        XCTAssertTrue(vm.voiceSettings.isReady)
+        XCTAssertFalse(vm.voiceSettings.hasCurrentConsent(for: .openAI))
     }
 
     func testUnavailableLocalCannotEnableAndNeverSelectsCloud() {
         for availability in [LocalVoiceAvailability.needsOS, .deviceNotEligible, .intelligenceDisabled,
                              .modelNotReady, .unsupportedLanguage, .speechUnavailable] {
-            let vm = SettingsViewModel(availabilityProvider: { availability })
+            let vm = makeLocalSettings { availability }
             vm.acceptVoiceConsent()
             vm.voiceEnabled = true
             XCTAssertFalse(vm.voiceSettings.isReady)
@@ -442,7 +511,7 @@ final class LocalVoiceTests: XCTestCase {
 
     func testAvailabilityIsRecheckedWhenEnabling() {
         var availability = LocalVoiceAvailability.available
-        let vm = SettingsViewModel(availabilityProvider: { availability })
+        let vm = makeLocalSettings { availability }
         vm.acceptVoiceConsent()
         availability = .modelNotReady
         vm.voiceEnabled = true
@@ -452,24 +521,8 @@ final class LocalVoiceTests: XCTestCase {
         XCTAssertTrue(vm.voiceSettings.isReady)
     }
 
-    func testChangingProviderRevokesConsentAndRequiresCloudKey() {
-        let vm = SettingsViewModel(availabilityProvider: { .available })
-        vm.acceptVoiceConsent()
-        vm.voiceEnabled = true
-        vm.selectProvider(.openAI)
-        XCTAssertFalse(vm.hasVoiceConsent)
-        XCTAssertFalse(vm.voiceSettings.enabled)
-        XCTAssertFalse(vm.canEnableVoice)
-        vm.acceptVoiceConsent()
-        vm.voiceEnabled = true
-        XCTAssertFalse(vm.voiceSettings.isReady)
-        vm.selectProvider(.appleLocal)
-        XCTAssertFalse(vm.hasVoiceConsent)
-        XCTAssertFalse(vm.voiceSettings.isReady)
-    }
-
     func testMissingCloudKeyDoesNotDisableLocalMode() {
-        let vm = SettingsViewModel(availabilityProvider: { .available })
+        let vm = makeLocalSettings()
         vm.acceptVoiceConsent()
         vm.voiceEnabled = true
         vm.reconcileStoredAPIKey()
@@ -478,9 +531,8 @@ final class LocalVoiceTests: XCTestCase {
 
     func testLocalSettingsRoundTrip() throws {
         var settings = VoiceSettings.default
+        settings.provider = .appleLocal
         settings.enabled = true
-        settings.consentVersion = VoiceSettings.currentConsentVersion
-        settings.consentedAt = Date()
         let decoded = try JSONDecoder().decode(VoiceSettings.self, from: JSONEncoder().encode(settings))
         XCTAssertEqual(decoded.provider, .appleLocal)
         XCTAssertTrue(decoded.isReady)
@@ -1209,6 +1261,7 @@ final class LocalVoiceTests: XCTestCase {
         let settings = SettingsViewModel(availabilityProvider: { .available },
                                          speechAvailabilityProvider: { speechState },
                                          speechModelInstaller: { installs += 1; speechState = .available })
+        settings.selectProvider(.appleLocal)
         await settings.refreshSpeechAvailability()
         XCTAssertEqual(settings.localAvailability, .speechModelMissing)
         XCTAssertTrue(settings.canEnableVoice, "Capture downloads the model on first use")

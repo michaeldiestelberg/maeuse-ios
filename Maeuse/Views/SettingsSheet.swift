@@ -18,7 +18,7 @@ struct SettingsSheet: View {
     @State private var showFilePicker = false
     @State private var showFileExporter = false
     @State private var exportDocument = BackupDocument()
-    @State private var showVoiceConsent = false
+    @State private var consentRequest: VoiceProvider?
     @State private var showModeSelection = false
     @State private var showsDiagnosis = false
     @State private var diagnosisStore = LocalVoiceDiagnosticStore.shared
@@ -99,21 +99,24 @@ struct SettingsSheet: View {
             if phase == .active { viewModel.refreshLocalAvailability() }
         }
         .onChange(of: languageManager.activeLanguageCode) { _, _ in viewModel.refreshLocalAvailability() }
-        .sheet(isPresented: $showModeSelection) {
+        // Switching to OpenAI while Voice Mode is on asks for its disclosure; it can only be
+        // presented once the chooser has closed.
+        .sheet(isPresented: $showModeSelection, onDismiss: { consentRequest = viewModel.pendingConsentProvider }) {
             VoiceModeSelectionView(viewModel: viewModel) { provider in
                 viewModel.confirmVoiceMode(provider)
                 showModeSelection = false
             } onCancel: { showModeSelection = false }
         }
-        .sheet(isPresented: $showVoiceConsent) {
-            VoicePrivacyConsentSheet(provider: viewModel.voiceSettings.provider) {
-                viewModel.acceptVoiceConsent()
-                viewModel.voiceEnabled = true
-                showVoiceConsent = false
+        .sheet(item: $consentRequest) { _ in
+            VoicePrivacyConsentSheet(isSwitching: viewModel.isSwitchingProvider) {
+                viewModel.acceptPendingConsent()
+                consentRequest = nil
             } onCancel: {
-                showVoiceConsent = false
+                viewModel.cancelPendingConsent()
+                consentRequest = nil
             }
         }
+        .onAppear { if consentRequest == nil { consentRequest = viewModel.pendingConsentProvider } }
     }
 
     @ViewBuilder
@@ -375,7 +378,8 @@ struct SettingsSheet: View {
                 get: { viewModel.voiceEnabled },
                 set: { enabled in
                     if enabled && !viewModel.hasVoiceConsent {
-                        showVoiceConsent = true
+                        viewModel.pendingConsentProvider = viewModel.voiceSettings.provider
+                        consentRequest = viewModel.voiceSettings.provider
                     } else {
                         viewModel.voiceEnabled = enabled
                     }
@@ -392,6 +396,14 @@ struct SettingsSheet: View {
             .tint(Color.maeusPrimary)
             .disabled(!viewModel.voiceEnabled && !viewModel.canEnableVoice)
             .accessibilityIdentifier("voice-enable")
+
+            if viewModel.isVoiceSetupPending {
+                Label(loc("VoicePendingSetup"), systemImage: "hourglass")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Color.maeusTextSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("voice-pending-setup")
+            }
 
             Toggle(isOn: Binding(
                 get: { viewModel.voiceSettings.hapticsEnabled },
@@ -563,8 +575,9 @@ struct SettingsSheet: View {
 
 }
 
+/// One-time disclosure for OpenAI mode, which sends voice data to a third party.
 private struct VoicePrivacyConsentSheet: View {
-    let provider: VoiceProvider
+    let isSwitching: Bool
     let onAccept: () -> Void
     let onCancel: () -> Void
 
@@ -572,47 +585,27 @@ private struct VoicePrivacyConsentSheet: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
-                    MouseCoin(size: 72, fill: .maeusCheese) {
+                    MouseCoin(size: 64, fill: .maeusCheese) {
                         Image(systemName: "waveform")
-                            .font(.system(size: 26, weight: .heavy))
+                            .font(.system(size: 24, weight: .heavy))
                             .foregroundStyle(Color.maeusInk)
                     }
                     .frame(maxWidth: .infinity)
 
-                    Text(loc(provider == .appleLocal ? "LocalPrivacyIntro" : "VoicePrivacyIntro"))
-                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                    disclosureRow(icon: "mic.fill", title: loc("VoicePrivacyDataTitle"), body: loc("VoicePrivacyDataDesc"))
+                    disclosureRow(icon: "clock.fill", title: loc("VoicePrivacyRetentionTitle"), body: loc("VoicePrivacyRetentionDesc"))
+                    disclosureRow(icon: "creditcard.fill", title: loc("VoicePrivacyBillingTitle"), body: loc("VoicePrivacyBillingDesc"))
+
+                    Text(loc("VoicePrivacyControl"))
+                        .font(.system(size: 12, weight: .bold, design: .rounded))
                         .foregroundStyle(Color.maeusTextSecondary)
-
-                    if provider == .appleLocal {
-                        disclosureRow(icon: "iphone", title: loc("LocalPrivacyDataTitle"), body: loc("LocalPrivacyDataBody"))
-                        disclosureRow(icon: "waveform", title: loc("LocalPrivacyExperienceTitle"), body: loc("LocalPrivacyExperienceBody"))
-                        disclosureRow(icon: "creditcard", title: loc("LocalPrivacyCostTitle"), body: loc("LocalPrivacyCostBody"))
-                    } else {
-                    disclosureRow(
-                        icon: "mic.fill",
-                        title: loc("VoicePrivacyDataTitle"),
-                        body: loc("VoicePrivacyDataDesc")
-                    )
-
-                    disclosureRow(
-                        icon: "clock.fill",
-                        title: loc("VoicePrivacyRetentionTitle"),
-                        body: loc("VoicePrivacyRetentionDesc")
-                    )
-
-                    disclosureRow(
-                        icon: "creditcard.fill",
-                        title: loc("VoicePrivacyBillingTitle"),
-                        body: loc("VoicePrivacyBillingDesc")
-                    )
-
-                    }
+                        .fixedSize(horizontal: false, vertical: true)
 
                     Link(loc("ReadPrivacyPolicy"), destination: URL(string: "https://xn--muse-loa.app/privacy.html#voice-mode")!)
                         .font(.system(size: 14, weight: .heavy, design: .rounded))
 
                     Button(action: onAccept) {
-                        Text(loc("AgreeEnableVoice"))
+                        Text(loc(isSwitching ? "AgreeSwitchVoice" : "AgreeEnableVoice"))
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(GlassPrimaryButtonStyle())
@@ -660,7 +653,8 @@ struct VoiceModeSelectionView: View {
 
     init(viewModel: SettingsViewModel, onSelect: @escaping (VoiceProvider) -> Void, onCancel: @escaping () -> Void) {
         self.viewModel = viewModel; self.onSelect = onSelect; self.onCancel = onCancel
-        _selection = State(initialValue: viewModel.voiceSettings.provider)
+        // Until a mode is chosen, preselect the recommended one.
+        _selection = State(initialValue: viewModel.hasSelectedVoiceMode ? viewModel.voiceSettings.provider : .openAI)
     }
 
     var body: some View {
@@ -687,7 +681,8 @@ struct VoiceModeSelectionView: View {
                             introduction
                         }
                         LazyVGrid(columns: Array(repeating: GridItem(.flexible(), alignment: .top), count: wide ? 2 : 1), spacing: 18) {
-                            ForEach(VoiceProvider.allCases) { provider in providerCard(provider) }
+                            // Recommended provider first: the cloud mode is far more accurate.
+                            ForEach([VoiceProvider.openAI, .appleLocal]) { provider in providerCard(provider) }
                         }.accessibilityIdentifier("voice-choice-options")
                         Text(loc("VoiceChoiceRemembered")).font(.footnote).foregroundStyle(Color.maeusTextSecondary)
                             .fixedSize(horizontal: false, vertical: true)
@@ -732,29 +727,73 @@ struct VoiceModeSelectionView: View {
     }
 
     private func providerCard(_ provider: VoiceProvider) -> some View {
-        Button { selection = provider } label: {
+        let selected = selection == provider
+        let recommended = provider == .openAI
+        return Button { selection = provider } label: {
             VStack(alignment: .leading, spacing: 10) {
-                HStack(alignment: .top) {
-                    Image(systemName: provider == .appleLocal ? "iphone" : "cloud").accessibilityHidden(true)
-                    Text(loc(provider == .appleLocal ? "VoiceChoiceAppleExperience" : "VoiceChoiceCloudExperience"))
-                        .font(.headline.weight(.heavy)).fixedSize(horizontal: false, vertical: true)
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text(provider.title).font(.headline.weight(.heavy)).fixedSize(horizontal: false, vertical: true)
+                    Text(loc(recommended ? "VoiceRecommended" : "VoiceFree"))
+                        .font(.system(.caption, design: .rounded, weight: .heavy))
+                        .foregroundStyle(recommended ? Color.maeusInk : Color.maeusSuccess)
+                        .padding(.horizontal, 8).padding(.vertical, 3)
+                        .background(recommended ? Color.maeusCheese : Color.maeusSuccess.opacity(0.18), in: Capsule())
                     Spacer(minLength: 4)
-                    Image(systemName: selection == provider ? "checkmark.circle.fill" : "circle").accessibilityHidden(true)
+                    Image(systemName: selected ? "checkmark.circle.fill" : "circle")
+                        .font(.title3)
+                        .foregroundStyle(selected ? Color.maeusForeground : Color.maeusTextTertiary)
+                        .accessibilityHidden(true)
                 }
-                Text(provider.title).font(.subheadline.weight(.semibold))
-                Text(loc(provider == .appleLocal ? "VoiceChoiceAppleBody" : "VoiceChoiceCloudBody"))
-                    .font(.callout).fixedSize(horizontal: false, vertical: true)
-                Text(loc(provider == .appleLocal ? "VoiceChoiceAppleNeeds" : "VoiceChoiceCloudNeeds"))
-                    .font(.caption).foregroundStyle(Color.maeusTextSecondary).fixedSize(horizontal: false, vertical: true)
+                Text(loc(recommended ? "VoiceCloudSummary" : "VoiceAppleSummary"))
+                    .font(.callout.weight(.semibold)).foregroundStyle(Color.maeusTextSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                VStack(alignment: .leading, spacing: 6) {
+                    ForEach(providerPoints(provider), id: \.text) { point in
+                        HStack(alignment: .firstTextBaseline, spacing: 8) {
+                            Image(systemName: point.icon)
+                                .foregroundStyle(point.isCaveat ? Color.orange : Color.maeusTextSecondary)
+                                .frame(width: 18).accessibilityHidden(true)
+                            Text(point.text).fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                }
+                .font(.caption).foregroundStyle(Color.maeusTextSecondary)
                 if provider == .appleLocal && !viewModel.localAvailability.allowsCapture {
                     Label(loc("VoiceChoiceUnavailable"), systemImage: "exclamationmark.circle")
                         .font(.caption.weight(.semibold)).fixedSize(horizontal: false, vertical: true)
                 }
             }.padding(18).frame(maxWidth: .infinity, alignment: .leading)
-            .background(selection == provider ? Color.maeusCheese.opacity(0.2) : Color.maeusSurface, in: RoundedRectangle(cornerRadius: 20))
-            .overlay(RoundedRectangle(cornerRadius: 20).stroke(selection == provider ? Color.maeusPrimaryHover : Color.maeusCardBorder, lineWidth: selection == provider ? 3 : 1.5))
+            // Only selection changes the card's look: the selected card is stamped like the
+            // app's buttons, the other stays flat. "Recommended" is carried by the badge.
+            .background {
+                let shape = RoundedRectangle(cornerRadius: 20, style: .continuous)
+                ZStack {
+                    if selected { shape.fill(Color.maeusInk).offset(x: 3, y: 3) }
+                    shape.fill(selected ? Self.selectedFill : Color.maeusSurface)
+                    shape.stroke(selected ? Self.selectedBorder : Color.maeusSoftBorder, lineWidth: selected ? 2 : 1.5)
+                }
+            }
+            .animation(.easeOut(duration: 0.15), value: selected)
         }.buttonStyle(.plain).accessibilityElement(children: .combine)
-            .accessibilityAddTraits(selection == provider ? .isSelected : [])
+            .accessibilityAddTraits(selected ? .isSelected : [])
             .accessibilityIdentifier("voice-choice-\(provider.rawValue)")
+    }
+
+    private static let selectedFill = Color(light: Color(hex: "FFE9A3"), dark: Color(hex: "4A3B10"))
+    private static let selectedBorder = Color(light: .maeusInk, dark: .maeusCheese)
+
+    private func providerPoints(_ provider: VoiceProvider) -> [(icon: String, text: String, isCaveat: Bool)] {
+        switch provider {
+        case .openAI:
+            return [("scope", loc("VoiceCloudPointAccuracy"), false),
+                    ("waveform", loc("VoiceCloudPointFlow"), false),
+                    ("dollarsign.circle", loc("VoiceCloudPointCost"), false),
+                    ("cloud", loc("VoiceCloudPointPrivacy"), false)]
+        case .appleLocal:
+            return [("exclamationmark.triangle", loc("VoiceApplePointAccuracy"), true),
+                    ("pause.circle", loc("VoiceApplePointFlow"), false),
+                    ("gift", loc("VoiceApplePointCost"), false),
+                    ("iphone", loc("VoiceApplePointPrivacy"), false)]
+        }
     }
 }

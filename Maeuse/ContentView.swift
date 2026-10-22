@@ -221,9 +221,18 @@ struct ContentView: View {
             settingsVM.hasSavedVoiceAPIKey = true
             settingsVM.voiceSettings.apiKeySuffix = "7mQ2"
             settingsVM.voiceSettings.verifiedAt = Date()
-            settingsVM.voiceSettings.consentVersion = VoiceSettings.currentConsentVersion
-            settingsVM.voiceSettings.consentedAt = Date()
+            settingsVM.voiceSettings.recordConsent(for: .openAI)
             settingsVM.voiceSettings.enabled = true
+            settingsVM.isPresented = true
+        case "voice-consent":
+            settingsVM.voiceSettings.provider = .openAI
+            settingsVM.hasSavedVoiceAPIKey = true
+            settingsVM.voiceSettings.apiKeySuffix = "7mQ2"
+            settingsVM.voiceSettings.verifiedAt = Date()
+            settingsVM.voiceSettings.revokeConsent()
+            settingsVM.voiceSettings.enabled = false
+            // Settings presents a pending disclosure as soon as it appears.
+            settingsVM.pendingConsentProvider = .openAI
             settingsVM.isPresented = true
         case "voice-choice":
             settingsVM.isChoosingVoiceMode = true

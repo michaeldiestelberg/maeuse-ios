@@ -1,3 +1,10 @@
+## 1.5.0 (62) — internal TestFlight candidate, 2026-10-23
+- The voice mode chooser recommends OpenAI · Cloud, lists it first and preselects it until a mode is chosen. Each mode shows accuracy, how you speak, cost and privacy side by side, including about $1–2 per 100 dictated expenses for OpenAI and an honest accuracy caveat for Apple. Only the selected card is highlighted; “Recommended” and “Free” are badges.
+- Switching modes keeps Voice Mode on. Switching to OpenAI shows its disclosure first unless it was already accepted (“Not now” keeps the current mode). If the new mode still needs its API key or Apple Intelligence, Voice Mode stays on and Settings says it starts working once setup is complete.
+- Apple mode turns on without a disclosure; only the system microphone and speech recognition prompts remain.
+- The OpenAI disclosure is shorter (what is sent, retention, cost) and is asked once. Turning Voice Mode off stops capture but keeps consent; deleting the API key withdraws it.
+- New installations default to OpenAI with voice off. 151 unit tests and 6 UI tests pass on the iPhone 18 Pro simulator.
+
 ## 1.5.0 (61) — internal TestFlight candidate, 2026-10-21
 - Apple mode reads prices as dictation writes them: “€4.50”, “4,50 €” and “4 Euro 80” are one price each. Before, “Dinner €64” could lose its price, and “Kaffee für 4,50 € und Blumen für 12 €” could give both purchases the same €12.
 - A price said once now belongs to one purchase only, and a purchase price is never mistaken for someone’s share.
