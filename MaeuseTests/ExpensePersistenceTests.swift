@@ -427,6 +427,23 @@ final class ExpenseValidationRegressionTests: XCTestCase {
     }
 }
 
+final class PrivacyManifestRegressionTests: XCTestCase {
+    func testAppPrivacyManifestDeclaresSystemBootTimeForElapsedCaptureTimers() throws {
+        let url = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appending(path: "Maeuse/PrivacyInfo.xcprivacy")
+        let data = try Data(contentsOf: url)
+        let plist = try XCTUnwrap(PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any])
+        let types = try XCTUnwrap(plist["NSPrivacyAccessedAPITypes"] as? [[String: Any]])
+        let boot = types.first { $0["NSPrivacyAccessedAPIType"] as? String == "NSPrivacyAccessedAPICategorySystemBootTime" }
+        XCTAssertEqual(boot?["NSPrivacyAccessedAPITypeReasons"] as? [String], ["35F9.1"],
+            "Apple capture uses ProcessInfo.systemUptime for endpoint timing; ITMS-91053 rejects a missing reason")
+        let defaults = types.first { $0["NSPrivacyAccessedAPIType"] as? String == "NSPrivacyAccessedAPICategoryUserDefaults" }
+        XCTAssertEqual(defaults?["NSPrivacyAccessedAPITypeReasons"] as? [String], ["CA92.1"])
+    }
+}
+
 private struct RestoreQueryProbe: View {
     @Query private var expenses: [Expense]
     let changed: ([String]) -> Void
