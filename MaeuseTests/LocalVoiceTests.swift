@@ -1567,6 +1567,36 @@ final class LocalVoiceTests: XCTestCase {
         XCTAssertNil(services.last?.workspaceContext)
     }
 
+    func testMicrophonePurposeStringsDiscloseOpenAISharingAndOnDeviceAppleMode() throws {
+        let en = try purposeStrings(language: "en")
+        let de = try purposeStrings(language: "de")
+        XCTAssertTrue(en["NSMicrophoneUsageDescription"]?.contains("OpenAI") == true)
+        XCTAssertTrue(en["NSMicrophoneUsageDescription"]?.localizedCaseInsensitiveContains("Apple") == true)
+        XCTAssertTrue(en["NSMicrophoneUsageDescription"]?.localizedCaseInsensitiveContains("iPhone") == true)
+        XCTAssertTrue(de["NSMicrophoneUsageDescription"]?.contains("OpenAI") == true)
+        XCTAssertTrue(de["NSMicrophoneUsageDescription"]?.localizedCaseInsensitiveContains("Apple") == true)
+        XCTAssertTrue(en["NSSpeechRecognitionUsageDescription"]?.localizedCaseInsensitiveContains("on-device") == true)
+        XCTAssertTrue(de["NSSpeechRecognitionUsageDescription"]?.localizedCaseInsensitiveContains("lokal") == true)
+    }
+
+    private func purposeStrings(language: String) throws -> [String: String] {
+        let url = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appending(path: "Maeuse/\(language).lproj/InfoPlist.strings")
+        let text = try String(contentsOf: url, encoding: .utf8)
+        var result: [String: String] = [:]
+        for match in text.split(separator: "\n") {
+            guard let eq = match.range(of: "\" = \"") else { continue }
+            let key = String(match[match.index(after: match.startIndex)..<eq.lowerBound])
+            var value = String(match[eq.upperBound...])
+            if value.hasSuffix("\";") { value.removeLast(2) }
+            result[key] = value
+        }
+        XCTAssertFalse(result.isEmpty, "Expected InfoPlist.strings at \(url.path)")
+        return result
+    }
+
     private func draft(_ id: String, _ title: String, _ amount: Double) -> VoiceExpenseDraft {
         VoiceExpenseDraft(id: id, title: title, amount: amount, dateISO: "2026-09-27", splitMode: .percent,
                           splitValue: 50, confidence: 1, missingFields: [])
