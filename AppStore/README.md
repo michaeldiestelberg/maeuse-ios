@@ -1,6 +1,6 @@
 # Mäuse App Store Launch Package
 
-This folder contains the product-page copy, compliance answers, reviewer notes, screenshot plan, and final submission checklist for Mäuse 1.4.0.
+This folder contains the product-page copy, compliance answers, reviewer notes, screenshot plan, and final submission checklist for Mäuse 1.5.0.
 
 ## App record
 
@@ -8,7 +8,7 @@ This folder contains the product-page copy, compliance answers, reviewer notes, 
 - Bundle ID: `com.michaeldiestelberg.maeuse`
 - Platform: iOS, iPhone only
 - Minimum OS: iOS 17.0
-- Version: `1.4.0`
+- Version: `1.5.0`
 - Primary language: German
 - Additional localization: English (U.S.)
 - Primary category: Finance
@@ -37,4 +37,4 @@ Do not place a real OpenAI API key in this repository. Add a temporary reviewer 
 
 ## Current approval package
 
-See `1.4.0-approval.md` for all proposed App Store copy and screenshots. Do not upload that copy or submit to App Review until the account holder approves it.
+See `1.5.0-approval.md` for all proposed App Store copy, the screenshot assessment, and reviewer notes. Do not upload that copy or submit to App Review until the account holder approves it. The 1.4.0 package remains in `1.4.0-approval.md` as history.

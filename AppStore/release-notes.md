@@ -13,25 +13,31 @@ When shipping a new marketing version:
 
 ---
 
-## 1.5.0 — TestFlight preview
+## 1.5.0 — proposed App Store release
 
-These notes describe the beta. The 1.4.0 App Review submission and public website remain unchanged until the public release is ready.
+Paste into App Store Connect for English (U.S.) and German. If version 1.4.0 never went live, prepend the 1.4.0 notes below so people upgrading from 1.3.0 see both.
 
-### English
+### English (U.S.)
 
-Free voice capture on your iPhone
-Choose Apple in Voice Mode settings to use on-device speech recognition and Apple Foundation Models, with no API key or usage fees. Your voice and expense processing stay on your iPhone. Requires iOS 26 or later, a compatible iPhone, Apple Intelligence enabled, and downloaded language resources.
+On-device Voice Mode
+Dictate expenses with Apple on your iPhone — no API key and no usage fees. Your voice stays on the device. OpenAI is still there if you want continuous capture with your own API account.
 
-Choose how you dictate
-Apple mode works one short phrase at a time: dictate, tap Process phrase, review your drafts, and record more to add or correct expenses. The optional OpenAI mode keeps continuous capture with your own API account. Setup explains the differences in privacy, availability, experience, and costs before you choose.
+One expense at a time
+In Apple mode, say one expense, check the draft, and save. Then it listens for the next one. Speak a correction if something is wrong. If you name two priced purchases at once, Mäuse asks for them one after the other.
+
+Clearer choice, same private ledger
+A setup screen compares privacy, accuracy, and cost before you start. Manual entry, backups, and your expenses on the iPhone are unchanged.
 
 ### German
 
-Kostenlose Spracherfassung auf deinem iPhone
-Wähle Apple in den Sprachmodus-Einstellungen für lokale Spracherkennung und Apple Foundation Models – ohne API-Schlüssel und ohne Nutzungsgebühren. Deine Stimme und die Verarbeitung deiner Ausgaben bleiben auf deinem iPhone. Erfordert iOS 26 oder neuer, ein kompatibles iPhone, aktiviertes Apple Intelligence und geladene Sprachressourcen.
+Sprachmodus auf dem iPhone
+Diktiere Ausgaben mit Apple auf deinem iPhone – ohne API-Schlüssel und ohne Nutzungsgebühren. Deine Stimme bleibt auf dem Gerät. OpenAI bleibt optional, wenn du fortlaufend diktieren möchtest, mit deinem eigenen API-Konto.
 
-Wähle, wie du diktierst
-Der Apple-Modus arbeitet mit kurzen Diktaten: sprechen, auf „Verarbeiten“ tippen, Entwürfe prüfen und weiter diktieren, um Ausgaben hinzuzufügen oder zu korrigieren. Der optionale OpenAI-Modus bietet weiterhin fortlaufende Erfassung über dein eigenes API-Konto. Die Einrichtung erklärt Unterschiede bei Datenschutz, Verfügbarkeit, Bedienung und Kosten.
+Eine Ausgabe nach der anderen
+Im Apple-Modus sagst du eine Ausgabe, prüfst den Entwurf und speicherst. Danach hört Mäuse die nächste. Korrekturen einfach vorsprechen. Zwei bezahlte Einkäufe in einem Satz fragt Mäuse nacheinander ab.
+
+Klarere Wahl, gleiches privates Haushaltsbuch
+Ein Einrichtungsbildschirm vergleicht Datenschutz, Genauigkeit und Kosten, bevor du startest. Manuelle Eingabe, Backups und deine Ausgaben auf dem iPhone bleiben unverändert.
 
 ---
 

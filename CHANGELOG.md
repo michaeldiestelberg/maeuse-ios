@@ -1,3 +1,16 @@
+## 1.5.0 (64) — proposed App Store release, 2026-10-23
+
+Consolidates Apple on-device Voice Mode and related changes tested in 1.5.0 builds 49–64 since 1.4.0 (48). Candidate build 64 is the intended App Store binary; this entry is for account-holder review and is not a submission.
+
+- Optional **Apple · On device** Voice Mode: on-device speech recognition and Apple Foundation Models, no API key, no usage fees, no cloud fallback. Audio stays on the iPhone. Requires iOS 26+, a compatible device, Apple Intelligence, and downloaded language resources.
+- Apple mode works one expense at a time: say it, check the draft, save; the screen then listens for the next one. Several priced purchases in one sentence are asked one after another.
+- Optional **OpenAI · Cloud** remains the recommended, more accurate continuous-capture mode with the user’s own API key. A setup screen compares privacy, accuracy, and cost. Switching modes keeps Voice Mode on.
+- OpenAI disclosure is asked once. Turning Voice Mode off stops capture but keeps that consent; deleting the API key withdraws it. Apple mode has no disclosure.
+- Month review, onboarding, and voice screens adapt to wide, short, and landscape windows. The expense-editor delete confirmation is a centred alert.
+- Backups, manual entry, and local expense storage are unchanged.
+
+No version or build bump. App Store copy is in `AppStore/1.5.0-approval.md`. Status: awaiting account-holder approval; do not push to `main` for this package.
+
 ## 1.5.0 (64) — internal TestFlight candidate, 2026-10-23
 Apple mode now handles one expense at a time.
 - Say one expense, check the draft, save it. The screen then clears, shows “Saved: … · €…” and listens for the next one. **Done** closes the session; saved expenses are already in the list.

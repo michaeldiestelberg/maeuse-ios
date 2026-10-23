@@ -21,9 +21,9 @@ Build 58 adapts month review, onboarding and voice drafts to the available windo
 
 | | |
 | --- | --- |
-| Version | 1.5.0 (build 61) |
+| Version | 1.5.0 (build 64) |
 | Platform | iPhone · iOS 17 or later |
-| Status | Internal TestFlight candidate; Xcode Cloud distribution pending |
+| Status | Proposed App Store candidate; package awaiting account-holder review |
 | Languages | English and German |
 
 Version 1.5.0 adds **Apple · On device** to Voice Mode: local Apple speech recognition and Foundation Models, with no API key, usage fees, or cloud fallback. Choose a provider in Settings before enabling Voice Mode. Apple mode requires iOS 26+, a compatible iPhone, enabled Apple Intelligence, and downloaded model/language resources.
@@ -119,7 +119,7 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
 The Xcode project is the source of truth for both version values:
 
 - `MARKETING_VERSION` is the user-facing version (`1.5.0`).
-- `CURRENT_PROJECT_VERSION` is the App Store Connect build number (`56`).
+- `CURRENT_PROJECT_VERSION` is the App Store Connect build number (`64`).
 
 Use `scripts/bump-version.sh` before creating a new archive. See [RELEASING.md](RELEASING.md) for the full release workflow and [CHANGELOG.md](CHANGELOG.md) for user-facing release notes.
 

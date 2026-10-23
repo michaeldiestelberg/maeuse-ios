@@ -10,7 +10,7 @@ Expense tracker for couples
 
 ## Promotional text
 
-Meet the new Voice Mode: clearer expense drafts, easy spoken corrections, and no separate transcription charges. Built for shared expenses and separate accounts.
+Dictate expenses on your iPhone for free, or keep OpenAI for continuous capture. Review every draft before it is saved. Built for shared expenses and separate accounts.
 
 ## Description
 
@@ -33,9 +33,13 @@ Open a new expense straight from a Home Screen or Lock Screen widget, the Lock S
 
 OR JUST SAY IT
 
-Optional Voice Mode turns what you say into one or more expense drafts using GPT-Realtime-2.1. Review drafts in a compact list, correct them by voice, and expand “What I understood” to see your requests and corrections in order. Animated feedback shows when Mäuse is listening or processing. Nothing is added to your expenses until you tap Save.
+Optional Voice Mode turns what you say into expense drafts you review before saving.
 
-Voice capture works in one session, without a separate transcription service or its additional charges.
+Choose Apple · On device to dictate on your iPhone with on-device speech recognition and Apple Foundation Models — no API key, no usage fees, and audio that never leaves the device. Say one expense, check the draft, save, and continue. Requires iOS 26 or later, a compatible iPhone, Apple Intelligence, and downloaded language resources.
+
+Or choose OpenAI · Cloud for continuous capture with GPT-Realtime-2.1 and your own API key. Review drafts in a compact list, correct them by voice, and expand “What I understood” to see your requests and corrections in order. Animated feedback shows when Mäuse is listening or processing.
+
+Nothing is added to your expenses until you tap Save. OpenAI mode sends microphone audio, spoken expense details, and the current voice drafts to OpenAI during a session, after you consent. OpenAI API usage charges may apply.
 
 PRIVATE BY DEFAULT
 
@@ -44,14 +48,15 @@ PRIVATE BY DEFAULT
 • No advertising or cross-app tracking
 • Export and restore a portable JSON backup
 • Manual entry works offline
+• Apple Voice Mode also works offline after the speech model is downloaded
 
-Optional Voice Mode requires your own compatible OpenAI API key. Only during a voice session, and after you consent, microphone audio, spoken expense details, and the current voice drafts are sent directly to OpenAI. OpenAI API usage charges may apply.
+OpenAI Voice Mode requires your own compatible OpenAI API key. Apple Voice Mode does not. Manual entry works without a key, microphone access, or internet connection.
 
 Enjoy Dark Mode, or choose light or system appearance.
 
 ## Keywords
 
-shared,bills,split,budget,partner,household,money,voice,widget,reconcile,settle,spending
+shared,bills,split,budget,partner,household,money,voice,widget,reconcile,settle,spending,dictate
 
 ## Screenshot captions
 

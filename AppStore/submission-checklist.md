@@ -1,5 +1,26 @@
 # Mäuse release checklist
 
+## 1.5.0 (64) — proposed App Store candidate
+
+Prepared 23 October 2026 for account-holder review. **Do not submit, do not push to `main`, do not bump the version** until explicitly approved.
+
+- [x] `main` is `0c7aa0d34eebfdb316f57e1a39d3b9305d3c5fa5` (“Apple mode: one expense at a time; prepare build 64”).
+- [x] Resolved version: `MARKETING_VERSION` 1.5.0, `CURRENT_PROJECT_VERSION` 64. Version was **not** bumped for this package.
+- [x] GitHub commit status **Maeuse | Default** for `0c7aa0d` succeeded (2026-10-23 08:21:38 UTC). Confirm in App Store Connect that processed build **1.5.0 (64)** is the binary from that commit.
+- [x] Release review written: `Review/1.5.0-release-review.md`. No blockers. Should-fix S1 (microphone purpose string) is on `cursor/mic-purpose-string-5f1a` and needs a new build if taken.
+- [x] English/German What’s New, metadata, review notes, privacy answers, and compliance notes drafted in this package and `1.5.0-approval.md`.
+- [x] OpenAI Realtime retention/training rechecked 23 October 2026 (no training by default, 30-day abuse monitoring).
+- [x] Screenshot assessment: reshoot **04-settings** (EN+DE) before upload; 01–03 and 05 can stay. See `1.5.0-approval.md`.
+- [ ] Account holder approves the exact copy and screenshot plan in `1.5.0-approval.md`.
+- [ ] Confirm 1.4.0 (48) status in App Store Connect. If still Waiting for Review, replace that version with 1.5.0 (64) rather than running two reviews. If 1.4.0 never went live, prepend the 1.4.0 What’s New.
+- [ ] Existing dedicated App Review credential confirmed active and compatible with GPT-Realtime-2.1.
+- [ ] On device: Apple-mode checks in `1.5.0-testflight.md` (speech, model download, one-expense flow, interruptions).
+- [ ] Re-shoot Settings screenshots in EN and DE; frame with `scripts/frame-app-store-screenshots.swift`; confirm no real API key.
+- [ ] Privacy and support website wording from `1.5.0-website-updates.md` is published **with** the 1.5.0 release, not before.
+- [ ] Approved copy saved on the 1.5.0 version in App Store Connect; build 64 attached; **Manual Release**.
+- [ ] Version 1.5.0 submitted to App Review only after explicit account-holder approval.
+- [ ] After the submitted commit is on `main`, retag `v1.5.0` to that commit (current tag points at build 49).
+
 ## 1.5.0 (64) — internal TestFlight only
 
 - [x] Account holder requested Apple mode as one expense at a time, the centred delete confirmation and local diagnosis in the Voice Mode card, as a new TestFlight build (October 23, 2026).

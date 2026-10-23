@@ -5,7 +5,7 @@ Mäuse follows Apple's two-part versioning model. The Xcode project is the sourc
 - `MARKETING_VERSION` is the user-facing `major.minor.patch` version.
 - `CURRENT_PROJECT_VERSION` is the App Store Connect build number. Keep it aligned with (or ahead of) builds already on App Store Connect, and with Xcode Cloud → Settings → Build Number → **Next Build Number**.
 
-App Store live: **1.3.0 (32)**. Versions `1.2.1` and `1.3.1` shipped only to TestFlight. The next public release is **1.4.0 (48)**, containing the user-tested behavior of 1.3.1 (47). App Store copy and submission require the account holder’s approval.
+App Store live at the last repo record: **1.3.0 (32)**. Version `1.4.0 (48)` was submitted to App Review on 27 September 2026 (Manual Release); confirm in App Store Connect whether it is live or still in review. Versions `1.2.1` and `1.3.1` shipped only to TestFlight. The next public release prepared in-repo is **1.5.0 (64)**. App Store copy and submission require the account holder’s approval. Do not push to `main` to prepare that package: a push to `main` starts Xcode Cloud.
 
 ## 1. Choose the version change
 
