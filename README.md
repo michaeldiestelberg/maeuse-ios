@@ -11,7 +11,7 @@
 
 ## On-device speech and review fixes
 
-Build 64 turns Apple mode into one expense at a time: say it, check the draft, save, and the screen clears for the next one. Several priced purchases in one sentence are no longer guessed at. Build 61 makes Apple mode read dictated prices reliably (“€4.50”, “4 Euro 80”), keeps one spoken price to one purchase, understands shares like “my partner pays everything” or “just for me”, never deletes an expense unless asked, and retries a failed phrase once. Build 60 floats the capture buttons over the list again, shortens the Apple voice settings and makes Save in Apple mode save directly once speaking is done. Build 59 moves Apple voice capture to Apple's iOS 26 SpeechAnalyzer and SpeechTranscriber. A missing speech model for the app language downloads in the app, from Settings or on the first capture, instead of being a dead end. It also fixes the 1.4 upgrade selecting OpenAI, overlapping prices, unreadable contributions, weekday dates, the silent-microphone restart loop and background processing, and improves VoiceOver and the mode chooser on short screens. Real speech recognition and the model download still need a physical iPhone check.
+Build 65 is the proposed App Store candidate: iPhone Duo layouts (month totals beside the list on the wide inner screen), Apple mode one expense at a time, and the review fixes (privacy manifest, OpenAI consent v2, microphone purpose string, isolated voice Save). Build 64 turned Apple mode into one expense at a time: say it, check the draft, save, and the screen clears for the next one. Several priced purchases in one sentence are no longer guessed at. Build 61 makes Apple mode read dictated prices reliably (“€4.50”, “4 Euro 80”), keeps one spoken price to one purchase, understands shares like “my partner pays everything” or “just for me”, never deletes an expense unless asked, and retries a failed phrase once. Build 60 floats the capture buttons over the list again, shortens the Apple voice settings and makes Save in Apple mode save directly once speaking is done. Build 59 moves Apple voice capture to Apple's iOS 26 SpeechAnalyzer and SpeechTranscriber. A missing speech model for the app language downloads in the app, from Settings or on the first capture, instead of being a dead end. It also fixes the 1.4 upgrade selecting OpenAI, overlapping prices, unreadable contributions, weekday dates, the silent-microphone restart loop and background processing, and improves VoiceOver and the mode chooser on short screens. Real speech recognition and the model download still need a physical iPhone check.
 
 ## Adaptive iPhone layouts
 
@@ -21,12 +21,12 @@ Build 58 adapts month review, onboarding and voice drafts to the available windo
 
 | | |
 | --- | --- |
-| Version | 1.5.0 (build 61) |
+| Version | 1.5.0 (build 65) |
 | Platform | iPhone · iOS 17 or later |
-| Status | Internal TestFlight candidate; Xcode Cloud distribution pending |
+| Status | Proposed App Store candidate; bump PR starts Cloud for 65; package awaiting account-holder review |
 | Languages | English and German |
 
-Version 1.5.0 adds **Apple · On device** to Voice Mode: local Apple speech recognition and Foundation Models, with no API key, usage fees, or cloud fallback. Choose a provider in Settings before enabling Voice Mode. Apple mode requires iOS 26+, a compatible iPhone, enabled Apple Intelligence, and downloaded model/language resources.
+Version 1.5.0 adds **iPhone Duo** layouts (month totals beside the expense list on the unfolded inner screen) and **Apple · On device** Voice Mode: local Apple speech recognition and Foundation Models, with no API key, usage fees, or cloud fallback. Choose a provider in Settings before enabling Voice Mode. Apple mode requires iOS 26+, a compatible iPhone, enabled Apple Intelligence, and downloaded model/language resources.
 
 Build 51 gives Apple mode one microphone control and automatically processes phrases after quiet speech pauses. The microphone visibly pauses during processing and resumes afterward unless you chose to pause. Draft cards, total, and Save stay familiar; transcript details are collapsed. Save during recording first finishes the phrase for review, then a second Save commits reviewed drafts. The build 50 false-interruption fix is retained. Offline speech, endpoint timing, and Apple model inference still need verification on an eligible physical iPhone.
 
@@ -119,7 +119,7 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
 The Xcode project is the source of truth for both version values:
 
 - `MARKETING_VERSION` is the user-facing version (`1.5.0`).
-- `CURRENT_PROJECT_VERSION` is the App Store Connect build number (`56`).
+- `CURRENT_PROJECT_VERSION` is the App Store Connect build number (`65` after the bump PR merges).
 
 Use `scripts/bump-version.sh` before creating a new archive. See [RELEASING.md](RELEASING.md) for the full release workflow and [CHANGELOG.md](CHANGELOG.md) for user-facing release notes.
 

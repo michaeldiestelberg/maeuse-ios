@@ -5,8 +5,8 @@ TestFlight is strongly recommended before App Store submission, especially for m
 ## Build 49 / 1.5.0 focus
 
 - Settings → Voice Mode → Apple · On device → Enable. No OpenAI key should be needed. No disclosure should appear; grant microphone/speech recognition access.
-- With Apple Intelligence and speech resources already downloaded, enable Airplane Mode. Dictate “Coffee four euros fifty and flowers twelve euros yesterday”, tap Process phrase, and check both amounts, dates, and default 50% shares. Try the equivalent German request with the app in German.
-- Record more to correct an amount, give a fixed partner euro share or a percentage, remove a draft by voice, and answer a missing-price question. Review the values before saving.
+- With Apple Intelligence and speech resources already downloaded, enable Airplane Mode. Dictate one expense (“Coffee for 4.50 euros”), check the draft, save, and confirm it listens for the next. Try the equivalent German request with the app in German.
+- Say two priced purchases in one sentence; the app should ask for them one after the other. Tap the microphone to correct a draft in review; ✕ discards it. Review values before saving.
 - Deny microphone/speech permission; disable Apple Intelligence; try an unsupported device/language. The app must explain why local capture is unavailable and must never switch to OpenAI.
 - Close during recognition/processing; remove a draft while processing; interrupt capture with a call, Siri, Bluetooth change, or backgrounding. Preserve previous drafts and ignore stale callbacks.
 - With voice on, switch to OpenAI and back. Voice stays on: the first switch to OpenAI shows its disclosure (Not now keeps Apple), switching to Apple shows none. Without a verified key, Settings shows the pending-setup note and the mic button stays hidden until the key verifies.
@@ -14,7 +14,7 @@ TestFlight is strongly recommended before App Store submission, especially for m
 
 ### Build 49 — Deutsch
 
-Wähle Einstellungen → Sprachmodus → Apple · Auf dem Gerät und aktiviere den Modus ohne OpenAI-Schlüssel. Prüfe den Hinweis, erlaube Mikrofon und Spracherkennung und teste nach dem Laden aller Apple-Ressourcen im Flugmodus. Diktiere „Kaffee vier Euro fünfzig und Blumen zwölf Euro gestern“, tippe auf „Verarbeiten“ und prüfe beide Beträge, Daten und die Aufteilung. Teste Korrekturen, feste Partnerbeträge, Prozente, fehlende Preise und das Entfernen von Entwürfen. Prüfe auch verweigerte Berechtigungen, deaktiviertes Apple Intelligence, ungeeignete Geräte, Anrufe/Siri, Bluetooth-Wechsel und das Schließen während der Verarbeitung. Es darf niemals automatisch zu OpenAI gewechselt werden. Beim Anbieterwechsel muss der Modus ausgeschaltet und eine neue Einwilligung verlangt werden.
+Wähle Einstellungen → Sprachmodus → Apple · Auf dem Gerät und aktiviere den Modus ohne OpenAI-Schlüssel. Es erscheint kein Einwilligungshinweis; erlaube Mikrofon und Spracherkennung. Nach dem Laden der Sprachressourcen im Flugmodus eine Ausgabe diktieren (z. B. „Kaffee für 4,50 €“), den Entwurf prüfen und speichern; danach hört Mäuse die nächste. Zwei bezahlte Einkäufe in einem Satz sollen nacheinander abgefragt werden, nicht geraten. Teste Korrekturen per Mikrofon, das Verwerfen mit ✕ und Fertig. Prüfe auch verweigerte Berechtigungen, deaktiviertes Apple Intelligence, ungeeignete Geräte, Anrufe/Siri, Bluetooth-Wechsel und das Schließen während der Verarbeitung. Es darf niemals automatisch zu OpenAI gewechselt werden. Beim Wechsel zu OpenAI bleibt der Sprachmodus an; die OpenAI-Einwilligung erscheint einmal, sofern sie nicht schon erteilt wurde.
 
 ## Build 46 focus
 

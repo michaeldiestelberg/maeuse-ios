@@ -1,3 +1,12 @@
+## 1.5.0 (65) — proposed App Store release, 2026-10-23
+
+Consolidates Apple on-device Voice Mode, iPhone Duo layouts, and related changes tested in 1.5.0 builds 49–64 since 1.4.0 (48), plus the review fixes merged in `398bdf7`. Candidate binary is **65** (bump PR `cursor/bump-build-65-5f1a`). This entry is for account-holder review and is not a submission.
+
+- **iPhone Duo:** On the unfolded inner screen, month totals sit beside the expense list. Welcome, Settings, and OpenAI Voice Mode use the extra width too.
+- **On-device Voice Mode:** Dictate expenses with Apple on your iPhone — no API key and no usage fees. Your voice stays on the device. OpenAI is still there if you want continuous capture with your own API account.
+
+The version bump to 65 is a separate PR. App Store copy is in `AppStore/1.5.0-approval.md`. Status: awaiting account-holder approval; do not push this package to `main`.
+
 ## 1.5.0 (64) — internal TestFlight candidate, 2026-10-23
 Apple mode now handles one expense at a time.
 - Say one expense, check the draft, save it. The screen then clears, shows “Saved: … · €…” and listens for the next one. **Done** closes the session; saved expenses are already in the list.

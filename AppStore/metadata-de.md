@@ -10,7 +10,7 @@ Ausgaben-Tracker für Paare
 
 ## Werbetext
 
-Der neue Sprachmodus: übersichtliche Entwürfe, einfache Korrekturen per Sprache und keine separaten Transkriptionsgebühren. Gemeinsame Kosten, getrennte Konten.
+Jetzt auf iPhone Duo: Summen neben der Liste auf dem Innenbildschirm. Kostenlos diktieren oder OpenAI. Jeden Entwurf prüfen. Gemeinsame Kosten, getrennte Konten.
 
 ## Beschreibung
 
@@ -26,6 +26,7 @@ FÜR ZWEI GEMACHT
 • Prozentual aufteilen oder den genauen Partneranteil eintragen
 • Monatssummen, Partneranteil und aktuellen Saldo auf einen Blick sehen
 • Einfach zwischen vergangenen und kommenden Monaten wechseln
+• Auf dem iPhone Duo zeigt der aufgeklappte Innenbildschirm Monatssummen neben der Ausgabenliste
 
 ERFASSEN, BEVOR ES VERGESSEN IST
 
@@ -33,9 +34,13 @@ Startet eine neue Ausgabe direkt über ein Widget auf dem Home- oder Sperrbildsc
 
 ODER EINFACH SAGEN
 
-Der optionale Sprachmodus verwandelt eure gesprochenen Angaben mit GPT-Realtime-2.1 in einen oder mehrere Ausgabenentwürfe. Prüft sie in einer kompakten Liste, korrigiert sie per Sprache und seht unter „So habe ich dich verstanden“ eure Anfragen und Korrekturen in der richtigen Reihenfolge. Animationen zeigen, wann Mäuse zuhört oder eine Anfrage verarbeitet. Erst wenn ihr auf Speichern tippt, werden die Ausgaben übernommen.
+Der optionale Sprachmodus verwandelt Gesprochenes in Ausgabenentwürfe, die ihr vor dem Speichern prüft.
 
-Die Spracheingabe funktioniert in einer Sitzung, ohne separaten Transkriptionsdienst und dessen zusätzliche Gebühren.
+Wählt Apple · Auf dem Gerät, um auf dem iPhone zu diktieren – mit lokaler Spracherkennung und Apple Foundation Models, ohne API-Schlüssel, ohne Nutzungsgebühren, und Audio, das das Gerät nicht verlässt. Sagt eine Ausgabe, prüft den Entwurf, speichert, und macht weiter. Erfordert iOS 26 oder neuer, ein kompatibles iPhone, Apple Intelligence und geladene Sprachressourcen.
+
+Oder wählt OpenAI · Cloud für fortlaufende Erfassung mit GPT-Realtime-2.1 und eurem eigenen API-Schlüssel. Prüft Entwürfe in einer kompakten Liste, korrigiert per Sprache und seht unter „So habe ich dich verstanden“ eure Anfragen und Korrekturen. Animationen zeigen, wann Mäuse zuhört oder eine Anfrage verarbeitet.
+
+Erst wenn ihr auf Speichern tippt, werden die Ausgaben übernommen. Der OpenAI-Modus sendet während einer Sitzung und nach eurer Zustimmung Mikrofon-Audio, gesprochene Ausgabendetails und die aktuellen Sprachentwürfe an OpenAI. Für die Nutzung der OpenAI-API können Kosten anfallen.
 
 PRIVAT VON ANFANG AN
 
@@ -44,14 +49,15 @@ PRIVAT VON ANFANG AN
 • Keine Werbung und kein App-übergreifendes Tracking
 • Backup als JSON-Datei exportieren und wiederherstellen
 • Manuelle Erfassung funktioniert offline
+• Der Apple-Sprachmodus funktioniert nach dem Laden des Sprachmodells ebenfalls offline
 
-Der optionale Sprachmodus erfordert einen eigenen kompatiblen OpenAI-API-Schlüssel. Nur während einer Sprachsitzung und nach eurer Zustimmung werden Mikrofon-Audio, gesprochene Ausgabendetails und die aktuellen Sprachentwürfe direkt an OpenAI gesendet. Für die Nutzung der OpenAI-API können Kosten anfallen.
+Der OpenAI-Sprachmodus erfordert einen eigenen kompatiblen OpenAI-API-Schlüssel. Der Apple-Sprachmodus nicht. Die manuelle Eingabe funktioniert ohne Schlüssel, Mikrofonzugriff oder Internetverbindung.
 
 Mäuse unterstützt Dark Mode sowie ein helles oder systemweites Erscheinungsbild.
 
 ## Schlüsselwörter
 
-teilen,rechnungen,budget,gemeinsam,partner,haushalt,geld,sprache,widget,abrechnung,schulden
+teilen,rechnungen,budget,gemeinsam,partner,haushalt,geld,sprache,widget,abrechnung,schulden,duo
 
 ## Screenshot-Texte
 

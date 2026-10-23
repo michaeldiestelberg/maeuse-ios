@@ -1,6 +1,8 @@
 # App Store Screenshot Set
 
-For 1.4.0, scenes 01–04 are fresh captures from an isolated iPhone 18 Pro Max simulator running iOS 27, using synthetic data. Framed output is 1320×2868. Provide the same five scenes in English and German. Scene 05 is retained from 1.3.0 because the widget UI is unchanged.
+For 1.4.0, scenes 01–04 were captured from an isolated iPhone 18 Pro Max simulator running iOS 27, using synthetic data. Framed output is 1320×2868. Provide the same five scenes in English and German. Scene 05 is retained from 1.3.0 because the widget UI is unchanged.
+
+For **1.5.0 (65)**, reshoot **04-settings** in both languages so it shows the Voice Mode provider row (OpenAI · Cloud or Apple · On device, plus Change) and the current toggle subtitle. Scenes 01–03 and 05 still represent the submitted UI (OpenAI Voice Mode remains the recommended capture screen). See `1.5.0-approval.md`.
 
 ## Order
 
@@ -22,7 +24,7 @@ For 1.4.0, scenes 01–04 are fresh captures from an isolated iPhone 18 Pro Max 
 4. `04-settings`
    - English caption: Your expenses. Your control.
    - German caption: Eure Ausgaben. Eure Kontrolle.
-   - Settings showing verified Voice Mode, the two Voice Mode toggles, backup controls, and privacy/support access. The visible API suffix is synthetic. Freshly captured for 1.4.0; consent is revoked by turning Voice Mode off.
+   - Settings showing the selected voice provider, Change, verified OpenAI key or Apple status, the Voice Mode toggles, backup controls, and privacy/support access. The visible API suffix is synthetic. **Re-capture for 1.5.0**; 1.4.0 frames omit the provider row and use the old toggle subtitle. Turning Voice Mode off no longer withdraws OpenAI consent; deleting the key does.
 
 5. `05-widgets`
    - English caption: Capture it before you forget.
