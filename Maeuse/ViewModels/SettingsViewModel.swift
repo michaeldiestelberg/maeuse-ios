@@ -71,8 +71,11 @@ final class SettingsViewModel {
         }
 
         localAvailability = availabilityProvider()
-        if !self.voiceSettings.hasCurrentConsent {
+        // Stale OpenAI consent (1.4 off=revoke) is not current in 1.5. Turn capture off
+        // and persist so a later reader of UserDefaults cannot start a session.
+        if !self.voiceSettings.hasCurrentConsent && self.voiceSettings.enabled {
             self.voiceSettings.enabled = false
+            saveVoiceSettings()
         }
     }
 

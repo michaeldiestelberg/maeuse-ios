@@ -210,7 +210,10 @@ struct VoiceSettings: Codable {
     var consentedProviders: Set<VoiceProvider>
 
     static let storageKey = "maeuse.voice-settings"
-    static let currentConsentVersion = 1
+    /// 1 = 1.4.0 (“turning Voice Mode off revokes consent”). 2 = 1.5.0 (“off stops
+    /// capture; deleting the API key withdraws consent”). Existing OpenAI users must
+    /// accept the new sheet once; Apple mode still needs no disclosure.
+    static let currentConsentVersion = 2
 
     static var `default`: VoiceSettings {
         VoiceSettings(
