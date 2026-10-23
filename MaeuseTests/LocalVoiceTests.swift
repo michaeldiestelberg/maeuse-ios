@@ -443,6 +443,7 @@ final class LocalVoiceTests: XCTestCase {
         let data = Data(#"{"provider":"appleLocal","enabled":true,"consentVersion":1,"consentedAt":1000}"#.utf8)
         let local = try JSONDecoder().decode(VoiceSettings.self, from: data)
         XCTAssertFalse(local.hasCurrentConsent(for: .openAI))
+        XCTAssertTrue(local.hasCurrentConsent(for: .appleLocal), "Apple mode never needed the OpenAI sheet")
     }
 
     func testChooserPreselectsRecommendedCloudUntilAModeIsChosen() {
@@ -479,7 +480,32 @@ final class LocalVoiceTests: XCTestCase {
         let data = Data(#"{"enabled":true,"apiKeySuffix":"1234","verifiedAt":1000,"consentVersion":1,"consentedAt":1000}"#.utf8)
         let settings = try JSONDecoder().decode(VoiceSettings.self, from: data)
         XCTAssertEqual(settings.provider, .openAI)
-        XCTAssertTrue(settings.isReady)
+        XCTAssertFalse(settings.hasCurrentConsent(for: .openAI),
+            "1.4 users accepted off=revoke; they must see the 1.5 withdrawal sheet once")
+        XCTAssertFalse(settings.isReady)
+        var upgraded = settings
+        upgraded.recordConsent(for: .openAI)
+        XCTAssertEqual(upgraded.consentVersion, VoiceSettings.currentConsentVersion)
+        XCTAssertTrue(upgraded.hasCurrentConsent(for: .openAI))
+    }
+
+    func testLaunchWithV1OpenAIConsentDoesNotTreatItAsCurrent() throws {
+        UserDefaults.standard.set(
+            Data(#"{"enabled":true,"apiKeySuffix":"1234","verifiedAt":1000,"consentVersion":1,"consentedAt":1000}"#.utf8),
+            forKey: VoiceSettings.storageKey
+        )
+        let settings = SettingsViewModel(availabilityProvider: { .available })
+        XCTAssertEqual(settings.voiceSettings.provider, .openAI)
+        XCTAssertFalse(settings.hasVoiceConsent, "1.4 OpenAI consent is not current in 1.5")
+        XCTAssertFalse(settings.voiceEnabled, "Capture must stay off until the 1.5 sheet is accepted")
+        XCTAssertFalse(settings.canStartVoice)
+        let stored = try JSONDecoder().decode(
+            VoiceSettings.self,
+            from: try XCTUnwrap(UserDefaults.standard.data(forKey: VoiceSettings.storageKey))
+        )
+        XCTAssertFalse(stored.enabled, "The disable is persisted so other readers cannot start capture")
+        XCTAssertEqual(stored.consentVersion, 1)
+        XCTAssertFalse(stored.hasCurrentConsent(for: .openAI))
     }
 
     func testLocalEnablesWithoutAnyAPIKeyAndPersistsAcrossLaunch() {
