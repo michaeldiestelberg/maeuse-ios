@@ -119,7 +119,7 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
 The Xcode project is the source of truth for both version values:
 
 - `MARKETING_VERSION` is the user-facing version (`1.5.0`).
-- `CURRENT_PROJECT_VERSION` is the App Store Connect build number (`65` after the bump PR merges).
+- `CURRENT_PROJECT_VERSION` is the App Store Connect build number (`65`).
 
 Use `scripts/bump-version.sh` before creating a new archive. See [RELEASING.md](RELEASING.md) for the full release workflow and [CHANGELOG.md](CHANGELOG.md) for user-facing release notes.
 

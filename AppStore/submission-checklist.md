@@ -22,6 +22,14 @@ Prepared 23 October 2026 for account-holder review. **Do not submit and do not p
 - [ ] Version 1.5.0 submitted to App Review only after explicit account-holder approval.
 - [ ] After the submitted commit is on `main`, retag `v1.5.0` to that commit (current tag points at build 49).
 
+## 1.5.0 (65) — internal TestFlight only
+
+- [x] Account holder requested build 65 as the App Store candidate: same code as `398bdf7` (#17, #18, #14, #16 on top of 64) with `CURRENT_PROJECT_VERSION` 65 (October 23, 2026).
+- [x] Marketing version remains 1.5.0; repository build number incremented to 65 with the release script.
+- [x] User-facing 1.5.0 What’s New stays two items (iPhone Duo; on-device Voice Mode). This build’s delta vs 64 is: System Boot Time in the privacy manifest (#17), OpenAI consent v2 (#18), microphone purpose string (#14), isolated voice Save + delete VoiceOver hint (#16).
+- [ ] Exact pushed commit succeeds in Xcode Cloud and the processed build is confirmed in the internal testing group.
+- [ ] On device: checks listed for 65 in `1.5.0-testflight.md` (consent off-keeps / key-withdraws, microphone purpose string, save does not duplicate, delete confirmation).
+
 ## 1.5.0 (64) — internal TestFlight only
 
 - [x] Account holder requested Apple mode as one expense at a time, the centred delete confirmation and local diagnosis in the Voice Mode card, as a new TestFlight build (October 23, 2026).

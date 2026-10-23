@@ -5,7 +5,15 @@ Consolidates Apple on-device Voice Mode, iPhone Duo layouts, and related changes
 - **iPhone Duo:** On the unfolded inner screen, month totals sit beside the expense list. Welcome, Settings, and OpenAI Voice Mode use the extra width too.
 - **On-device Voice Mode:** Dictate expenses with Apple on your iPhone — no API key and no usage fees. Your voice stays on the device. OpenAI is still there if you want continuous capture with your own API account.
 
-The version bump to 65 is a separate PR. App Store copy is in `AppStore/1.5.0-approval.md`. Status: awaiting account-holder approval; do not push this package to `main`.
+App Store copy is in `AppStore/1.5.0-approval.md`. Merging this bump to `main` starts Xcode Cloud for build 65.
+
+## 1.5.0 (65) — internal TestFlight candidate, 2026-10-23
+App Store candidate on top of 64. User-facing 1.5.0 notes stay two items (iPhone Duo; on-device Voice Mode). This build adds the review fixes:
+- Privacy manifest declares System Boot Time (`NSPrivacyAccessedAPICategorySystemBootTime` / `35F9.1`) so App Store Connect does not reject the upload (`ITMS-91053`). (#17)
+- OpenAI consent is version 2: 1.4 users re-accept that turning Voice Mode off keeps consent and deleting the API key withdraws it. Apple mode still needs no disclosure. (#18)
+- Microphone purpose string names OpenAI streaming vs on-device Apple mode. (#14)
+- Voice Save inserts through an isolated context so a failed save cannot duplicate a row; the expense-delete VoiceOver hint says a confirmation opens. (#16)
+- Marketing version remains 1.5.0; repository build number is 65.
 
 ## 1.5.0 (64) — internal TestFlight candidate, 2026-10-23
 Apple mode now handles one expense at a time.
