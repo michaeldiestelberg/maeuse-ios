@@ -7,7 +7,7 @@ Prepared 23 October 2026 for account-holder review. **Do not submit, do not push
 - [x] `main` is `0c7aa0d34eebfdb316f57e1a39d3b9305d3c5fa5` (“Apple mode: one expense at a time; prepare build 64”).
 - [x] Resolved version: `MARKETING_VERSION` 1.5.0, `CURRENT_PROJECT_VERSION` 64. Version was **not** bumped for this package.
 - [x] GitHub commit status **Maeuse | Default** for `0c7aa0d` succeeded (2026-10-23 08:21:38 UTC). Confirm in App Store Connect that processed build **1.5.0 (64)** is the binary from that commit.
-- [x] Release review written: `Review/1.5.0-release-review.md`. No blockers. Should-fix S1 (microphone purpose string) is on `cursor/mic-purpose-string-5f1a` (`36831f0`) and needs a new build if taken.
+- [x] Release review written: `Review/1.5.0-release-review.md`. No blockers. Optional binary should-fixes (each needs a new build if taken): S1 microphone string on `cursor/mic-purpose-string-5f1a` (`36831f0`); S3/S4 voice-save isolation + delete VoiceOver hint on `cursor/voice-save-isolation-5f1a` (`976010e`).
 - [x] English/German What’s New, metadata, review notes, privacy answers, and compliance notes drafted in this package and `1.5.0-approval.md`.
 - [x] OpenAI Realtime retention/training rechecked 23 October 2026 (no training by default, 30-day abuse monitoring).
 - [x] Screenshot assessment: reshoot **04-settings** (EN+DE) before upload; 01–03 and 05 can stay. See `1.5.0-approval.md`.
