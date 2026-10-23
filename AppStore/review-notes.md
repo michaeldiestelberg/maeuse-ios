@@ -1,67 +1,63 @@
 # App Review notes — 1.5.0 approval draft
 
-The text below is proposed for the Notes field. The existing private review contact is retained in App Store Connect. Insert the confirmed dedicated review key only in App Store Connect; never commit a key to this repository.
-
-The OpenAI consent paragraph matches 1.5 product copy. On **build 64** it is true for new consent and false for 1.4 upgraders (their version-1 acceptance is still treated as current). Take `cursor/consent-version-2-5f1a` so those users see this sheet once before you paste these notes.
+The text below the line is the Notes field. Keep the existing private review contact in App Store Connect. Insert the dedicated review key only there; never commit a key.
 
 ---
 
-Mäuse is a shared-expense tracker for iPhone. The core app requires no login and works offline. Expenses are stored on-device with SwiftData. There is no developer-operated backend, advertising, app analytics, or in-app purchase.
+Mäuse is a shared-expense tracker for iPhone. No login. Offline. Expenses stay on-device (SwiftData). No developer backend, ads, analytics, or IAP.
 
 VERSION 1.5.0
 
-This update adds an optional on-device Voice Mode (Apple speech recognition and Apple Foundation Models) alongside the existing OpenAI · Cloud mode. Users choose a mode before enabling Voice Mode. Apple mode processes one expense at a time entirely on the iPhone. OpenAI mode keeps continuous capture with GPT-Realtime-2.1. Users review and explicitly save voice drafts in both modes. “What I understood” (OpenAI) is a history of interpreted requests and corrections, not a verbatim transcript.
+Optional Voice Mode: Apple · On device (on-device speech and Foundation Models; one expense at a time) or OpenAI · Cloud (GPT-Realtime-2.1; continuous capture). Users choose a mode first, review drafts, and save explicitly. OpenAI “What I understood” is request history, not a transcript. Layouts use a wide iPhone Duo inner screen (month totals beside the list).
 
 VOICE MODE AND PRIVACY
 
-Voice Mode is optional and offers two modes.
+OpenAI · Cloud sends microphone audio, spoken expense details, and voice-draft context to OpenAI. First use requires a disclosure covering that sharing, OpenAI’s default retention (up to 30 days for abuse monitoring; not used for training unless the API account owner opts in), and estimated API charges. Turning Voice Mode off stops capture. Deleting the API key withdraws consent; the disclosure is shown again before OpenAI is used next.
 
-OpenAI · Cloud sends microphone audio, spoken expense details, and voice-draft context directly to OpenAI. Before it is used for the first time, users must accept a disclosure covering that data sharing, OpenAI's default retention (up to 30 days for abuse monitoring; not used for training unless the API account owner opts in), and estimated API charges. Turning Voice Mode off stops all capture and transmission. Deleting the saved API key withdraws consent, and the disclosure is shown again before OpenAI mode is used next.
+Apple · On device stays on the iPhone and shares nothing with a third party. System microphone and speech-recognition permissions only. No in-app disclosure. A missing speech model can download in Settings or on first capture; then it works offline. Never falls back to OpenAI.
 
-Apple · On device processes speech and expenses entirely on the iPhone and shares nothing with a third party. It needs only the system microphone and speech recognition permissions. There is no in-app disclosure because no data leaves the device. A missing on-device speech model can be downloaded in Settings or on first capture; afterwards capture works offline. Apple mode never falls back to OpenAI.
-
-The user supplies a compatible OpenAI API key, stored in iOS Keychain, only for OpenAI mode. Mäuse does not sell API access, receive revenue from OpenAI, or link to a purchase of API credits. Manual expense entry remains available without a key, microphone access, Apple Intelligence, or internet connection.
+The OpenAI key is the user’s, in iOS Keychain. Mäuse does not sell API access. Manual entry works without a key, microphone, Apple Intelligence, or internet.
 
 LOCAL DIAGNOSIS
 
-Settings → Voice Mode shows a collapsible “Local diagnosis” section only while Apple mode is selected and Voice Mode is on. It is technical metadata (app/OS/model variant, timing, error category) for the last Apple turn. It contains no audio, transcript, or amounts, is never written to disk, and is shared only if the user chooses Share.
+Settings → Voice Mode shows collapsible “Local diagnosis” only while Apple mode is on and Voice Mode is enabled. Last-turn technical metadata only (no audio, transcript, or amounts). In memory; shared only if the user taps Share.
 
 REVIEW CREDENTIAL
 
-[TEMPORARY_REVIEW_API_KEY — retain the existing dedicated credential once the account holder confirms it remains active and supports GPT-Realtime-2.1]
+[TEMPORARY_REVIEW_API_KEY]
 
-The review credential will remain active throughout App Review. It is for testing the optional OpenAI voice feature; no Mäuse account or app login is required. Apple mode can be tested without this key on an Apple Intelligence–capable iPhone running iOS 26 or later.
+Active throughout App Review. For optional OpenAI Voice Mode only; no app login. Apple mode needs no key (iOS 26+, Apple Intelligence).
 
 STEPS TO TEST OPENAI VOICE MODE (any supported iPhone)
 
 1. Launch Mäuse and tap Get Started.
-2. If asked how you would like to dictate, choose OpenAI · Cloud (it is recommended and listed first).
-3. Open Settings using the top-right control.
+2. If asked how to dictate, choose OpenAI · Cloud (recommended, listed first).
+3. Open Settings (top-right).
 4. Under Voice Mode, enter the review key and tap Verify & Save Key.
-5. Enable Voice Mode, accept the disclosure, and allow microphone access when prompted.
-6. Close Settings and tap the microphone button to open Voice Mode. Start listening using the microphone control if the session has not started.
+5. Enable Voice Mode, accept the disclosure, allow the microphone.
+6. Close Settings and tap the microphone. Start listening if needed.
 7. Say: “Add groceries for 10 euros and coffee for 5 euros, split both in half.”
-8. Review the two expense drafts. Say: “Change the coffee to 4 euros.”
-9. Expand What I understood to review the request history, then tap Save.
+8. Review the two drafts. Say: “Change the coffee to 4 euros.”
+9. Expand What I understood, then tap Save.
 
-STEPS TO TEST APPLE VOICE MODE (iOS 26+, Apple Intelligence enabled)
+STEPS TO TEST APPLE VOICE MODE (iOS 26+, Apple Intelligence)
 
-1. In Settings → Voice Mode, tap Change and choose Apple · On device. No disclosure is shown. Allow microphone and speech recognition if prompted.
-2. If Settings offers Download speech model, tap it and wait until it reports ready.
-3. Close Settings and tap the microphone. Say one expense, for example: “Coffee for 4.50 euros.”
-4. Check the draft (the microphone pauses). Tap Save expense. The screen should show that it was saved and listen for the next one.
-5. Say two priced purchases at once, for example: “Coffee 4.50 and flowers 12.” The app should ask for them one after the other rather than guessing.
-6. Tap Done to close. Saved expenses are already in the list.
+1. Settings → Voice Mode → Change → Apple · On device. No disclosure. Allow microphone and speech recognition if asked.
+2. If offered, download the speech model and wait until ready.
+3. Close Settings, tap the microphone. Say: “Coffee for 4.50 euros.”
+4. Check the draft (mic pauses). Tap Save expense. It should confirm and listen for the next one.
+5. Say two priced purchases at once, e.g. “Coffee 4.50 and flowers 12.” The app should ask for them one after the other.
+6. Tap Done. Saved expenses are in the list.
 
-If Apple Intelligence is not available on the review device, OpenAI mode and manual entry are sufficient; Apple mode will explain what is missing and will not switch to OpenAI.
+If Apple Intelligence is unavailable, OpenAI mode and manual entry suffice; Apple mode explains what is missing and does not switch to OpenAI.
 
 BACKUP TESTING
 
-Settings → Backup & Restore exports local expenses as JSON. Import replaces the local ledger only after a replacement confirmation. Invalid backup data is rejected before replacement.
+Settings → Backup & Restore exports JSON. Import replaces the ledger only after confirmation. Invalid data is rejected.
 
 BUSINESS MODEL
 
-The app is free, with no subscriptions, paid unlocks, advertising, or referral payments. OpenAI may bill the user's API project for optional OpenAI Voice Mode usage. Apple Voice Mode has no API charge.
+Free. No subscriptions, unlocks, ads, or referrals. OpenAI may bill the user’s API project for OpenAI Voice Mode. Apple Voice Mode has no API charge.
 
 PRIVACY POLICY
 https://xn--muse-loa.app/privacy.html

@@ -10,7 +10,7 @@ Ausgaben-Tracker für Paare
 
 ## Werbetext
 
-Kostenlos auf dem iPhone diktieren – oder OpenAI für fortlaufende Erfassung. Jeden Entwurf prüfen, bevor er gespeichert wird. Gemeinsame Kosten, getrennte Konten.
+Jetzt auf iPhone Duo: Summen neben der Liste auf dem Innenbildschirm. Kostenlos diktieren oder OpenAI. Jeden Entwurf prüfen. Gemeinsame Kosten, getrennte Konten.
 
 ## Beschreibung
 
@@ -26,6 +26,7 @@ FÜR ZWEI GEMACHT
 • Prozentual aufteilen oder den genauen Partneranteil eintragen
 • Monatssummen, Partneranteil und aktuellen Saldo auf einen Blick sehen
 • Einfach zwischen vergangenen und kommenden Monaten wechseln
+• Auf dem iPhone Duo zeigt der aufgeklappte Innenbildschirm Monatssummen neben der Ausgabenliste
 
 ERFASSEN, BEVOR ES VERGESSEN IST
 
@@ -56,7 +57,7 @@ Mäuse unterstützt Dark Mode sowie ein helles oder systemweites Erscheinungsbil
 
 ## Schlüsselwörter
 
-teilen,rechnungen,budget,gemeinsam,partner,haushalt,geld,sprache,widget,abrechnung,schulden
+teilen,rechnungen,budget,gemeinsam,partner,haushalt,geld,sprache,widget,abrechnung,schulden,duo
 
 ## Screenshot-Texte
 

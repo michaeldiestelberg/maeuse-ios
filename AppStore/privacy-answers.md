@@ -71,9 +71,9 @@ Existing privacy labels should be preserved; Apple on-device Voice Mode introduc
 
 Nutrition Labels above are collected-data categories. Separately, App Store Connect validates `PrivacyInfo.xcprivacy`.
 
-| API | Reason | Bundles | In build 64? |
+| API | Reason | Bundles | In build 65? |
 | --- | --- | --- | --- |
 | `NSPrivacyAccessedAPICategoryUserDefaults` | `CA92.1` | App and Controls | Yes |
-| `NSPrivacyAccessedAPICategorySystemBootTime` | `35F9.1` (elapsed time between events) | App only | **No** — Apple Voice Mode uses `ProcessInfo.systemUptime` to time speech endpoints. Missing this is `ITMS-91053`. Fix: `cursor/privacy-boot-time-5f1a`. |
+| `NSPrivacyAccessedAPICategorySystemBootTime` | `35F9.1` (elapsed time between events) | App only | Yes — merged in #17. Apple Voice Mode uses `ProcessInfo.systemUptime` to time speech endpoints. |
 
 Do not add System Boot Time to Nutrition Labels. It is not collected data.

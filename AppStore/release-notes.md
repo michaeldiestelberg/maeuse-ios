@@ -19,6 +19,9 @@ Paste into App Store Connect for English (U.S.) and German. If version 1.4.0 nev
 
 ### English (U.S.)
 
+iPhone Duo
+On the unfolded inner screen, month totals sit beside the expense list. Welcome, Settings, and OpenAI Voice Mode use the extra width too. Larger accessibility text stays one column.
+
 On-device Voice Mode
 Dictate expenses with Apple on your iPhone — no API key and no usage fees. Your voice stays on the device. OpenAI is still there if you want continuous capture with your own API account.
 
@@ -29,6 +32,9 @@ Clearer choice, same private ledger
 A setup screen compares privacy, accuracy, and cost before you start. Manual entry, backups, and your expenses on the iPhone are unchanged.
 
 ### German
+
+iPhone Duo
+Auf dem aufgeklappten Innenbildschirm stehen die Monatssummen neben der Ausgabenliste. Willkommen, Einstellungen und der OpenAI-Sprachmodus nutzen die Extra-Breite ebenfalls. Größere Bedienungshilfen-Schrift bleibt eine Spalte.
 
 Sprachmodus auf dem iPhone
 Diktiere Ausgaben mit Apple auf deinem iPhone – ohne API-Schlüssel und ohne Nutzungsgebühren. Deine Stimme bleibt auf dem Gerät. OpenAI bleibt optional, wenn du fortlaufend diktieren möchtest, mit deinem eigenen API-Konto.

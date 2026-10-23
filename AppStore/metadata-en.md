@@ -10,7 +10,7 @@ Expense tracker for couples
 
 ## Promotional text
 
-Dictate expenses on your iPhone for free, or keep OpenAI for continuous capture. Review every draft before it is saved. Built for shared expenses and separate accounts.
+Now on iPhone Duo: totals beside the list on the wide inner screen. Dictate on-device or with OpenAI. Review every draft. Shared expenses, separate accounts.
 
 ## Description
 
@@ -26,6 +26,7 @@ BUILT FOR TWO
 • Split by percentage or enter the exact amount your partner should cover
 • See monthly totals, your partner's share, and the current balance at a glance
 • Move easily between previous and upcoming months
+• On iPhone Duo, the unfolded inner screen shows month totals beside the expense list
 
 CAPTURE IT BEFORE YOU FORGET
 
@@ -56,7 +57,7 @@ Enjoy Dark Mode, or choose light or system appearance.
 
 ## Keywords
 
-shared,bills,split,budget,partner,household,money,voice,widget,reconcile,settle,spending,dictate
+shared,bills,split,budget,partner,household,money,voice,widget,reconcile,settle,spending,dictate,duo
 
 ## Screenshot captions
 

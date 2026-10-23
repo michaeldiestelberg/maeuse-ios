@@ -1,15 +1,17 @@
-## 1.5.0 (64) — proposed App Store release, 2026-10-23
+## 1.5.0 (65) — proposed App Store release, 2026-10-23
 
-Consolidates Apple on-device Voice Mode and related changes tested in 1.5.0 builds 49–64 since 1.4.0 (48). Build 64 (`0c7aa0d`) is the reviewed candidate and succeeded in Xcode Cloud; the release review found two blockers that are **not** in 64 (privacy-manifest System Boot Time; OpenAI consent v2). This entry is for account-holder review and is not a submission.
+Consolidates Apple on-device Voice Mode, iPhone Duo layouts, and related changes tested in 1.5.0 builds 49–64 since 1.4.0 (48), plus the review fixes merged in `398bdf7`. Candidate binary is **65** (bump PR `cursor/bump-build-65-5f1a`). This entry is for account-holder review and is not a submission.
 
+- **iPhone Duo:** on the unfolded inner screen, month totals sit beside the expense list. Welcome, Settings, and OpenAI Voice Mode use the extra width. Larger accessibility text stays one column. A closed or narrow window keeps the regular iPhone layout.
 - Optional **Apple · On device** Voice Mode: on-device speech recognition and Apple Foundation Models, no API key, no usage fees, no cloud fallback. Audio stays on the iPhone. Requires iOS 26+, a compatible device, Apple Intelligence, and downloaded language resources.
 - Apple mode works one expense at a time: say it, check the draft, save; the screen then listens for the next one. Several priced purchases in one sentence are asked one after another.
 - Optional **OpenAI · Cloud** remains the recommended, more accurate continuous-capture mode with the user’s own API key. A setup screen compares privacy, accuracy, and cost. Switching modes keeps Voice Mode on.
 - OpenAI disclosure is asked once. Turning Voice Mode off stops capture but keeps that consent; deleting the API key withdraws it. Apple mode has no disclosure.
-- Month review, onboarding, and voice screens adapt to wide, short, and landscape windows. The expense-editor delete confirmation is a centred alert.
+- Review fixes in this binary: System Boot Time in the privacy manifest, OpenAI consent v2 for 1.4 upgraders, microphone purpose string names OpenAI vs Apple, voice Save inserts through an isolated context.
+- The expense-editor delete confirmation is a centred alert.
 - Backups, manual entry, and local expense storage are unchanged.
 
-No version or build bump. App Store copy is in `AppStore/1.5.0-approval.md`. Status: awaiting account-holder approval; do not push to `main` for this package.
+The version bump to 65 is a separate PR. App Store copy is in `AppStore/1.5.0-approval.md`. Status: awaiting account-holder approval; do not push this package to `main`.
 
 ## 1.5.0 (64) — internal TestFlight candidate, 2026-10-23
 Apple mode now handles one expense at a time.

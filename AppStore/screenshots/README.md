@@ -2,7 +2,7 @@
 
 For 1.4.0, scenes 01–04 were captured from an isolated iPhone 18 Pro Max simulator running iOS 27, using synthetic data. Framed output is 1320×2868. Provide the same five scenes in English and German. Scene 05 is retained from 1.3.0 because the widget UI is unchanged.
 
-For **1.5.0 (64)**, reshoot **04-settings** in both languages so it shows the Voice Mode provider row (OpenAI · Cloud or Apple · On device, plus Change) and the current toggle subtitle. Scenes 01–03 and 05 still represent the submitted UI (OpenAI Voice Mode remains the recommended capture screen). See `1.5.0-approval.md`.
+For **1.5.0 (65)**, reshoot **04-settings** in both languages so it shows the Voice Mode provider row (OpenAI · Cloud or Apple · On device, plus Change) and the current toggle subtitle. Scenes 01–03 and 05 still represent the submitted UI (OpenAI Voice Mode remains the recommended capture screen). See `1.5.0-approval.md`.
 
 ## Order
 
