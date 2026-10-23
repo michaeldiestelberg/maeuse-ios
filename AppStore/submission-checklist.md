@@ -7,7 +7,7 @@ Prepared 23 October 2026 for account-holder review. **Do not submit, do not push
 - [x] `main` is `0c7aa0d34eebfdb316f57e1a39d3b9305d3c5fa5` (“Apple mode: one expense at a time; prepare build 64”).
 - [x] Resolved version: `MARKETING_VERSION` 1.5.0, `CURRENT_PROJECT_VERSION` 64. Version was **not** bumped for this package.
 - [x] GitHub commit status **Maeuse | Default** for `0c7aa0d` succeeded (2026-10-23 08:21:38 UTC). Confirm in App Store Connect that processed build **1.5.0 (64)** is the binary from that commit.
-- [x] Release review written: `Review/1.5.0-release-review.md`. No blockers. Optional binary should-fixes (each needs a new build if taken): S1 microphone string on `cursor/mic-purpose-string-5f1a` (`36831f0`); S3/S4 voice-save isolation + delete VoiceOver hint on `cursor/voice-save-isolation-5f1a` (`976010e`).
+- [x] Release review written: `Review/1.5.0-release-review.md`. **Two blockers vs 64:** B-privacy System Boot Time (`cursor/privacy-boot-time-5f1a` `d5dbf98`, [PR #17](https://github.com/michaeldiestelberg/maeuse-ios/pull/17)) and B-consent OpenAI v2 (`cursor/consent-version-2-5f1a` `08f6415`, [PR #18](https://github.com/michaeldiestelberg/maeuse-ios/pull/18)). Optional should-fixes: S1 microphone string (`cursor/mic-purpose-string-5f1a` `36831f0`, [PR #14](https://github.com/michaeldiestelberg/maeuse-ios/pull/14)); S3/S4 voice-save isolation + delete VoiceOver (`cursor/voice-save-isolation-5f1a` `976010e`, [PR #16](https://github.com/michaeldiestelberg/maeuse-ios/pull/16)). Taking any of these needs a new build. **Do not submit 64 until B-privacy is in the binary.**
 - [x] English/German What’s New, metadata, review notes, privacy answers, and compliance notes drafted in this package and `1.5.0-approval.md`.
 - [x] OpenAI Realtime retention/training rechecked 23 October 2026 (no training by default, 30-day abuse monitoring).
 - [x] Screenshot assessment: reshoot **04-settings** (EN+DE) before upload; 01–03 and 05 can stay. See `1.5.0-approval.md`.
@@ -17,7 +17,8 @@ Prepared 23 October 2026 for account-holder review. **Do not submit, do not push
 - [ ] On device: Apple-mode checks in `1.5.0-testflight.md` (speech, model download, one-expense flow, interruptions).
 - [ ] Re-shoot Settings screenshots in EN and DE; frame with `scripts/frame-app-store-screenshots.swift`; confirm no real API key.
 - [ ] Privacy and support website wording from `1.5.0-website-updates.md` is published **with** the 1.5.0 release, not before.
-- [ ] Approved copy saved on the 1.5.0 version in App Store Connect; build 64 attached; **Manual Release**.
+- [ ] Account holder decides whether B-privacy / B-consent (and optionally S1/S3/S4) replace build 64. A new Cloud build is required if any code branch is taken. Do not bump versions in this package.
+- [ ] Approved copy saved on the 1.5.0 version in App Store Connect; chosen build attached; **Manual Release**.
 - [ ] Version 1.5.0 submitted to App Review only after explicit account-holder approval.
 - [ ] After the submitted commit is on `main`, retag `v1.5.0` to that commit (current tag points at build 49).
 

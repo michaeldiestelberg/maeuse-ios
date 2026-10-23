@@ -2,6 +2,8 @@
 
 The text below is proposed for the Notes field. The existing private review contact is retained in App Store Connect. Insert the confirmed dedicated review key only in App Store Connect; never commit a key to this repository.
 
+The OpenAI consent paragraph matches 1.5 product copy. On **build 64** it is true for new consent and false for 1.4 upgraders (their version-1 acceptance is still treated as current). Take `cursor/consent-version-2-5f1a` so those users see this sheet once before you paste these notes.
+
 ---
 
 Mäuse is a shared-expense tracker for iPhone. The core app requires no login and works offline. Expenses are stored on-device with SwiftData. There is no developer-operated backend, advertising, app analytics, or in-app purchase.

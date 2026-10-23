@@ -23,7 +23,7 @@ Build 58 adapts month review, onboarding and voice drafts to the available windo
 | --- | --- |
 | Version | 1.5.0 (build 64) |
 | Platform | iPhone · iOS 17 or later |
-| Status | Proposed App Store candidate; package awaiting account-holder review |
+| Status | Proposed App Store candidate; 64 is not submittable until privacy-manifest + consent-v2; package awaiting account-holder review |
 | Languages | English and German |
 
 Version 1.5.0 adds **Apple · On device** to Voice Mode: local Apple speech recognition and Foundation Models, with no API key, usage fees, or cloud fallback. Choose a provider in Settings before enabling Voice Mode. Apple mode requires iOS 26+, a compatible iPhone, enabled Apple Intelligence, and downloaded model/language resources.

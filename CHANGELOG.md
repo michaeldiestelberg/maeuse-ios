@@ -1,6 +1,6 @@
 ## 1.5.0 (64) — proposed App Store release, 2026-10-23
 
-Consolidates Apple on-device Voice Mode and related changes tested in 1.5.0 builds 49–64 since 1.4.0 (48). Candidate build 64 is the intended App Store binary; this entry is for account-holder review and is not a submission.
+Consolidates Apple on-device Voice Mode and related changes tested in 1.5.0 builds 49–64 since 1.4.0 (48). Build 64 (`0c7aa0d`) is the reviewed candidate and succeeded in Xcode Cloud; the release review found two blockers that are **not** in 64 (privacy-manifest System Boot Time; OpenAI consent v2). This entry is for account-holder review and is not a submission.
 
 - Optional **Apple · On device** Voice Mode: on-device speech recognition and Apple Foundation Models, no API key, no usage fees, no cloud fallback. Audio stays on the iPhone. Requires iOS 26+, a compatible device, Apple Intelligence, and downloaded language resources.
 - Apple mode works one expense at a time: say it, check the draft, save; the screen then listens for the next one. Several priced purchases in one sentence are asked one after another.
