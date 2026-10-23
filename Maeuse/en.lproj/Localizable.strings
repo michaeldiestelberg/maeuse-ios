@@ -124,6 +124,7 @@
 "DeleteExpense" = "Delete expense";
 "DeleteConfirmationTitle" = "Delete this expense?";
 "DeleteConfirmationMsg" = "This cannot be undone.";
+"DeleteOpensConfirmation" = "Opens a confirmation before deleting.";
 "AddNote" = "Add a note";
 "When" = "When";
 "You" = "You";
