@@ -124,6 +124,7 @@
 "DeleteExpense" = "Ausgabe löschen";
 "DeleteConfirmationTitle" = "Diese Ausgabe löschen?";
 "DeleteConfirmationMsg" = "Dies kann nicht rückgängig gemacht werden.";
+"DeleteOpensConfirmation" = "Öffnet eine Rückfrage vor dem Löschen.";
 "AddNote" = "Notiz hinzufügen";
 "When" = "Wann";
 "You" = "Du";

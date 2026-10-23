@@ -263,14 +263,7 @@ struct VoiceSheet: View {
             viewModel.pauseLocalForReview()
             return
         }
-        for expense in viewModel.expensesForSaving() { modelContext.insert(expense) }
-        do { try modelContext.save() }
-        catch {
-            modelContext.rollback()
-            viewModel.phase = .error
-            viewModel.errorMessage = loc("SaveExpensesFailed", error.localizedDescription)
-            return
-        }
+        guard commitDrafts() else { return }
         viewModel.didSaveLocalDraft()
     }
 
@@ -449,16 +442,22 @@ struct VoiceSheet: View {
             return
         }
         viewModel.phase = .finalizing
-        for expense in viewModel.expensesForSaving() { modelContext.insert(expense) }
-        do { try modelContext.save() }
-        catch {
-            modelContext.rollback()
-            viewModel.phase = .error
-            viewModel.errorMessage = loc("SaveExpensesFailed", error.localizedDescription)
-            return
-        }
+        guard commitDrafts() else { return }
         viewModel.finishAfterSave()
         dismiss()
+    }
+
+    /// Isolated insert: a failed live-context save can leave inserted objects
+    /// registered after rollback, and the next Save would insert a new ID.
+    private func commitDrafts() -> Bool {
+        do {
+            try Expense.insertCommitted(viewModel.expensesForSaving(), into: modelContext)
+            return true
+        } catch {
+            viewModel.phase = .error
+            viewModel.errorMessage = loc("SaveExpensesFailed", error.localizedDescription)
+            return false
+        }
     }
 }
 

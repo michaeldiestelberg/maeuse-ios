@@ -72,6 +72,17 @@ final class Expense {
               let date = isoFormatter.date(from: string), isoFormatter.string(from: date) == string else { return nil }
         return date
     }
+
+    /// Inserts new expenses in an isolated context so a failed save cannot leave
+    /// objects registered in the live UI context after rollback. Voice Save builds a
+    /// new `Expense` identity on every tap; a leaky rollback would then duplicate.
+    static func insertCommitted(_ expenses: [Expense], into context: ModelContext) throws {
+        guard !expenses.isEmpty else { return }
+        let writer = ModelContext(context.container)
+        writer.autosaveEnabled = false
+        for expense in expenses { writer.insert(expense) }
+        try writer.save()
+    }
 }
 
 // MARK: - Backup Codable Wrapper

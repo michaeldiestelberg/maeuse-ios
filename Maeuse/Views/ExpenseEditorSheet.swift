@@ -193,7 +193,8 @@ struct ExpenseEditorSheet: View {
                 shadowColor: .maeusDestructive.opacity(0.22)
             )
         )
-        .accessibilityHint(loc("DeleteConfirmationTitle"))
+        .accessibilityHint(loc("DeleteOpensConfirmation"))
+        .accessibilityIdentifier("expense-delete")
     }
 
     private var datePicker: some View {

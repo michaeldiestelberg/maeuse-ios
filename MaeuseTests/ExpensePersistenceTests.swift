@@ -381,6 +381,54 @@ final class BackupFailureRegressionTests: XCTestCase {
 }
 
 @MainActor
+final class VoiceInsertRegressionTests: XCTestCase {
+    func testFailedVoiceInsertDoesNotRegisterOrDuplicateOnRetry() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let url = directory.appendingPathComponent("readonly-voice.store")
+        let schema = Schema([Expense.self])
+        let date = try XCTUnwrap(Expense.dateFromISO("2026-10-23"))
+        do {
+            let store = try ModelContainer(for: schema, configurations: [ModelConfiguration(schema: schema, url: url)])
+            store.mainContext.insert(Expense(id: "keep", amount: 24, desc: "Original", date: date))
+            try store.mainContext.save()
+        }
+        let readonly = try ModelContainer(for: schema, configurations: [ModelConfiguration(schema: schema, url: url, allowsSave: false)])
+        // Voice Save mints a new Expense identity on every tap.
+        XCTAssertThrowsError(try Expense.insertCommitted(
+            [Expense(id: "voice-1", amount: 4.5, desc: "Coffee", date: date)],
+            into: readonly.mainContext))
+        XCTAssertThrowsError(try Expense.insertCommitted(
+            [Expense(id: "voice-2", amount: 4.5, desc: "Coffee", date: date)],
+            into: readonly.mainContext),
+            "A second Save after failure must not insert a different ID")
+        let live = try readonly.mainContext.fetch(FetchDescriptor<Expense>())
+        XCTAssertEqual(live.map(\.id), ["keep"])
+        XCTAssertEqual(live.first?.amount, 24)
+        let fresh = try ModelContext(readonly).fetch(FetchDescriptor<Expense>())
+        XCTAssertEqual(fresh.map(\.id), ["keep"])
+        XCTAssertEqual(fresh.first?.amount, 24)
+    }
+
+    func testSuccessfulVoiceInsertAppearsInLiveAndFreshContext() throws {
+        let store = try ModelContainer(for: Schema([Expense.self]),
+            configurations: [ModelConfiguration(schema: Schema([Expense.self]), isStoredInMemoryOnly: true)])
+        let date = try XCTUnwrap(Expense.dateFromISO("2026-10-23"))
+        store.mainContext.insert(Expense(id: "keep", amount: 24, desc: "Original", date: date))
+        try store.mainContext.save()
+        try Expense.insertCommitted(
+            [Expense(id: "coffee", amount: 4.5, desc: "Coffee", date: date, splitMode: .percent, splitValue: 50)],
+            into: store.mainContext)
+        let live = try store.mainContext.fetch(FetchDescriptor<Expense>())
+        XCTAssertEqual(Set(live.map(\.id)), ["keep", "coffee"])
+        XCTAssertEqual(live.first { $0.id == "coffee" }?.amount, 4.5)
+        let fresh = try ModelContext(store).fetch(FetchDescriptor<Expense>())
+        XCTAssertEqual(Set(fresh.map(\.id)), ["keep", "coffee"])
+    }
+}
+
+@MainActor
 final class ExpenseValidationRegressionTests: XCTestCase {
     func testUnsafeBackupNumbersAndDatesAreRejectedBeforeReplacement() throws {
         let schema = Schema([Expense.self])
