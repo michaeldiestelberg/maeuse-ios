@@ -196,10 +196,10 @@
 "LocalTooMuchContext" = "Diese lokale Sitzung ist voll. Speichere oder entferne vorhandene Entwürfe und versuche eine kürzere Anfrage. Der lokale Modus unterstützt bis zu 10 Entwürfe pro Sitzung.";
 "LocalGenerationFailed" = "Apples Modell konnte diese Entwürfe nicht zuverlässig erstellen. Vorhandene Entwürfe bleiben unverändert. Versuche eine kürzere, klarere Anfrage; es wurde kein Cloud-Modell verwendet.";
 "LocalMissingDetails" = "Bitte ergänze vor dem Speichern den fehlenden Namen oder Betrag.";
-"LocalAmbiguousCorrection" = "Bitte korrigiere oder entferne jeweils eine namentlich genannte Ausgabe. Deine vorhandenen Entwürfe bleiben unverändert.";
+"LocalAmbiguousCorrection" = "Diese Korrektur habe ich nicht verstanden. Sag zum Beispiel „Es waren 13,50 Euro“ oder „Das war gestern“. Dein Entwurf bleibt unverändert.";
 
 "LocalProcessingState" = "Verarbeitung · Mikrofon pausiert";
-"LocalPausedState" = "Pausiert · Entwürfe prüfen";
+"LocalPausedState" = "Pausiert · zum Sprechen tippen";
 "LocalPause" = "Aufnahme pausieren und verarbeiten";
 "LocalPauseAfterProcessing" = "Nach der Verarbeitung pausieren";
 "LocalResumeAfterProcessing" = "Nach der Verarbeitung wieder zuhören";
@@ -234,7 +234,7 @@
 "VoiceCloudPointCost" = "Etwa 1–2 $ pro 100 diktierte Ausgaben, abgerechnet über dein OpenAI-Konto";
 "VoiceCloudPointPrivacy" = "Audio wird an OpenAI gesendet; benötigt Internet und deinen API-Schlüssel";
 "VoiceApplePointAccuracy" = "Versteht öfter etwas falsch; prüfe jeden Entwurf";
-"VoiceApplePointFlow" = "Sprechen, dann Pause; eine kurze Angabe nach der anderen";
+"VoiceApplePointFlow" = "Eine Ausgabe pro Aufnahme: sprechen, prüfen, speichern";
 "VoiceApplePointCost" = "Keine Kosten, kein API-Schlüssel";
 "VoiceApplePointPrivacy" = "Bleibt auf deinem iPhone; benötigt Apple Intelligence";
 "VoicePendingSetup" = "Der Sprachmodus bleibt aktiv und funktioniert, sobald dieser Modus eingerichtet ist.";
@@ -257,3 +257,17 @@
 "LocalDownloadSpeechModel" = "Sprachmodell laden";
 "LocalSpeechModelDownloading" = "Sprachmodell wird geladen …";
 "LocalSpeechModelPreparationFailed" = "Das Sprachmodell auf dem Gerät konnte nicht vorbereitet werden. Der erste Download braucht eine Internetverbindung; versuche es später erneut. Es wurde kein Audio an die Cloud gesendet.";
+
+/* Apple mode: one expense at a time */
+"LocalSavedSummary" = "Gespeichert: %@ · %@";
+"LocalSpeakOne" = "Sag eine Ausgabe";
+"LocalExample" = "Zum Beispiel: „Kaffee für 4,50 €.“";
+"LocalHeard" = "„%@“";
+"LocalCorrectionHint" = "Stimmt etwas nicht? Tippe aufs Mikrofon und sag die Korrektur.";
+"LocalSaveExpense" = "Ausgabe speichern";
+"LocalSpeakCorrection" = "Korrektur sprechen";
+"LocalReviewState" = "Entwurf prüfen";
+"LocalCorrectionState" = "Höre auf die Korrektur…";
+"LocalOneAtATime" = "Das klang nach mehreren Ausgaben. Bitte sag eine nach der anderen – die nächste nach dem Speichern.";
+"LocalNoExpenseHeard" = "Ich habe keine Ausgabe erkannt. Sag, was es war und was es gekostet hat.";
+"LocalSaveFirst" = "Speichere zuerst diese Ausgabe, dann sag die nächste. Zum Ändern sag einfach, was anders ist.";

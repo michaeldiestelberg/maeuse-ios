@@ -152,9 +152,17 @@ final class AdaptiveLayoutUITests: XCTestCase {
         app = launch("local-voice", extra: ["--local-processing"])
         XCTAssertTrue(app.staticTexts["voice-fixture-notice"].exists)
         XCTAssertTrue(app.buttons["local-record"].exists)
-        XCTAssertTrue(app.otherElements["voice-draft-flowers"].waitForExistence(timeout: 5))
+        // Apple mode handles one expense at a time: the phrase being processed, no draft list.
+        XCTAssertTrue(app.staticTexts["local-transcript"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["voice-save"].exists)
         app.buttons["voice-close"].tap()
         XCTAssertTrue(app.buttons["Ausgabe hinzufügen"].waitForExistence(timeout: 5))
+        app.terminate()
+
+        app = launch("local-voice", extra: ["--local-review", "--local-saved"])
+        XCTAssertTrue(app.buttons["voice-save"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["voice-save"].isHittable)
+        XCTAssertFalse(app.buttons["local-done"].exists, "Save, not Done, while a draft is in review")
     }
 
     func testAccessibilityContentCanActuallyScrollToLastControls() {

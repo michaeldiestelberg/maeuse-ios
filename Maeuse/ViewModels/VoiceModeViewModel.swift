@@ -43,6 +43,9 @@ final class VoiceModeViewModel {
     private(set) var localTranscript = ""
     private(set) var localShouldListen = false
     private(set) var localEndpointProgress: Double = 0
+    /// Apple mode handles one expense at a time: each one is saved before the next is spoken.
+    private(set) var localSavedCount = 0
+    private(set) var localLastSaved: String?
     private var service: (any VoiceSessionService)?
     private let serviceFactory: (VoiceProvider) -> any VoiceSessionService
     private var sessionID = UUID()
@@ -76,7 +79,8 @@ final class VoiceModeViewModel {
     var stateLabel: String {
         if provider == .appleLocal {
             if isProcessingRequest { return loc("LocalProcessingState") }
-            if phase == .idle { return loc("LocalPausedState") }
+            if phase == .idle { return loc(drafts.isEmpty ? "LocalPausedState" : "LocalReviewState") }
+            if phase == .listening && microphoneIsActive && !drafts.isEmpty { return loc("LocalCorrectionState") }
         }
         switch phase {
         case .idle: return loc("StateReady")
@@ -111,6 +115,12 @@ final class VoiceModeViewModel {
         return provider == .appleLocal && (microphoneIsActive || phase == .connecting)
     }
 
+    /// The draft in review can be saved once complete; an active phrase is finished first.
+    var canSaveLocalDraft: Bool {
+        provider == .appleLocal && drafts.count == 1 && drafts[0].isReadyForSaving &&
+            !isProcessingRequest && phase != .connecting && phase != .finalizing
+    }
+
     var totalAmount: Double {
         drafts.reduce(0) { $0 + $1.normalizedAmount }.roundedMoney
     }
@@ -141,8 +151,28 @@ final class VoiceModeViewModel {
         localShouldListen = !arguments.contains("--local-paused")
         if arguments.contains("--local-endpoint") { localEndpointProgress = 0.75; microphoneLevel = 0 }
         if arguments.contains("--local-speaking") { microphoneLevel = 0.65 }
-        localTranscript = LanguageManager.shared.activeLanguageCode == "de" ? "Kaffee vier Euro fünfzig" : "Coffee four euros fifty"
-        if arguments.contains("--local-processing") {
+        let german = LanguageManager.shared.activeLanguageCode == "de"
+        // Apple mode reviews one expense at a time.
+        drafts = []
+        understandingHistory = []
+        localTranscript = german ? "Kaffee vier Euro fünfzig" : "Coffee four euros fifty"
+        if arguments.contains("--local-saved") {
+            localSavedCount = 1
+            localLastSaved = loc("LocalSavedSummary", "Tesla Supercharger", 73.75.euroFormatted)
+        }
+        if arguments.contains("--local-empty") { localTranscript = "" }
+        if arguments.contains("--local-review") {
+            let request = german ? "Kaffee vier Euro fünfzig, halbe-halbe" : "Coffee four euros fifty, split evenly"
+            if let payload = try? VoiceWorkspaceDomain.apply([VoiceExpenseChange(existingID: nil, remove: false,
+                    title: german ? "Kaffee" : "Coffee", amount: .value(4.5), date: .relativeDays(0), share: .equalDefault)],
+                    to: [], understanding: request, question: "", todayISO: Self.todayISOString()) {
+                handleVoiceEvent(.workspaceSync(payload))
+            }
+            localTranscript = ""
+            microphoneIsActive = false
+            phase = .idle
+            localShouldListen = false
+        } else if arguments.contains("--local-processing") {
             microphoneIsActive = false
             handleVoiceEvent(.responseStarted(id: "local-preview", isAppGenerated: false))
         } else if arguments.contains("--local-paused") {
@@ -418,6 +448,37 @@ final class VoiceModeViewModel {
         service?.sendWorkspaceNote("The user removed expense \(draft.id) named \(draft.normalizedTitle) from the temporary workspace. This ID must stay removed for the rest of the session. If the user explicitly asks to add it again, use a new ID. Do not respond to this app-generated note.")
     }
 
+    /// The saved draft leaves the plate and listening starts for the next expense.
+    func didSaveLocalDraft() {
+        guard provider == .appleLocal, let draft = drafts.first else { return }
+        localSavedCount += 1
+        localLastSaved = loc("LocalSavedSummary", draft.normalizedTitle, draft.normalizedAmount.euroFormatted)
+        playVoiceHaptic(.success)
+        clearLocalPlate()
+        localShouldListen = true
+        startNextLocalTurn()
+    }
+
+    /// Discarding the draft in review starts over for the same expense.
+    func discardLocalDraft(_ draft: VoiceExpenseDraft) {
+        guard provider == .appleLocal, !isProcessingRequest else { removeDraft(draft); return }
+        clearLocalPlate()
+        localShouldListen = true
+        startNextLocalTurn()
+    }
+
+    private func clearLocalPlate() {
+        drafts = []
+        removedDraftIDs = []
+        understandingHistory = []
+        clarificationQuestion = ""
+        updatedExpenseIDs = []
+        changedFieldsByExpenseID = [:]
+        localTranscript = ""
+        errorMessage = ""
+        phase = .idle
+    }
+
     func expensesForSaving() -> [Expense] {
         guard canSaveDrafts else { return [] }
 
@@ -460,6 +521,8 @@ final class VoiceModeViewModel {
         localTranscript = ""
         localShouldListen = false
         localEndpointProgress = 0
+        localSavedCount = 0
+        localLastSaved = nil
     }
 
     /// The microphone finishes the current phrase and pauses. During generation
@@ -658,7 +721,9 @@ extension VoiceModeViewModel: RealtimeVoiceServiceDelegate {
             microphoneIsActive = false
             microphoneLevel = 0
             phase = .idle
-            if drafts.count >= 10 { localShouldListen = false }
+            // A complete draft waits for review; one that still needs details keeps
+            // listening for the answer, and an empty plate for the expense itself.
+            if drafts.first?.isReadyForSaving == true { localShouldListen = false }
             if localShouldListen { startNextLocalTurn() }
         case .localNoSpeech:
             guard provider == .appleLocal else { return }

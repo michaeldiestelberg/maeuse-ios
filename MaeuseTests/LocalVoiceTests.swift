@@ -143,7 +143,11 @@ final class LocalVoiceTests: XCTestCase {
             let service = StubVoiceService(); services.append(service); return service
         })
         vm.open(provider: .appleLocal)
-        vm.drafts = [draft("coffee", "Coffee", 4)]
+        // A draft that still needs its amount keeps listening for the answer.
+        var incomplete = draft("coffee", "Coffee", 4)
+        incomplete.amount = nil
+        incomplete.missingFields = [.amount]
+        vm.drafts = [incomplete]
         vm.startSession()
         for _ in 0..<20 { await Task.yield() }
         for _ in 0..<3 {
@@ -1453,6 +1457,88 @@ final class LocalVoiceTests: XCTestCase {
         XCTAssertEqual(AppleExpenseInterpreter.splitNote("70/30"), "70/30")
         XCTAssertEqual(AppleExpenseInterpreter.splitNote("  "), loc("VoiceCheckSplit"))
         XCTAssertEqual(AppleExpenseInterpreter.splitNote(nil), loc("VoiceCheckSplit"))
+    }
+
+    // MARK: One expense at a time
+
+    func testCompleteDraftPausesForReviewInsteadOfListening() async {
+        var services: [StubVoiceService] = []
+        let vm = VoiceModeViewModel(serviceFactory: { _ in
+            let service = StubVoiceService(); services.append(service); return service
+        })
+        vm.open(provider: .appleLocal)
+        vm.startSession()
+        for _ in 0..<20 { await Task.yield() }
+        let service = services.last!
+        service.onEvent?(.localTranscript("Coffee four euros"))
+        service.finishTurn()
+        service.onEvent?(.responseStarted(id: "turn", isAppGenerated: false))
+        service.onEvent?(.workspaceSync(VoiceWorkspaceSyncPayload(responseID: "turn", userUnderstanding: "Coffee four euros",
+            clarificationQuestion: "", expenses: [draft("coffee", "Coffee", 4).payload], changedExpenseIDs: ["coffee"], removedExpenseIDs: [])))
+        service.onEvent?(.responseFinished(id: "turn"))
+        service.onEvent?(.localTurnReady)
+        for _ in 0..<20 { await Task.yield() }
+        XCTAssertEqual(services.count, 1, "a complete draft is reviewed, not followed by a new recording")
+        XCTAssertFalse(vm.localShouldListen)
+        XCTAssertEqual(vm.phase, .idle)
+        XCTAssertTrue(vm.canSaveLocalDraft)
+        XCTAssertEqual(vm.stateLabel, loc("LocalReviewState"))
+    }
+
+    func testSavingDraftClearsPlateAndListensForNextExpense() async {
+        var services: [StubVoiceService] = []
+        let vm = VoiceModeViewModel(serviceFactory: { _ in
+            let service = StubVoiceService(); services.append(service); return service
+        })
+        vm.open(provider: .appleLocal)
+        vm.drafts = [draft("coffee", "Coffee", 4.5)]
+        XCTAssertTrue(vm.canSaveLocalDraft)
+        XCTAssertEqual(vm.expensesForSaving().count, 1)
+        vm.didSaveLocalDraft()
+        for _ in 0..<20 { await Task.yield() }
+        XCTAssertTrue(vm.drafts.isEmpty)
+        XCTAssertTrue(vm.understandingHistory.isEmpty)
+        XCTAssertEqual(vm.localSavedCount, 1)
+        XCTAssertEqual(vm.localLastSaved, loc("LocalSavedSummary", "Coffee", 4.5.euroFormatted))
+        XCTAssertTrue(vm.localShouldListen)
+        XCTAssertTrue(vm.microphoneIsActive, "listening starts again for the next expense")
+        XCTAssertNil(services.last?.workspaceContext, "the next expense starts from an empty plate")
+
+        vm.drafts = [draft("flowers", "Flowers", 12)]
+        vm.didSaveLocalDraft()
+        XCTAssertEqual(vm.localSavedCount, 2)
+        vm.cancelSession()
+        XCTAssertEqual(vm.localSavedCount, 0)
+        XCTAssertNil(vm.localLastSaved)
+    }
+
+    func testIncompleteOrProcessingDraftCannotBeSaved() {
+        let vm = VoiceModeViewModel(serviceFactory: { _ in StubVoiceService() })
+        vm.open(provider: .appleLocal)
+        var incomplete = draft("coffee", "Coffee", 4)
+        incomplete.amount = nil
+        incomplete.missingFields = [.amount]
+        vm.drafts = [incomplete]
+        XCTAssertFalse(vm.canSaveLocalDraft)
+        vm.drafts = [draft("coffee", "Coffee", 4)]
+        vm.handleVoiceEvent(.responseStarted(id: "correction", isAppGenerated: false))
+        XCTAssertFalse(vm.canSaveLocalDraft, "a correction in flight is shown before saving")
+    }
+
+    func testDiscardingDraftListensForTheSameExpenseAgain() async {
+        var services: [StubVoiceService] = []
+        let vm = VoiceModeViewModel(serviceFactory: { _ in
+            let service = StubVoiceService(); services.append(service); return service
+        })
+        vm.open(provider: .appleLocal)
+        let coffee = draft("coffee", "Coffee", 4)
+        vm.drafts = [coffee]
+        vm.discardLocalDraft(coffee)
+        for _ in 0..<20 { await Task.yield() }
+        XCTAssertTrue(vm.drafts.isEmpty)
+        XCTAssertEqual(vm.localSavedCount, 0)
+        XCTAssertTrue(vm.microphoneIsActive)
+        XCTAssertNil(services.last?.workspaceContext)
     }
 
     private func draft(_ id: String, _ title: String, _ amount: Double) -> VoiceExpenseDraft {

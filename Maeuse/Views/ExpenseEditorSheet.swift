@@ -51,9 +51,13 @@ struct ExpenseEditorSheet: View {
         .fontDesign(.rounded).background(Color.maeusBackground.ignoresSafeArea())
         .presentationDetents([.large]).presentationDragIndicator(.hidden)
         .presentationCornerRadius(30)
-        .confirmationDialog(loc("DeleteConfirmationTitle"), isPresented: $showDeleteConfirmation) {
+        // An alert stays centred; on iOS 26 a confirmation dialog attached to the whole sheet
+        // turns into a popover anchored to its top-left corner.
+        .alert(loc("DeleteConfirmationTitle"), isPresented: $showDeleteConfirmation) {
             Button(loc("DeleteExpense"), role: .destructive) { deleteExpense() }
             Button(loc("Cancel"), role: .cancel) { }
+        } message: {
+            Text(loc("DeleteConfirmationMsg"))
         }
         .alert(loc("PersistenceErrorTitle"), isPresented: $showPersistenceError) {
             Button(loc("OK"), role: .cancel) { }

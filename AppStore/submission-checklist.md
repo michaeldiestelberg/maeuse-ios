@@ -1,5 +1,14 @@
 # Mäuse release checklist
 
+## 1.5.0 (64) — internal TestFlight only
+
+- [x] Account holder requested Apple mode as one expense at a time, the centred delete confirmation and local diagnosis in the Voice Mode card, as a new TestFlight build (October 23, 2026).
+- [x] Marketing version remains 1.5.0; repository build number incremented to 64 with the release script.
+- [x] 161 unit tests and 6 UI tests pass on the iPhone 18 Pro simulator; Release device build without warnings.
+- [x] Apple model check 18/18 and accuracy suite 85/96 on this Mac; misses match the 11 documented known limits.
+- [ ] Exact pushed commit succeeds in Xcode Cloud and the processed build is confirmed in the internal testing group.
+- [ ] On device: Apple-mode checks listed in `1.5.0-testflight.md`.
+
 ## 1.5.0 (63) — internal TestFlight only
 
 - [x] Account holder requested fixes for all ten 1.5.0 release review findings plus removal of the chooser footer note, as a new TestFlight build (October 23, 2026).

@@ -280,12 +280,25 @@ enum AppleExpenseInterpreter {
                 """, instructions: """
                 Classify the current expense request: add for a new purchase; totalPrice for its total purchase cost; share for a person's contribution/percentage/ratio; date for changing date; multiple for several changed fields; rename for changing title; remove for deletion; clarify for an unclear request. A person paying one euro is share, not totalPrice.
                 Existing expenses are numbered. Return the ONE matching number for every edit/removal action. Zero only means unclear target or add.
+                A request naming a different purchase than every inventory item, or another/also/noch ein, is add.
                 """)
             try Task.checkCancellation()
         }
         #if MODEL_EVALUATION
         print("PLAN ROUTE:", intent.action, intent.expenseNumber)
         #endif
+        // Apple mode reviews one expense at a time: a draft in review only takes corrections.
+        // A new purchase waits until it is saved, unless the draft still needs an answer.
+        if rows.count == 1 {
+            intent.expenseNumber = 1
+            if intent.action == .add {
+                guard !(rows[0].missing_fields ?? []).isEmpty else {
+                    return try VoiceWorkspaceDomain.apply([], to: rows.map(\.payload), understanding: request,
+                        question: loc("LocalSaveFirst"), todayISO: today, timeZone: timeZone)
+                }
+                intent.action = .multiple
+            }
+        }
         if intent.action == .remove {
             // Deleting is destructive; confirm it was asked for, otherwise treat it as an edit.
             let check = try await generate(LocalRemovalCheck.self, quote: text,
@@ -299,10 +312,16 @@ enum AppleExpenseInterpreter {
         let plan: LocalTurnPlan
         switch intent.action {
         case .add:
-            let source = try await generate(LocalSourcePlan.self, quote: text, instructions: """
+            let extracted = try await generate(LocalSourcePlan.self, quote: text, instructions: """
                 Extract the new purchases in spoken order. Copy each total purchase price EXACTLY with original number words and currency; empty if absent. Dates and personal contributions are not purchases or total prices. Include partial purchases. Do not add old expenses or defaults.
                 Reference date \(today), zone \(timeZone.identifier), locale \(LanguageManager.shared.activeLocale.identifier). Speaker is I/ich; partner is the other person; no names/order are known.
                 """)
+            guard let single = singlePurchase(extracted.purchases, in: text) else {
+                let question = extracted.purchases.isEmpty ? "LocalNoExpenseHeard" : "LocalOneAtATime"
+                return try VoiceWorkspaceDomain.apply([], to: [], understanding: request,
+                    question: loc(question), todayISO: today, timeZone: timeZone)
+            }
+            let source = LocalSourcePlan(purchases: [single])
             let names = source.purchases.enumerated().map { "\($0.offset + 1): \($0.element.title)" }.joined(separator: "\n")
             var priceQuotes: [String] = []
 
@@ -435,6 +454,22 @@ enum AppleExpenseInterpreter {
             trace?.record(issue)
             throw LocalVoiceFailure(issue: issue)
         }
+    }
+
+    /// One request is one expense. Two priced purchases are not guessed at: the person is
+    /// asked to say them one after the other. Unpriced extra items ("coffee and cake for
+    /// 8 euros") are usually one purchase the model split, so their names are joined.
+    private static func singlePurchase(_ purchases: [LocalSourcePurchase], in text: String) -> LocalSourcePurchase? {
+        guard let first = purchases.first else { return nil }
+        guard purchases.count > 1 else { return first }
+        // The model may spell a quoted price out ("four point five zero euros"), so count
+        // prices it saw as well as currency amounts literally in the request.
+        let pricedCount = purchases.filter { !$0.priceText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }.count
+        let spokenPrices = VoiceWorkspaceDomain.literalNumericTokens(in: text).filter { purchaseQuote($0, in: text) != nil }
+        if pricedCount > 1 || spokenPrices.count > 1 { return nil }
+        let priced = purchases.first { !$0.priceText.isEmpty } ?? first
+        let title = purchases.map(\.title).filter { !$0.isEmpty }.joined(separator: " & ")
+        return LocalSourcePurchase(title: title.isEmpty ? priced.title : title, priceText: priced.priceText)
     }
 
     private static func groundedQuote(_ quote: String, in text: String) -> String? {

@@ -25,17 +25,20 @@ struct VoiceSheet: View {
                         .accessibilityIdentifier("voice-fixture-notice")
                 }
                 #endif
-                if wide {
+                if viewModel.provider == .appleLocal {
+                    localWorkspace
+                    localFooter.dynamicTypeSize(...DynamicTypeSize.xxxLarge)
+                } else if wide {
                     HStack(alignment: .top, spacing: 20) {
                         captureRail.frame(width: 240).padding(.leading, 20)
                         draftList
                     }.accessibilityIdentifier("voice-wide")
+                    footer.dynamicTypeSize(...DynamicTypeSize.xxxLarge)
                 } else {
-                    if viewModel.provider == .appleLocal { localControls }
-                    else if !dynamicTypeSize.isAccessibilitySize { listeningHero }
+                    if !dynamicTypeSize.isAccessibilitySize { listeningHero }
                     draftList
+                    footer.dynamicTypeSize(...DynamicTypeSize.xxxLarge)
                 }
-                footer.dynamicTypeSize(...DynamicTypeSize.xxxLarge)
             }
         }
         .background(Color.maeusBackground.ignoresSafeArea())
@@ -53,11 +56,8 @@ struct VoiceSheet: View {
 
     private var captureRail: some View {
         VStack(spacing: 18) {
-            if viewModel.provider == .appleLocal { localControls }
-            else {
-                listeningHero
-                Text(viewModel.stateLabel).font(.subheadline.weight(.bold))
-            }
+            listeningHero
+            Text(viewModel.stateLabel).font(.subheadline.weight(.bold))
             Text(viewModel.takeawayText).font(.footnote)
                 .foregroundStyle(Color.maeusTextSecondary).multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
@@ -117,6 +117,163 @@ struct VoiceSheet: View {
         .animation(reduceMotion ? nil : .smooth(duration: 0.35), value: viewModel.drafts.map(\.id))
     }
 
+    // MARK: - Apple: one expense at a time
+
+    /// Speak one expense, review it, save it; the plate then clears for the next one.
+    private var localWorkspace: some View {
+        ScrollView {
+            VStack(spacing: 14) {
+                localControls
+                localPlate
+                if viewModel.phase == .error {
+                    Label(viewModel.errorMessage, systemImage: "exclamationmark.triangle.fill")
+                        .font(.callout)
+                        .foregroundStyle(Color.maeusDestructive)
+                        .padding(14)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color.maeusDestructive.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
+                }
+            }
+            .foregroundStyle(Color.maeusForeground)
+            .padding(.horizontal, 20)
+            .padding(.bottom, 20)
+            .frame(maxWidth: 560)
+            .frame(maxWidth: .infinity)
+        }
+        .scrollBounceBehavior(.basedOnSize)
+        .accessibilityIdentifier("voice-drafts-scroll")
+        .animation(reduceMotion ? nil : .smooth(duration: 0.35), value: viewModel.drafts.map(\.id))
+        .animation(reduceMotion ? nil : .smooth(duration: 0.35), value: viewModel.localSavedCount)
+    }
+
+    @ViewBuilder
+    private var localPlate: some View {
+        if let draft = viewModel.drafts.first {
+            VStack(alignment: .leading, spacing: 12) {
+                VoiceExpenseDraftCard(draft: draft,
+                    changedFields: viewModel.changedFieldsByExpenseID[draft.id] ?? [],
+                    onRemove: { viewModel.discardLocalDraft(draft) })
+                if !viewModel.clarificationQuestion.isEmpty {
+                    localNotice(viewModel.clarificationQuestion, systemImage: "questionmark.bubble")
+                        .accessibilityIdentifier("voice-clarification")
+                }
+                ForEach(viewModel.understandingHistory) { entry in
+                    Text(loc("LocalHeard", entry.text))
+                        .font(.footnote)
+                        .foregroundStyle(Color.maeusTextSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                if draft.isReadyForSaving && !viewModel.microphoneIsActive && !viewModel.isProcessingRequest {
+                    Label(loc("LocalCorrectionHint"), systemImage: "mic")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(Color.maeusTextSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .id(draft.id)
+            .transition(reduceMotion ? .opacity : .asymmetric(
+                insertion: .move(edge: .bottom).combined(with: .opacity),
+                removal: .move(edge: .top).combined(with: .opacity)))
+        } else {
+            VStack(spacing: 12) {
+                if let saved = viewModel.localLastSaved, viewModel.localTranscript.isEmpty, !viewModel.isProcessingRequest {
+                    Label(saved, systemImage: "checkmark.circle.fill")
+                        .font(.system(.subheadline, design: .rounded, weight: .bold))
+                        .foregroundStyle(Color.maeusSuccess)
+                        .padding(.horizontal, 14).padding(.vertical, 8)
+                        .background(Color.maeusSuccess.opacity(0.12), in: Capsule())
+                        .accessibilityIdentifier("local-last-saved")
+                }
+                if !viewModel.clarificationQuestion.isEmpty {
+                    localNotice(viewModel.clarificationQuestion, systemImage: "exclamationmark.bubble")
+                        .accessibilityIdentifier("voice-clarification")
+                }
+                if viewModel.localTranscript.isEmpty {
+                    VStack(spacing: 6) {
+                        Text(loc("LocalSpeakOne"))
+                            .font(.system(.headline, design: .rounded, weight: .heavy))
+                        Text(loc("LocalExample"))
+                            .font(.callout)
+                            .foregroundStyle(Color.maeusTextSecondary)
+                    }
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(18)
+                    .frame(maxWidth: .infinity)
+                    .background(Color.maeusSurface.opacity(0.6), in: RoundedRectangle(cornerRadius: 18))
+                    .overlay(RoundedRectangle(cornerRadius: 18).stroke(Color.maeusSoftBorder, style: StrokeStyle(lineWidth: 1.5, dash: [6, 5])))
+                    .accessibilityIdentifier("local-hint")
+                } else {
+                    Text(loc("LocalHeard", viewModel.localTranscript))
+                        .font(.system(.title3, design: .rounded, weight: .semibold))
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 8)
+                        .accessibilityIdentifier("local-transcript")
+                }
+            }
+            .transition(.opacity)
+        }
+    }
+
+    private func localNotice(_ text: String, systemImage: String) -> some View {
+        Label(text, systemImage: systemImage)
+            .font(.system(.body, design: .rounded, weight: .semibold))
+            .fixedSize(horizontal: false, vertical: true)
+            .padding(16)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color.maeusInputBackground, in: RoundedRectangle(cornerRadius: 16))
+    }
+
+    /// Save is the main action while a draft is in review; once something has been saved,
+    /// Done closes the session.
+    @ViewBuilder
+    private var localFooter: some View {
+        Group {
+            if !viewModel.drafts.isEmpty {
+                Button { saveLocalDraft() } label: {
+                    Label(loc("LocalSaveExpense"), systemImage: "checkmark")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(GlassPrimaryButtonStyle())
+                .opacity(viewModel.canSaveLocalDraft ? 1 : 0.4)
+                .disabled(!viewModel.canSaveLocalDraft)
+                .accessibilityHint(viewModel.localSaveNeedsReview ? loc("LocalSaveReviewHint") : "")
+                .accessibilityIdentifier("voice-save")
+            } else if viewModel.localSavedCount > 0 {
+                Button(loc("Done")) {
+                    viewModel.cancelSession()
+                    dismiss()
+                }
+                .buttonStyle(GlassSecondaryButtonStyle())
+                .accessibilityIdentifier("local-done")
+            }
+        }
+        .frame(maxWidth: 560)
+        .padding(.horizontal, 20)
+        .padding(.vertical, 12)
+        .frame(maxWidth: .infinity)
+    }
+
+    private func saveLocalDraft() {
+        guard viewModel.canSaveLocalDraft else { return }
+        // A correction still being spoken is heard and shown before anything is saved.
+        if viewModel.localSaveNeedsReview {
+            viewModel.pauseLocalForReview()
+            return
+        }
+        for expense in viewModel.expensesForSaving() { modelContext.insert(expense) }
+        do { try modelContext.save() }
+        catch {
+            modelContext.rollback()
+            viewModel.phase = .error
+            viewModel.errorMessage = loc("SaveExpensesFailed", error.localizedDescription)
+            return
+        }
+        viewModel.didSaveLocalDraft()
+    }
+
     private var localControls: some View {
         VStack(spacing: 8) {
             Button { viewModel.toggleLocalRecording() } label: {
@@ -152,6 +309,7 @@ struct VoiceSheet: View {
         if viewModel.isProcessingRequest {
             return loc(viewModel.localShouldListen ? "LocalPauseAfterProcessing" : "LocalResumeAfterProcessing")
         }
+        if !viewModel.microphoneIsActive && !viewModel.drafts.isEmpty { return loc("LocalSpeakCorrection") }
         return loc(viewModel.microphoneIsActive || viewModel.phase == .connecting ? "LocalPause" : "VoiceResumeListening")
     }
 
@@ -174,20 +332,22 @@ struct VoiceSheet: View {
                 connectionEmblem.frame(width: 44, height: 44)
             }
             Spacer(minLength: 0)
-            Button { endAndSave() } label: {
-                Text(loc("Save"))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
-                    .font(.system(.subheadline, design: .rounded, weight: .heavy))
-                    .padding(.horizontal, 14)
-                    .frame(minHeight: 42)
+            // Apple mode saves each expense from its review below.
+            if viewModel.provider != .appleLocal {
+                Button { endAndSave() } label: {
+                    Text(loc("Save"))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                        .font(.system(.subheadline, design: .rounded, weight: .heavy))
+                        .padding(.horizontal, 14)
+                        .frame(minHeight: 42)
+                }
+                .buttonStyle(StampedButtonStyle(fill: .maeusCheese, foreground: .maeusInk,
+                    cornerRadius: 20, borderColor: .maeusInk, shadow: 2.5))
+                .opacity(canSave ? 1 : 0.4)
+                .disabled(!canSave)
+                .accessibilityIdentifier("voice-save")
             }
-            .buttonStyle(StampedButtonStyle(fill: .maeusCheese, foreground: .maeusInk,
-                cornerRadius: 20, borderColor: .maeusInk, shadow: 2.5))
-            .opacity(canSave ? 1 : 0.4)
-            .disabled(!canSave)
-            .accessibilityHint(viewModel.localSaveNeedsReview ? loc("LocalSaveReviewHint") : "")
-            .accessibilityIdentifier("voice-save")
         }
         .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
     }

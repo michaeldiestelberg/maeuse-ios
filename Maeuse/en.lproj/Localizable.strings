@@ -196,10 +196,10 @@
 "LocalTooMuchContext" = "This local session is full. Save or remove existing drafts, then try a shorter request. Local mode supports up to 10 drafts per session.";
 "LocalGenerationFailed" = "Apple’s model could not safely create these drafts. Your previous drafts are unchanged. Try a shorter, clearer request; no cloud model was used.";
 "LocalMissingDetails" = "Please give the missing expense name or amount before saving.";
-"LocalAmbiguousCorrection" = "Please correct or remove one named expense at a time. Your existing drafts are unchanged.";
+"LocalAmbiguousCorrection" = "I didn’t understand that correction. Say, for example, “It was 13.50 euros” or “That was yesterday.” Your draft is unchanged.";
 
 "LocalProcessingState" = "Processing · microphone paused";
-"LocalPausedState" = "Paused · review drafts";
+"LocalPausedState" = "Paused · tap to speak";
 "LocalPause" = "Pause and process recording";
 "LocalPauseAfterProcessing" = "Stay paused after processing";
 "LocalResumeAfterProcessing" = "Resume listening after processing";
@@ -234,7 +234,7 @@
 "VoiceCloudPointCost" = "About $1–2 per 100 dictated expenses, billed to your OpenAI account";
 "VoiceCloudPointPrivacy" = "Audio is sent to OpenAI; needs internet and your API key";
 "VoiceApplePointAccuracy" = "Misunderstands more often; check every draft";
-"VoiceApplePointFlow" = "Speak, then pause; one short phrase at a time";
+"VoiceApplePointFlow" = "One expense per recording: speak, check, save";
 "VoiceApplePointCost" = "No cost, no API key";
 "VoiceApplePointPrivacy" = "Stays on your iPhone; needs Apple Intelligence";
 "VoicePendingSetup" = "Voice Mode stays on and starts working as soon as this mode is set up.";
@@ -257,3 +257,17 @@
 "LocalDownloadSpeechModel" = "Download speech model";
 "LocalSpeechModelDownloading" = "Downloading speech model…";
 "LocalSpeechModelPreparationFailed" = "The on-device speech model could not be prepared. Its first download needs an internet connection; try again later. No audio was sent to the cloud.";
+
+/* Apple mode: one expense at a time */
+"LocalSavedSummary" = "Saved: %@ · %@";
+"LocalSpeakOne" = "Say one expense";
+"LocalExample" = "For example: “Coffee for €4.50.”";
+"LocalHeard" = "“%@”";
+"LocalCorrectionHint" = "Something wrong? Tap the microphone and say the correction.";
+"LocalSaveExpense" = "Save expense";
+"LocalSpeakCorrection" = "Speak a correction";
+"LocalReviewState" = "Check the draft";
+"LocalCorrectionState" = "Listening for a correction…";
+"LocalOneAtATime" = "That sounded like several expenses. Please say one at a time – the next one after saving.";
+"LocalNoExpenseHeard" = "I didn’t catch an expense. Say what it was and how much it cost.";
+"LocalSaveFirst" = "Save this expense first, then say the next one. To change it, just say what’s different.";

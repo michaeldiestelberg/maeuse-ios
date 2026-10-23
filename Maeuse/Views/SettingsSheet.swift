@@ -130,16 +130,12 @@ struct SettingsSheet: View {
                     helpSection
                     if viewModel.showStatus { statusCard }
                 }.frame(maxWidth: .infinity)
-                VStack(spacing: 16) {
-                    voiceSection
-                    diagnosticsSection.id("local-diagnostics")
-                }.frame(maxWidth: .infinity)
+                voiceSection.frame(maxWidth: .infinity)
             }.accessibilityIdentifier("settings-wide")
         } else {
             VStack(spacing: 16) {
                 appSection
                 voiceSection
-                diagnosticsSection.id("local-diagnostics")
                 backupSection
                 legalAndSupportSection
                 if viewModel.showStatus { statusCard }
@@ -225,6 +221,11 @@ struct SettingsSheet: View {
         }.buttonStyle(.plain)
     }
 
+    /// Only meaningful while Apple's on-device mode is chosen and Voice Mode is on.
+    private var showsLocalDiagnostics: Bool {
+        viewModel.voiceSettings.provider == .appleLocal && viewModel.voiceEnabled
+    }
+
     private var diagnosticsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             DisclosureGroup(isExpanded: $showsDiagnosis) {
@@ -242,7 +243,7 @@ struct SettingsSheet: View {
             } label: {
                 Label(loc("LocalDiagnosis"), systemImage: "stethoscope").font(.subheadline.weight(.bold)).frame(minHeight: 44)
             }
-        }.foregroundStyle(Color.maeusForeground).padding(18).glassSurface()
+        }.foregroundStyle(Color.maeusForeground)
         .accessibilityIdentifier("settings-local-diagnostic")
         #if targetEnvironment(simulator)
         .onAppear { if ProcessInfo.processInfo.arguments.contains("--settings-local-diagnostic") { showsDiagnosis = true } }
@@ -321,6 +322,10 @@ struct SettingsSheet: View {
                 if !viewModel.localAvailability.allowsCapture {
                     Button(loc("LocalCheckAgain")) { Task { await viewModel.refreshSpeechAvailability() } }
                         .buttonStyle(GlassSecondaryButtonStyle())
+                }
+                if showsLocalDiagnostics {
+                    Divider().overlay(Color.maeusSoftBorder)
+                    diagnosticsSection.id("local-diagnostics")
                 }
             } else {
                 Text(loc("VoiceChoiceCloudBody"))

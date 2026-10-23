@@ -245,6 +245,9 @@ struct ContentView: View {
             let trace = LocalVoiceTrace(language: "de-DE", modelVariant: "simulator-fixture", availability: "fixture-only", referenceDate: VoiceModeViewModel.todayISOString())
             trace.begin("LocalGroundedPrice"); trace.failed(.init(.timeout, reason: "processing-deadline"))
             LocalVoiceDiagnosticStore.shared.record(trace.snapshot)
+            // Diagnostics only show while Apple mode is chosen and Voice Mode is on.
+            settingsVM.selectProvider(.appleLocal)
+            settingsVM.voiceSettings.enabled = true
             settingsVM.isPresented = true
         case "local-settings":
             settingsVM.selectProvider(.appleLocal)

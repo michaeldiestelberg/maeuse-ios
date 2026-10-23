@@ -1,3 +1,13 @@
+## 1.5.0 (64) — internal TestFlight candidate, 2026-10-23
+Apple mode now handles one expense at a time.
+- Say one expense, check the draft, save it. The screen then clears, shows “Saved: … · €…” and listens for the next one. **Done** closes the session; saved expenses are already in the list.
+- A complete draft pauses the microphone for review instead of listening on, so the next sentence can no longer change it by accident. Tap the microphone to say a correction; ✕ discards the draft and listens again. A draft that still needs details keeps listening for the answer.
+- Several priced purchases in one sentence (“coffee 4.50 and flowers 12”) are no longer guessed at: Mäuse asks for them one after the other. Items sharing one price (“coffee and cake for 8 euros”) stay one expense. A new purchase while a draft is in review asks to save first.
+- The listening screen shows an example (“Coffee for €4.50”) and the live transcript; the review shows what was heard.
+- The delete confirmation in the expense editor appears as a centred alert instead of a popover in the top-left corner.
+- Local diagnosis moved from its own Settings card into the Voice Mode card, below the Apple mode status. It only shows while Apple mode is selected and Voice Mode is on.
+- 161 unit tests and 6 UI tests pass on the iPhone 18 Pro simulator; the Release device build has no warnings. Apple model check 18/18; accuracy suite 85/96, the 11 misses being the known model limits. Real speech recognition still needs a physical iPhone check.
+
 ## 1.5.0 (63) — internal TestFlight candidate, 2026-10-23
 Fixes from the 1.5.0 release code review.
 - Apple mode keeps what you said you pay across phrases: “Dinner 73 €, I pay 20” followed by “actually it was 80” gives your partner 60, not 53. Untouched cards no longer show as updated after each phrase.
