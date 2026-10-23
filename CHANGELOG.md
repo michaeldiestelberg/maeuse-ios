@@ -2,7 +2,7 @@
 
 Consolidates Apple on-device Voice Mode, iPhone Duo layouts, and related changes tested in 1.5.0 builds 49–64 since 1.4.0 (48), plus the review fixes merged in `398bdf7`. Candidate binary is **65** (bump PR `cursor/bump-build-65-5f1a`). This entry is for account-holder review and is not a submission.
 
-- **iPhone Duo:** on the unfolded inner screen, month totals sit beside the expense list. Welcome, Settings, and OpenAI Voice Mode use the extra width. Larger accessibility text stays one column. A closed or narrow window keeps the regular iPhone layout.
+- **iPhone Duo:** on the unfolded inner screen, month totals sit beside the expense list. Welcome, Settings, and OpenAI Voice Mode use the extra width. A closed or narrow window keeps the regular iPhone layout.
 - Optional **Apple · On device** Voice Mode: on-device speech recognition and Apple Foundation Models, no API key, no usage fees, no cloud fallback. Audio stays on the iPhone. Requires iOS 26+, a compatible device, Apple Intelligence, and downloaded language resources.
 - Apple mode works one expense at a time: say it, check the draft, save; the screen then listens for the next one. Several priced purchases in one sentence are asked one after another.
 - Optional **OpenAI · Cloud** remains the recommended, more accurate continuous-capture mode with the user’s own API key. A setup screen compares privacy, accuracy, and cost. Switching modes keeps Voice Mode on.
