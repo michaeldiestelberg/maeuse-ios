@@ -25,12 +25,6 @@ On the unfolded inner screen, month totals sit beside the expense list. Welcome,
 On-device Voice Mode
 Dictate expenses with Apple on your iPhone — no API key and no usage fees. Your voice stays on the device. OpenAI is still there if you want continuous capture with your own API account.
 
-One expense at a time
-In Apple mode, say one expense, check the draft, and save. Then it listens for the next one. Speak a correction if something is wrong. If you name two priced purchases at once, Mäuse asks for them one after the other.
-
-Clearer choice, same private ledger
-A setup screen compares privacy, accuracy, and cost before you start. Manual entry, backups, and your expenses on the iPhone are unchanged.
-
 ### German
 
 iPhone Duo
@@ -38,12 +32,6 @@ Auf dem aufgeklappten Innenbildschirm stehen die Monatssummen neben der Ausgaben
 
 Sprachmodus auf dem iPhone
 Diktiere Ausgaben mit Apple auf deinem iPhone – ohne API-Schlüssel und ohne Nutzungsgebühren. Deine Stimme bleibt auf dem Gerät. OpenAI bleibt optional, wenn du fortlaufend diktieren möchtest, mit deinem eigenen API-Konto.
-
-Eine Ausgabe nach der anderen
-Im Apple-Modus sagst du eine Ausgabe, prüfst den Entwurf und speicherst. Danach hört Mäuse die nächste. Korrekturen einfach vorsprechen. Zwei bezahlte Einkäufe in einem Satz fragt Mäuse nacheinander ab.
-
-Klarere Wahl, gleiches privates Haushaltsbuch
-Ein Einrichtungsbildschirm vergleicht Datenschutz, Genauigkeit und Kosten, bevor du startest. Manuelle Eingabe, Backups und deine Ausgaben auf dem iPhone bleiben unverändert.
 
 ---
 

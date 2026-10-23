@@ -2,14 +2,8 @@
 
 Consolidates Apple on-device Voice Mode, iPhone Duo layouts, and related changes tested in 1.5.0 builds 49–64 since 1.4.0 (48), plus the review fixes merged in `398bdf7`. Candidate binary is **65** (bump PR `cursor/bump-build-65-5f1a`). This entry is for account-holder review and is not a submission.
 
-- **iPhone Duo:** on the unfolded inner screen, month totals sit beside the expense list. Welcome, Settings, and OpenAI Voice Mode use the extra width. A closed or narrow window keeps the regular iPhone layout.
-- Optional **Apple · On device** Voice Mode: on-device speech recognition and Apple Foundation Models, no API key, no usage fees, no cloud fallback. Audio stays on the iPhone. Requires iOS 26+, a compatible device, Apple Intelligence, and downloaded language resources.
-- Apple mode works one expense at a time: say it, check the draft, save; the screen then listens for the next one. Several priced purchases in one sentence are asked one after another.
-- Optional **OpenAI · Cloud** remains the recommended, more accurate continuous-capture mode with the user’s own API key. A setup screen compares privacy, accuracy, and cost. Switching modes keeps Voice Mode on.
-- OpenAI disclosure is asked once. Turning Voice Mode off stops capture but keeps that consent; deleting the API key withdraws it. Apple mode has no disclosure.
-- Review fixes in this binary: System Boot Time in the privacy manifest, OpenAI consent v2 for 1.4 upgraders, microphone purpose string names OpenAI vs Apple, voice Save inserts through an isolated context.
-- The expense-editor delete confirmation is a centred alert.
-- Backups, manual entry, and local expense storage are unchanged.
+- **iPhone Duo:** On the unfolded inner screen, month totals sit beside the expense list. Welcome, Settings, and OpenAI Voice Mode use the extra width too.
+- **On-device Voice Mode:** Dictate expenses with Apple on your iPhone — no API key and no usage fees. Your voice stays on the device. OpenAI is still there if you want continuous capture with your own API account.
 
 The version bump to 65 is a separate PR. App Store copy is in `AppStore/1.5.0-approval.md`. Status: awaiting account-holder approval; do not push this package to `main`.
 
