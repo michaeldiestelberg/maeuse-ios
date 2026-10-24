@@ -198,7 +198,7 @@ Internal TestFlight candidate (build 44; follows build 42).
 ## 1.3.0 — 2026-08-01
 
 Released on the App Store (build 32).
-- Lock Screen and Control Center controls now start manual or voice expense capture directly, with custom mouse-themed add and microphone icons that match the app's brand.
+- Lock Screen and Control Center controls now open the app with one tap into manual entry or Voice Mode, with custom mouse-themed add and microphone icons that match the app's brand.
 - Matching Home Screen and Lock Screen widgets provide one-tap access to manual entry or Voice Mode: a small Home Screen widget and two circular Lock Screen widgets.
 - Lock Screen widgets now sit on a translucent background so the mouse add and microphone icons stay clearly legible over any wallpaper.
 - The expense editor now places deletion in a separate, clearly destructive action below the split control, with native confirmation before an expense is removed.
