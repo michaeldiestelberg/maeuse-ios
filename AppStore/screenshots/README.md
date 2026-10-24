@@ -29,7 +29,7 @@ For **1.5.0 (65)**, reshoot **04-settings** in both languages so it shows the Vo
 5. `05-widgets`
    - English caption: Capture it before you forget.
    - German caption: Erfassen, bevor es vergessen ist.
-   - Home Screen with both medium Mäuse widgets side by side — dictate on the left, manual add on the right — showing that a new expense starts without opening the app first. Capture on a stock Home Screen page with the widgets in the top row.
+   - Home Screen with both medium Mäuse widgets side by side — dictate on the left, manual add on the right — showing one-tap shortcuts that open the app into dictation or manual add. Capture on a stock Home Screen page with the widgets in the top row.
    - Note: the simulator has no Wallpaper pane, so the stock wallpaper is used. A solid brand-colour backdrop needs a capture from a physical device.
 
 ## Rules
